@@ -84,6 +84,10 @@ class PairedDatasetConfig:
     # Input mode
     input_mode: str = "video_only"  # video_only | language_only | video_and_language
 
+    # If True, keep only task/repo metadata on the human side and never
+    # construct/decode HumanVideoDataset. Intended for stages A/B.
+    skip_human_video: bool = False
+
     # First frame observation
     include_first_frame: bool = True
 
@@ -251,7 +255,7 @@ class HumanSimPairedDataset(Dataset):
     def __init__(self, config: PairedDatasetConfig):
         self.config     = config
         self.input_mode = InputMode(config.input_mode)
-        self.skip_human_video: bool = False
+        self.skip_human_video: bool = bool(config.skip_human_video)
 
         print("\n" + "=" * 80)
         print("🔄 INITIALIZING HUMAN-SIM PAIRED DATASET")
@@ -282,17 +286,37 @@ class HumanSimPairedDataset(Dataset):
         if not filtered_human_configs or not filtered_sim_configs:
             raise ValueError(f"No valid paired tasks found for split '{config.split}'")
 
-        human_temp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json")
-        json.dump(filtered_human_configs, human_temp, indent=2)
-        human_temp.close()
+        # Build a cheap task -> repo_id lookup from JSON metadata. This is enough
+        # for stages A/B, where the agent only needs task identity and never uses
+        # human frames. It lets us avoid constructing HumanVideoDataset entirely.
+        self.human_repo_ids_by_task: Dict[str, List[str]] = {}
+        for h_id in valid_human_ids:
+            repo_ids = []
+            for cfg in filtered_human_configs:
+                repo_id = cfg.get("repo_id", cfg.get("task_id", ""))
+                if repo_id == h_id or repo_id.endswith(h_id) or h_id in repo_id:
+                    repo_ids.append(repo_id)
+            if repo_ids:
+                self.human_repo_ids_by_task[h_id] = repo_ids
+
+        human_temp_name = None
+        need_human_video = (
+            self.input_mode in [InputMode.VIDEO_ONLY, InputMode.VIDEO_AND_LANGUAGE]
+            and not self.skip_human_video
+        )
+        if need_human_video:
+            human_temp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json")
+            json.dump(filtered_human_configs, human_temp, indent=2)
+            human_temp.close()
+            human_temp_name = human_temp.name
 
         sim_temp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json")
         json.dump(filtered_sim_configs, sim_temp, indent=2)
         sim_temp.close()
 
-        # Build human dataset (only needed for video modes)
+        # Build human dataset only when actual human frames are required.
         self.human_dataset = None
-        if self.input_mode in [InputMode.VIDEO_ONLY, InputMode.VIDEO_AND_LANGUAGE]:
+        if need_human_video:
             print("\n" + "=" * 80)
             print("🎥 LOADING HUMAN VIDEO DATASET")
             print("=" * 80)
@@ -300,7 +324,7 @@ class HumanSimPairedDataset(Dataset):
                 source_type="human",
                 root=config.human_root,
                 split=config.split,
-                dataset_file=human_temp.name,
+                dataset_file=human_temp_name,
                 task_description_file=None,
                 cameras=config.cameras,
                 include_depth=config.include_depth,
@@ -317,6 +341,8 @@ class HumanSimPairedDataset(Dataset):
                 pre_decode_num_workers=config.pre_decode_num_workers,
             )
             self.human_dataset = build_lerobot_dataset(human_config)
+        elif self.input_mode in [InputMode.VIDEO_ONLY, InputMode.VIDEO_AND_LANGUAGE]:
+            print("\n[dataloader] human video disabled: metadata-only human task mapping")
 
         # Build sim dataset
         print("\n" + "=" * 80)
@@ -345,7 +371,8 @@ class HumanSimPairedDataset(Dataset):
         )
         self.sim_dataset = build_lerobot_dataset(sim_config)
 
-        os.unlink(human_temp.name)
+        if human_temp_name is not None:
+            os.unlink(human_temp_name)
         os.unlink(sim_temp.name)
 
         self._build_and_validate_pairing()
@@ -360,6 +387,7 @@ class HumanSimPairedDataset(Dataset):
         print(f"   - Valid paired tasks: {len(self.paired_tasks)}")
         print(f"   - Input mode: {self.input_mode.value}")
         print(f"   - Include first frame: {config.include_first_frame}")
+        print(f"   - Human video decoding: {not self.skip_human_video}")
         print("=" * 80 + "\n")
 
     def _build_and_validate_pairing(self):
@@ -382,12 +410,21 @@ class HumanSimPairedDataset(Dataset):
                     self.task_to_human_indices[task] = {
                         "num_episodes": total_episodes,
                         "repos": repos,
+                        "repo_id": repos[0]["repo_id"],
                         "task_name": task,
                     }
                     print(f"   ✓ {task} - {total_episodes} episodes")
         else:
             for h_id in self.task_mapper.get_all_human_task_ids():
-                self.task_to_human_indices[h_id] = {"task_name": h_id}
+                repo_ids = self.human_repo_ids_by_task.get(h_id, [])
+                if not repo_ids:
+                    continue
+                self.task_to_human_indices[h_id] = {
+                    "task_name": h_id,
+                    "repo_id": repo_ids[0],
+                    "repo_ids": repo_ids,
+                }
+                print(f"   ✓ {h_id} -> {repo_ids[0]} (metadata only)")
 
         # O(k) metadata-based indexing — build contiguous ranges from
         # cumulative_sizes directly instead of looping over all N indices.
@@ -468,10 +505,16 @@ class HumanSimPairedDataset(Dataset):
 
         if self.input_mode in [InputMode.VIDEO_ONLY, InputMode.VIDEO_AND_LANGUAGE]:
             human_task_info = self.task_to_human_indices[human_task_id]
-            human_repo_id   = human_task_info["repos"][0]["repo_id"]
+            human_repo_id = human_task_info.get("repo_id")
+            if human_repo_id is None and human_task_info.get("repos"):
+                human_repo_id = human_task_info["repos"][0]["repo_id"]
+            if human_repo_id is None:
+                raise RuntimeError(f"No human repo_id metadata for task: {human_task_id}")
             result["human_repo_id"] = human_repo_id
 
             if not self.skip_human_video:
+                if self.human_dataset is None:
+                    raise RuntimeError("human video requested but HumanVideoDataset was not constructed")
                 human_video = self.human_dataset._get_target_item(human_repo_id)["video"]
                 result["human_video"] = human_video
 
