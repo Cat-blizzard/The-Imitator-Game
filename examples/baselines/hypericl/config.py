@@ -12,8 +12,9 @@ class HyperICLArgs:
     seed: int = 1
     cuda: bool = True
     stage: str = "D"                 # A base | B expert bank | C video encoder | D compiler | E closed-loop+TTT
-    init_from: Optional[str] = None  # checkpoint of the previous stage (strict=False load)
-    init_dict_from_bank: bool = True # at the start of stage D: SVD-init manifold atoms from the expert bank
+    init_from: Optional[str] = None   # previous-stage checkpoint: model weights only (A->B->C->D->E)
+    resume_from: Optional[str] = None # same-stage checkpoint: restore model + optimizer + scheduler + epoch/RNG
+    init_dict_from_bank: bool = True  # at the start of stage D: SVD-init manifold atoms from the expert bank
 
     # ---- experiment tracking ------------------------------------------------
     track: bool = True
