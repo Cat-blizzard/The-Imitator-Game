@@ -131,6 +131,18 @@ class HyperICLArgs:
     target: str = "scratch"                   # scratch | vla
     share_res_heads: bool = True              # shared residual heads per layer-shape (keeps D small)
     trunk_dim: int = 64
+
+    # ---- block-level learned-optimizer refinement -----------------------------
+    # T first predicts one skill token per target block. R then performs a small,
+    # topology-aware pseudo-forward/backward refinement in latent space before D.
+    use_block_refiner: bool = True
+    refiner_steps: int = 2
+    refiner_layers: int = 1
+    refiner_lr_max: float = 0.10
+    refiner_on_feedback: bool = False       # safer until recurrent updates are trained with long unrolls
+    phase_manifold: bool = False             # phase can change manifold coefficients, not only AdaLN bias
+    feedback_gate_max: float = 0.25         # bound recurrent S updates to prevent long-horizon drift
+    max_state_updates: int = 0              # 0 = unlimited; use 8/16 as a diagnostic if eval drifts
     # -- vla target (pretrained; see targets/pretrained_target.py) --
     vla_profile: str = "lerobot_smolvla"      # lerobot_smolvla | lerobot_pi0 | groot_n15 | custom
     vla_repo_id: str = "lerobot/smolvla_base"

@@ -139,10 +139,19 @@ class HyperICLAgent(nn.Module):
         specs = self.target.layer_specs()
 
         # 5. compiler (T + D + latent TTT + feedback tokenizer), world model, expert bank
-        self.compiler = HyperCompiler(specs, self.target.n_blocks, args.d, args.K, args.d_prog, args.h_dim,
-                                      args.action_dim, args.pred_horizon, args.n_atoms, args.T_layers, args.nhead,
-                                      args.M_fb, args.use_manifold, args.use_residual, args.use_prev_action,
-                                      args.share_res_heads, args.trunk_dim)
+        self.compiler = HyperCompiler(
+            specs, self.target.n_blocks, args.d, args.K, args.d_prog, args.h_dim,
+            args.action_dim, args.pred_horizon, args.n_atoms, args.T_layers, args.nhead,
+            args.M_fb, args.use_manifold, args.use_residual, args.use_prev_action,
+            args.share_res_heads, args.trunk_dim,
+            use_block_refiner=args.use_block_refiner,
+            refiner_steps=args.refiner_steps,
+            refiner_layers=args.refiner_layers,
+            refiner_lr_max=args.refiner_lr_max,
+            refiner_on_feedback=args.refiner_on_feedback,
+            phase_manifold=args.phase_manifold,
+            feedback_gate_max=args.feedback_gate_max,
+        )
         self.wm = LatentDynamics(args.h_dim, args.action_dim, args.pred_horizon)
         self.effect_head = EffectHead(args.h_dim, args.d)
         self.bank = TaskLoRABank(specs, 1 if (args.target == "vla" and args.stage == "A") else args.max_tasks)
@@ -206,7 +215,7 @@ class HyperICLAgent(nn.Module):
     def trainable_report(self) -> Dict[str, float]:
         rep = {}
         for name, m in (("tokenizer", self.tokenizer), ("obs_enc", self.obs_encoder), ("state_enc", self.state_encoder),
-                        ("obs_proj", self.obs_proj), ("E", self.E), ("T", self.compiler.T), ("D", self.compiler.D),
+                        ("obs_proj", self.obs_proj), ("E", self.E), ("T", self.compiler.T), ("R", self.compiler.R), ("D", self.compiler.D),
                         ("ttt", self.compiler.ttt), ("fb", self.compiler.fb), ("wm", self.wm),
                         ("effect", self.effect_head), ("bank", self.bank), ("target", self.target)):
             rep[name] = sum(p.numel() for p in m.parameters() if p.requires_grad) / 1e6
@@ -480,7 +489,8 @@ class HyperICLAgent(nn.Module):
                 use_img = (torch.rand(B, device=dev) < a.p_img)[:, None]
                 h_fb = torch.where(use_img, h_img, h_fb)
             chunk_idx = (progress * 32).long() if progress is not None else torch.zeros(B, dtype=torch.long, device=dev)
-            r = self.compiler.fb(h_fb, self.robot_progress(h_fb), chunk_idx)[:, None]   # [B,1,d]
+            a_prev_fb = x0_hat.detach() if (a.use_prev_action and x0_hat is not None) else None
+            r = self.compiler.fb(h_fb, self.robot_progress(h_fb), chunk_idx, a_prev=a_prev_fb)[:, None]   # [B,1,d]
             S1 = self.compiler.step(S0[inv], human_tokens[inv], r)                   # [B, L, d]
             alpha1 = self.phase_assign(self.robot_progress(h_fb), rho[inv])
             P1 = self.compiler.decode(S1, alpha1, None)
@@ -527,7 +537,7 @@ class HyperICLAgent(nn.Module):
         if a.ttt_steps_eval > 0:
             S = self.compiler.run_ttt(S, enc, human_tokens, self.E, a.ttt_steps_eval, create_graph=False).detach()
         self._cache = dict(S=S, human_tokens=human_tokens, rho=self.E.phase_anchors(enc, uniform=a.uniform_phases),
-                           fb=[], n_calls=0, alpha_prev=None)
+                           fb=[], n_calls=0, n_updates=0, alpha_prev=None, prev_action=None)
 
     @torch.no_grad()
     def get_action(self, obs: Dict) -> torch.Tensor:
@@ -542,15 +552,23 @@ class HyperICLAgent(nn.Module):
             c["S"], c["human_tokens"], c["rho"] = S, ht, rho
         p_R = self.robot_progress(h)
         k = a.state_update_every
-        if k > 0 and c["n_calls"] > 0 and c["n_calls"] % k == 0:          # closed-loop recurrence
-            r = self.compiler.fb(h, p_R, torch.full((B,), c["n_calls"] // k, dtype=torch.long, device=self.device))
+        can_update = (a.max_state_updates <= 0 or c["n_updates"] < a.max_state_updates)
+        if k > 0 and c["n_calls"] > 0 and c["n_calls"] % k == 0 and can_update:  # closed-loop recurrence
+            r = self.compiler.fb(
+                h, p_R,
+                torch.full((B,), c["n_calls"] // k, dtype=torch.long, device=self.device),
+                a_prev=c.get("prev_action") if a.use_prev_action else None,
+            )
             c["fb"].append(r)
             c["S"] = S = self.compiler.step(S, ht, torch.stack(c["fb"][-a.M_fb:], dim=1))
+            c["n_updates"] += 1
         alpha = self.phase_assign(p_R, rho, prev=c["alpha_prev"])
         c["alpha_prev"] = alpha
         P = self.compiler.decode(S, alpha, None)
         c["n_calls"] += 1
-        return self.target.sample(P, obs, h)
+        action = self.target.sample(P, obs, h)
+        c["prev_action"] = action.detach()
+        return action
 
     def clear_cache(self):
         self._cache = None
