@@ -82,7 +82,7 @@ def solve(env: YourTaskEnv, seed=None, debug=False, vis=False):
     )
     env = env.unwrapped
 
-    # Always pass the other robot's gripper state to avoid collisions.
+    # Preserve the other robot's gripper command while this robot moves.
     left_planner.move_to_pose_with_screw(
         my_pose, other_gripper_state=right_planner.gripper_state)
     left_planner.close_gripper(other_gripper_state=right_planner.gripper_state)
@@ -140,5 +140,31 @@ python -m mani_skill.examples.motionplanning.dual.two_robot_run \
   waypoints differ structurally from the base task.
 - **Determinism**: `env.reset(seed=seed)` at the start keeps episodes
   reproducible; the runner increments `seed` per trajectory.
-- Always pass `other_gripper_state` — the two planners share one scene and
-  would otherwise collide.
+- Pass `other_gripper_state` to preserve the other robot's gripper command.
+  This parameter does not add inter-arm collision checking.
+
+## Dual-arm trajectory scheduling (development)
+
+`trajectory_schedule.py` implements simultaneous starts with independent
+completion: each arm keeps its source timing, and the shorter trajectory holds
+its final joint target and phase gripper command until the longer one finishes.
+`plan_pose()` uses the existing solver's `dry_run=True` interface and checks the
+planner's joint order against the caller-supplied arm-controller joint names.
+
+`build_hold_schedule()` samples both trajectories by their actual timestamps
+onto one control clock. Each yielded dictionary contains both arms' targets
+for the end of the same control interval. Gripper commands are normalized
+values in `[-1, 1]`, held constant within a phase. A zero-duration phase emits
+no actions; opening or closing with a dwell requires a positive duration.
+
+Run the CPU self-test from this checkout, with its dependencies activated:
+
+```bash
+python -m mani_skill.examples.motionplanning.dual.trajectory_schedule --self-test
+```
+
+This module generates commands only; it does not call `env.step`, add collision
+geometry, or change the existing collection runner. A live executor must first
+validate the actual start state, joint limits, and combined collision geometry,
+then monitor tracking, grasp state and environment termination. The CPU fixture
+checks scheduling behavior and does not measure physical task success.
