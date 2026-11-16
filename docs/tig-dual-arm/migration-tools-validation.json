@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-17",
+  "scope": "Actual synthetic archive/bundle/restore tests on the source host; no dependency reinstallation or GPU execution.",
+  "prepare_transfer": {
+    "self_test": "PASS",
+    "actual_archive_files": 3,
+    "actual_git_bundles_verified": 1,
+    "payload_inventory_rows": 5,
+    "negative_cases": [
+      "path:../escape",
+      "path:/absolute",
+      "path:a/../b",
+      "path:a\\b",
+      "path:.git/config",
+      "path:a:b",
+      "path:a//b",
+      "symbolic_link",
+      "symlink_parent",
+      "special_file",
+      "nonempty_output",
+      "source_changed",
+      "unknown_local_requirement",
+      "url_credentials"
+    ],
+    "source_file_hashes_generated": 0,
+    "dependency_installation": "NOT_RUN",
+    "gpu_execution": "NOT_RUN"
+  },
+  "restore_workspace": {
+    "self_test": "PASS",
+    "actual_git_repositories": 2,
+    "restored_clean_checkouts": 4,
+    "archive_kinds": 3,
+    "negative_cases": [
+      "sha256_corruption",
+      "nonempty_destination",
+      "path_traversal",
+      "symbolic_link",
+      "second_restore"
+    ],
+    "dependency_installation": "NOT_RUN",
+    "gpu_execution": "NOT_RUN"
+  },
+  "full_migration_package": "PREPARING_SEPARATELY",
+  "target_server_validation": "NOT_RUN",
+  "original_sources_and_historical_evidence_modified": false
+}
