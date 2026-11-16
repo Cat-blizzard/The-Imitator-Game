@@ -21,6 +21,10 @@ ROTATION_TOLERANCE_RAD = 1e-3
 MAX_CORRECTIONS = 3
 
 
+class _CorrectionGeometryCaptured(Exception):
+    """Stop a native correction at its TOPP boundary; no trajectory is made."""
+
+
 def _array(value: Any) -> np.ndarray:
     if hasattr(value, "detach"):
         value = value.detach()
@@ -88,12 +92,18 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         raise ValueError("Control timestep must be positive seconds")
     native_topp = planner.TOPP
     captured_paths: list[np.ndarray] = []
+    capture_geometry_only = False
+    native_topp_calls = 0
 
     def capture_topp(path: Any, step: float = .1, verbose: bool = False) -> Any:
+        nonlocal native_topp_calls
         path = _array(path)
         if path.ndim != 2 or path.shape[1] != 7 or len(path) < 2:
             raise ValueError("Native TOPP source must have shape [N>=2, 7]")
         captured_paths.append(path)
+        if capture_geometry_only:
+            raise _CorrectionGeometryCaptured
+        native_topp_calls += 1
         return native_topp(path, step, verbose)
 
     def fk(arm_qpos: Any) -> np.ndarray:
@@ -110,7 +120,7 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         return (error["position_m"] <= position_tolerance_m
                 and error["rotation_rad"] <= rotation_tolerance_rad)
 
-    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v1",
+    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v2",
         "position_tolerance_m": position_tolerance_m,
         "rotation_tolerance_rad": rotation_tolerance_rad,
         "max_corrections": max_corrections,
@@ -146,12 +156,38 @@ def checked_screw_plan(solver: Any, pose: Any, *,
             full_qpos = start.copy()
             full_qpos[indices] = combined_path[-1]
             count = len(captured_paths)
-            correction = planner.plan_screw(goal_world.copy(), full_qpos,
-                time_step=timestep, use_point_cloud=bool(solver.use_point_cloud),
-                use_attach=bool(getattr(planner.planning_world, "use_attach", False)))
-            if (not isinstance(correction, Mapping) or correction.get("status") != "Success"
-                    or len(captured_paths) == count):
-                raise ValueError("Native endpoint correction failed")
+            # Native screw's rot2so3 treats np.isclose(trace(R), 3) as zero
+            # rotation. Its small-angle dead zone needs native IK/joint planning
+            # rather than more screw retries. Both routes expose a real native
+            # geometric path; no short-segment TOPP or fake trajectory is made.
+            use_ik = (error["rotation_rad"] > rotation_tolerance_rad
+                and np.isclose(1 + 2 * np.cos(error["rotation_rad"]), 3))
+            kind = "native_ik_joint_path_correction" if use_ik else "native_screw_correction"
+            capture_geometry_only = True
+            try:
+                options = dict(time_step=timestep, use_point_cloud=bool(solver.use_point_cloud),
+                    use_attach=bool(getattr(planner.planning_world, "use_attach", False)))
+                if use_ik:
+                    status, goals = planner.IK(goal_base.copy(), full_qpos.copy(),
+                        n_init_qpos=1, threshold=1e-5)
+                    if status != "Success" or not goals:
+                        raise ValueError(f"Native endpoint IK failed: {status}")
+                    for goal in goals:
+                        if not np.array_equal(_array(goal)[np.setdiff1d(np.arange(len(start)), indices)],
+                                start[np.setdiff1d(np.arange(len(start)), indices)]):
+                            raise ValueError("Native endpoint IK changed non-arm joints")
+                    planner.plan_qpos_to_qpos(goals, full_qpos.copy(),
+                        fix_joint_limits=False, **options)
+                else:
+                    planner.plan_screw(goal_world.copy(), full_qpos.copy(), **options)
+            except _CorrectionGeometryCaptured:
+                pass
+            else:
+                raise ValueError("Native correction failed before producing a geometric path")
+            finally:
+                capture_geometry_only = False
+            if len(captured_paths) != count + 1:
+                raise ValueError("Native correction did not produce exactly one geometric path")
             path = captured_paths[-1]
             if not np.allclose(path[0], combined_path[-1], atol=1e-9, rtol=0):
                 raise ValueError("Native correction does not continue the original path")
@@ -159,7 +195,7 @@ def checked_screw_plan(solver: Any, pose: Any, *,
             actual = fk(combined_path[-1])
             error = pose_error(actual, goal_base)
             corrections += 1
-            audit["attempts"].append({"kind": "native_screw_correction",
+            audit["attempts"].append({"kind": kind,
                 "correction_index": corrections, **error})
         if not within(error):
             raise ValueError(f"Actual FK endpoint exceeds contract after {corrections} corrections: {error}")
@@ -183,7 +219,8 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         audit.update(status="passed", corrections=corrections,
             endpoint_base_xyz_wxyz=actual.tolist(), final_error=final_error,
             geometric_path_samples=len(combined_path),
-            native_topp_calls=len(captured_paths),
+            geometric_path_captures=len(captured_paths),
+            correction_geometry_only=True, native_topp_calls=native_topp_calls,
             parameterization="native TOPP over complete corrected geometric path" if corrections
                 else "original native TOPP unchanged")
         result["endpoint_audit"] = audit
@@ -253,7 +290,8 @@ def self_test() -> dict[str, Any]:
     assert solver.planner.TOPP == original_topp and solver.calls == 2
     assert solver.last_native_result is result
     assert np.array_equal(solver.last_native_parameterization, solver.topp_calls[-1])
-    assert len(solver.topp_calls[-1]) == 3 and np.array_equal(solver.state, state)
+    assert len(solver.topp_calls) == 2 and len(solver.topp_calls[-1]) == 3
+    assert np.array_equal(solver.state, state)
     assert result["endpoint_audit"]["final_error"]["position_m"] < 1e-12
     assert result["endpoint_audit"]["attempts"][0]["position_m"] > .013
     assert result["endpoint_audit"]["corrections"] == 1

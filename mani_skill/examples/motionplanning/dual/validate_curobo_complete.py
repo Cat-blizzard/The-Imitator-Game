@@ -50,7 +50,7 @@ TASKS = ('TwoRobotPickAppleBananaToBaskets-v1', 'TwoRobotPickPillToRegions-v1',
 LAST_COMPLETION_STEP = 199
 FINAL_STABLE_STEPS = 20
 MINIMUM_SETTLE_BUDGET = 3
-APPROACH_RECIPES = ('standard-8cm', 'compact-4cm')
+APPROACH_RECIPES = ('standard-8cm', 'compact-4cm', 'compact-5cm')
 PAYLOAD_REFINEMENTS = ('baseline', 'fixed-task-v1', 'fixed-task-v2', 'fixed-task-v3', 'fixed-task-v4')
 TRANSPORT_RECIPES = ('standard', 'pill-direct-release-v1', 'direct-release-v2')
 # Existing executors require three stable endpoint ticks, five stable grasp
@@ -97,7 +97,7 @@ def execution_configuration(task_id: str = TASKS[0], *,
             'cuRobo native payload and both fruit-arm panda_link7 conservative sphere geometry only; physical model, control and acceptance thresholds unchanged'
             if payload_refinement in ('fixed-task-v3','fixed-task-v4') else
             'cuRobo native payload representation only; physical model, control and acceptance thresholds unchanged'),
-        'pregrasp_distance_m': .04 if approach_recipe == 'compact-4cm' else None,
+        'pregrasp_distance_m': {'compact-4cm':.04,'compact-5cm':.05}.get(approach_recipe),
         'pregrasp_contact_permission': False, 'descend_contact_permission': 'corresponding own two fingers only',
         'approach_geometry_policy': 'fixed recipe with measured whole-end-effector positive-Z clearance check; same goals for both backends',
         'task_execution_parameters': parameters,
@@ -176,12 +176,13 @@ def approach_pairs(grasp_pairs: Any, recipe: str) -> tuple[tuple[Any,Any],tuple[
         raise ValueError('Expected two pregrasp/grasp pairs and a fixed recipe')
     if recipe == 'standard-8cm':
         return tuple(tuple(pair) for pair in grasp_pairs)
+    distance = {'compact-4cm':.04,'compact-5cm':.05}[recipe]
     result = []
     for _,grasp in grasp_pairs:
         transform = _matrix(np.r_[grasp.p,grasp.q])
         if not np.allclose(transform[:3,2],[0.,0.,-1.],rtol=0,atol=1e-6):
             raise ValueError('The compact recipe requires the task adapter downward grasp orientation')
-        pre = sapien.Pose(np.asarray(grasp.p,dtype=float)+[0.,0.,.04],grasp.q)
+        pre = sapien.Pose(np.asarray(grasp.p,dtype=float)+[0.,0.,distance],grasp.q)
         result.append((pre,grasp))
     return tuple(result)
 
@@ -936,6 +937,9 @@ def self_test() -> dict[str,Any]:
     compact = approach_pairs(original_pairs,'compact-4cm')
     assert np.allclose(compact[0][0].p,[0.,0.,.14])
     assert compact[0][1] is grasp and np.allclose(original_pairs[0][0].p,[0.,0.,.18])
+    compact5 = approach_pairs(original_pairs,'compact-5cm')
+    assert np.allclose(compact5[0][0].p,[0.,0.,.15]) and compact5[0][1] is grasp
+    assert execution_configuration(TASKS[1],approach_recipe='compact-5cm')['pregrasp_distance_m'] == .05
     assert approach_pairs(original_pairs,'standard-8cm')[0][0] is pre
     try:
         approach_pairs(((pre,sapien.Pose()),(pre,grasp)),'compact-4cm')
