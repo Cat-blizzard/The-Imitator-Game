@@ -1,0 +1,276 @@
+{
+  "status": "passed",
+  "scope": "Two existing strict pill401 cases; paired source versions and same GPUs; exactness and timings descriptive, not general success rate or benchmark ranking",
+  "pairs": [
+    {
+      "backend": "mplib",
+      "old_case": "stage2-mplib-pill-s401",
+      "new_case": "stage3-mplib-pill-s401",
+      "old_steps": 171,
+      "new_steps": 171,
+      "policy_sha256_unchanged": true,
+      "old": {
+        "whole_run_wall_s": 18.534849749179557,
+        "native_planning_wall_s": 0.1130318830255419,
+        "worker_rpc_by_operation": {},
+        "native_update_count": 0,
+        "native_update_sum_s": 0,
+        "native_update_timing_sum_s": {},
+        "execution_stage_wall_sum_s": 8.77746884408407
+      },
+      "new": {
+        "whole_run_wall_s": 15.057608543895185,
+        "native_planning_wall_s": 0.09622497600503266,
+        "worker_rpc_by_operation": {},
+        "native_update_count": 0,
+        "native_update_sum_s": 0,
+        "native_update_timing_sum_s": {},
+        "execution_stage_wall_sum_s": 7.8599400408566
+      },
+      "old_report_sha256": "059684b8f244a0e40d2f6d2b6cc83fd1dbfd08273a32e7b82e865bcd0a554890",
+      "new_report_sha256": "219de455e66bfa7f5aefd30ffeca995b48c45412c20ff62d1dbb9230355ad71e",
+      "actions": {
+        "old_shape": [
+          171,
+          16
+        ],
+        "new_shape": [
+          171,
+          16
+        ],
+        "exact": true,
+        "max_abs_error": 0.0
+      },
+      "states": {
+        "actors/080_pillbottle_1": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "actors/080_pillbottle_2": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "actors/table": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "articulations/panda_wristcam-agent-0": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "articulations/panda_wristcam-agent-1": {
+          "exact": true,
+          "max_abs_error": 0.0
+        }
+      },
+      "new_validation_owners": [
+        [
+          "pregrasp",
+          "executor",
+          "passed"
+        ],
+        [
+          "descend",
+          "executor",
+          "passed"
+        ],
+        [
+          "lift_and_hold",
+          "executor",
+          "passed"
+        ],
+        [
+          "carry_lower",
+          "executor",
+          "passed"
+        ],
+        [
+          "retreat",
+          "executor",
+          "passed"
+        ]
+      ],
+      "new_physical_monitoring": {
+        "observed_substeps": 855,
+        "expected_substeps": 855,
+        "forbidden_contact_count": 0,
+        "interarm_forbidden_count": 0,
+        "robot_world_forbidden_count": 0,
+        "robot_world_observed_substeps": 855,
+        "robot_world_coverage_complete": true,
+        "coverage_complete": true,
+        "scope": "recorded100Hz actual contact observations, not continuous collision proof"
+      }
+    },
+    {
+      "backend": "curobo",
+      "old_case": "stage2-pathfix-curobo-pill-s401",
+      "new_case": "stage3-curobo-pill-s401",
+      "old_steps": 191,
+      "new_steps": 191,
+      "policy_sha256_unchanged": true,
+      "old": {
+        "whole_run_wall_s": 206.26732498197816,
+        "native_planning_wall_s": 1.7969467383809388,
+        "worker_rpc_by_operation": {
+          "init_session": {
+            "count": 4,
+            "sum_s": 157.0248232355807
+          },
+          "inspect_sessions": {
+            "count": 2,
+            "sum_s": 0.3442180738784373
+          },
+          "update_session": {
+            "count": 12,
+            "sum_s": 4.552343789488077
+          },
+          "fk": {
+            "count": 12,
+            "sum_s": 0.8006304977461696
+          },
+          "plan_pose": {
+            "count": 10,
+            "sum_s": 1.794025233015418
+          },
+          "shutdown": {
+            "count": 1,
+            "sum_s": 0.1699539301916957
+          }
+        },
+        "native_update_count": 12,
+        "native_update_sum_s": 1.5370419074315578,
+        "native_update_timing_sum_s": {
+          "cached_kinematics": 0.05450839572586119,
+          "world_poses": 0.17613070760853589,
+          "payload_attachment": 0.009457321604713798,
+          "permissions_and_graph_reset": 0.015637392178177834,
+          "integrity_and_full_native_readback": 0.6666914576198906,
+          "task_source_permissions_and_full_readback": 0.612245085882023
+        },
+        "execution_stage_wall_sum_s": 8.812104735989124
+      },
+      "new": {
+        "whole_run_wall_s": 205.9216580770444,
+        "native_planning_wall_s": 1.784046775661409,
+        "worker_rpc_by_operation": {
+          "init_session": {
+            "count": 4,
+            "sum_s": 157.3989232259337
+          },
+          "inspect_sessions": {
+            "count": 2,
+            "sum_s": 0.33900520810857415
+          },
+          "update_session": {
+            "count": 12,
+            "sum_s": 2.8613256404642016
+          },
+          "fk": {
+            "count": 12,
+            "sum_s": 0.9369899155572057
+          },
+          "plan_pose": {
+            "count": 10,
+            "sum_s": 1.7810257212258875
+          },
+          "shutdown": {
+            "count": 1,
+            "sum_s": 0.3978023480158299
+          }
+        },
+        "native_update_count": 12,
+        "native_update_sum_s": 0.9739848780445755,
+        "native_update_timing_sum_s": {
+          "cached_kinematics": 0.054935541935265064,
+          "world_poses": 0.18143284297548234,
+          "payload_attachment": 0.009836237644776702,
+          "permissions_and_graph_reset": 0.016290677012875676,
+          "integrity_and_full_native_readback": 0.6631643399596214,
+          "task_source_permissions_and_full_readback": 0.04820755636319518
+        },
+        "execution_stage_wall_sum_s": 12.4700549938716
+      },
+      "old_report_sha256": "1c9bb50942a4cd991f30395c82300a7ae668672ad88acbf49d6e0142bb1e6210",
+      "new_report_sha256": "0de41d3e3a9b2479c37a291b02a875ef430aa5e54b9ddb0627322d39708e0b70",
+      "actions": {
+        "old_shape": [
+          191,
+          16
+        ],
+        "new_shape": [
+          191,
+          16
+        ],
+        "exact": true,
+        "max_abs_error": 0.0
+      },
+      "states": {
+        "actors/080_pillbottle_1": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "actors/080_pillbottle_2": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "actors/table": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "articulations/panda_wristcam-agent-0": {
+          "exact": true,
+          "max_abs_error": 0.0
+        },
+        "articulations/panda_wristcam-agent-1": {
+          "exact": true,
+          "max_abs_error": 0.0
+        }
+      },
+      "new_validation_owners": [
+        [
+          "pregrasp",
+          "executor",
+          "passed"
+        ],
+        [
+          "descend",
+          "executor",
+          "passed"
+        ],
+        [
+          "lift_and_hold",
+          "executor",
+          "passed"
+        ],
+        [
+          "carry_lower",
+          "executor",
+          "passed"
+        ],
+        [
+          "retreat",
+          "executor",
+          "passed"
+        ]
+      ],
+      "new_physical_monitoring": {
+        "observed_substeps": 955,
+        "expected_substeps": 955,
+        "forbidden_contact_count": 0,
+        "interarm_forbidden_count": 0,
+        "robot_world_forbidden_count": 0,
+        "robot_world_observed_substeps": 955,
+        "robot_world_coverage_complete": true,
+        "coverage_complete": true,
+        "scope": "recorded100Hz actual contact observations, not continuous collision proof"
+      }
+    }
+  ],
+  "performance_limits": [
+    "One run per source/case; no repeated confidence interval",
+    "Worker init includes native build/warmup and cache effects; total wall difference is not isolated update speedup",
+    "Native update timing stages are same reported labels; task_source_permissions_and_full_readback now covers validation after shared readback",
+    "Physical monitoring and strict replay passed; observations remain discrete100Hz"
+  ]
+}
