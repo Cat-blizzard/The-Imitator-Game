@@ -12,7 +12,6 @@ import argparse
 import copy
 import json
 import math
-import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -212,30 +211,19 @@ def audit_task_native_state(snapshot: dict[str, Any], receipt: dict[str, Any]) -
 
 class _TaskProcess(_SessionProcess):
     def __init__(self, gpu_uuid: str, log_path: Path, *, task_id: str, timeout_s: float = 180., python: Path | None = None) -> None:
-        python = python or ROOT/"infrastructure/envs/curobo-tig/bin/python"
-        worker = ROOT/"infrastructure/curobo_tig_task_payload_worker.py"
         task = canonical_task(task_id)
-        if not python.is_file() or not worker.is_file():
-            raise FileNotFoundError("Independent cuRobo task worker/environment is missing")
-        if not gpu_uuid.startswith("GPU-") or not math.isfinite(timeout_s) or timeout_s <= 0:
-            raise ValueError("An explicit GPU UUID and positive timeout are required")
-        environment = os.environ.copy()
-        environment.pop("PYTHONPATH", None)
-        environment.update(CUDA_VISIBLE_DEVICES=gpu_uuid, PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1")
-        cache = ROOT/"infrastructure/tmp/curobo-v2-runtime-cache"
-        for variable, subdirectory in (("CUDA_CACHE_PATH", "cuda"), ("TORCHINDUCTOR_CACHE_DIR", "inductor"), ("WARP_CACHE_PATH", "warp")):
-            directory = cache/subdirectory
-            directory.mkdir(parents=True, exist_ok=True)
-            environment[variable] = str(directory)
-        self._log = log_path.open("x")
-        try:
-            self.process = subprocess.Popen([str(python), "-B", "-u", str(worker), "--serve", "--task-id", task],
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self._log, env=environment, cwd=ROOT, text=True, bufsize=1)
-        except Exception:
-            self._log.close()
-            raise
-        self.timeout_s, self.sequence, self.failed = float(timeout_s), 0, False
-        self.receipts: list[dict[str, Any]] = []
+        super().__init__(gpu_uuid, log_path, timeout_s=timeout_s, python=python,
+            _worker="curobo_tig_task_payload_worker.py",
+            _worker_args=("--serve", "--task-id", task))
+
+
+class SelectedWorkerProcess(_SessionProcess):
+    """The same task protocol with a caller-selected explicit worker source."""
+    def __init__(self, gpu_uuid: str, log_path: Path, worker_script: Path, *,
+                 task_id: str, timeout_s: float = 180., python: Path | None = None) -> None:
+        task = canonical_task(task_id)
+        super().__init__(gpu_uuid, log_path, timeout_s=timeout_s, python=python,
+            _worker=worker_script.resolve(), _worker_args=("--serve", "--task-id", task))
 
 
 class CuroboTaskPayloadSessions(CuroboPayloadSessions):
@@ -314,11 +302,7 @@ def self_test() -> None:
     payload_self_test()
     from .curobo_scene import ARM_NAMES, FINGER_NAMES
     from .curobo_payload import reserve_payload_config
-    import sys
-    infrastructure = str(ROOT/"infrastructure")
-    if infrastructure not in sys.path:
-        sys.path.insert(0, infrastructure)
-    from curobo_tig_task_payload_worker import TaskSessionManager, dispatch_task
+    from infrastructure.curobo_tig_task_payload_worker import TaskSessionManager, dispatch_task
 
     class FakeBackend:
         def __init__(self) -> None:

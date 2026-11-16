@@ -1,4 +1,4 @@
-"""Fixed fruit-only actual link7 full-solid coverage, isolated from runtime.
+"""Fixed fruit-only actual link7 full-solid coverage, used by the generation runner.
 
 Both fruit arms use the same 12.5mm grid and the existing six-LP/cell tight
 circumsphere algorithm. Every native convex shape is covered in shape axes,
@@ -21,21 +21,18 @@ from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
-import sys
 import time
 from typing import Any, Callable
 
 import numpy as np
 from scipy.spatial import ConvexHull
 
-ROOT = next(p for p in Path(__file__).resolve().parents
-            if (p/'infrastructure/development/tig-dual-arm').is_dir())
-DEV = ROOT/'infrastructure/development/tig-dual-arm'
-for directory in (DEV, ROOT/'infrastructure'):
-    if str(directory) not in sys.path:
-        sys.path.insert(0, str(directory))
-from mani_skill.examples.motionplanning.dual import curobo_payload_refinement as v1
-from mani_skill.examples.motionplanning.dual import curobo_payload_refinement_v2 as v2
+from infrastructure.tig_runtime import resolve_runtime_paths
+RUNTIME_PATHS = resolve_runtime_paths()
+ROOT = RUNTIME_PATHS.workspace_root
+DEV = RUNTIME_PATHS.code_root
+from . import curobo_payload_refinement as v1
+from . import curobo_payload_refinement_v2 as v2
 
 E = ROOT/'infrastructure/validation/dual-arm/curobo-complete-20261116'
 P = E/'extensions-v2/curobo-fruit-s401-refined-dev01'
@@ -133,7 +130,7 @@ def geometry_from_initial_scene(initial: dict[str, Any], arm_index: int) -> dict
 def export_link7_geometry(raw: Any, arm_index: int) -> dict[str, Any]:
     """Read the selected robot's actual PhysX shapes without stepping or setters."""
     from mani_skill.examples.motionplanning.dual.initial_scene_manifest import _native_geometry, _raw_pose
-    from mani_skill.examples.motionplanning.dual.validate_curobo_payload import state_digest
+    from .runtime_io import state_digest
     _require(type(arm_index) is int and arm_index in (0, 1), 'Canonical physical arm0/1 required')
     _require(len(raw.agent.agents) == 2 and raw.num_envs == 1 and not raw.gpu_sim_enabled,
              'One actual CPU TIG physical Panda pair required')

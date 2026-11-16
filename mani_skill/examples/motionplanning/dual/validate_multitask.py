@@ -36,13 +36,11 @@ EVIDENCE = ROOT / 'infrastructure/validation/dual-arm/m1-multitask-20261116'
 TASKS = ('TwoRobotPickAppleBananaToBaskets-v1','TwoRobotPickPillToRegions-v1','TwoRobotPickFruitsToPlate-v1')
 
 
-class ControlledTermination(RuntimeError):
-    """External stop that unwinds native_run and preserves its partial evidence."""
+# Compatibility exports: implementations live in shared runtime modules.
+from .runtime_io import (ControlledTermination, termination_handler)
 
 
-def termination_handler(signum: int, frame: Any) -> None:
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)
-    raise ControlledTermination(f'External signal {signum}; finalize partial episode')
+
 
 
 def termination_self_test() -> None:

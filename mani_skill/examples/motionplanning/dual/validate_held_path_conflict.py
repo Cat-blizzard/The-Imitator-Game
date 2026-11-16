@@ -35,16 +35,11 @@ ACTOR_NAMES=('apple_out','banana_out')
 RESERVE_SETTLE, FINAL_HOVER, TERMINAL_MARGIN = 5,20,1
 
 
-def physical_contact_points(points: Any) -> bool:
-    return any(p['separation_m']<=0 or any(x!=0 for x in p['impulse_Ns']) for p in points)
+# Compatibility exports: implementations live in shared runtime modules.
+from .physical_observation import (physical_contact_points, classify_interarm_contacts)
 
 
-def classify_interarm_contacts(rows: list[dict[str,Any]]) -> list[dict[str,Any]]:
-    for row in rows:
-        actual=physical_contact_points(row['points'])
-        row.update(physical_contact=actual,
-            positive_separation_zero_impulse_proximity=bool(row['points']) and not actual)
-    return rows
+
 
 
 def object_contact_rows(contacts: Any, identities: dict[Any,dict[str,Any]],

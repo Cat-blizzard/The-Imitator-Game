@@ -22,61 +22,18 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(__file__).resolve().parents[7]
-TASK = "TwoRobotPickAppleBananaToBaskets-v1"
+# Compatibility exports: implementations live in shared runtime modules.
+from .runtime_io import (json_value, recording_summary, save_report)
+from .task_targets import (TASK, grasp_poses)
 
 
-def json_value(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {str(k): json_value(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [json_value(v) for v in value]
-    if hasattr(value, "detach"):
-        value = value.detach().cpu().numpy()
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    return value
 
 
-def save_report(path: Path, report: dict[str, Any]) -> None:
-    path.write_text(json.dumps(json_value(report), indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
-def grasp_poses(raw: Any) -> tuple[Any, Any]:
-    """Reuse the task solution's OBB grasp and 8 cm pregrasp offset."""
-    import sapien
-    from mani_skill.examples.motionplanning.panda.utils import compute_grasp_info_by_obb, get_actor_obb
-    from .trajectory_execution import as_numpy
-    closing = as_numpy(raw.left_agent.tcp.pose.to_transformation_matrix())[0, :3, 1]
-    info = compute_grasp_info_by_obb(get_actor_obb(raw.apple_out), approaching=np.array([0, 0, -1]),
-                                   target_closing=closing, depth=.025)
-    grasp = raw.left_agent.build_grasp_pose(np.array([0, 0, -1]), info["closing"], info["center"])
-    return grasp * sapien.Pose([0, 0, -.08]), grasp
 
 
-def recording_summary(path: Path, expected_steps: int,
-                      expected_actions: np.ndarray | None = None) -> dict[str, Any]:
-    import h5py
-    with h5py.File(path, "r") as h5:
-        if expected_steps == 0:
-            return {"path": str(path), "recorded_steps": 0}
-        group = h5["traj_0"]
-        lengths: dict[str, int] = {}
-        group.visititems(lambda name, obj: lengths.update({name: len(obj)})
-                         if isinstance(obj, h5py.Dataset) else None)
-        actions = group["actions"][()]
-        states = {k: n for k, n in lengths.items() if k.startswith("env_states/")}
-        if actions.shape != (expected_steps, 16) or not np.isfinite(actions).all() or not states or any(
-                n != expected_steps + 1 for n in states.values()):
-            raise RuntimeError(f"Recording lengths disagree with actual steps: {lengths}")
-        if expected_actions is not None and (expected_actions.shape != actions.shape or
-                not np.allclose(actions, expected_actions, rtol=0, atol=1e-7)):
-            raise RuntimeError("Recorded arm action order/values differ from submitted actions")
-        return {"path": str(path), "recorded_steps": expected_steps,
-                "actions_shape": list(actions.shape), "submitted_actions_matched": expected_actions is not None,
-                "state_lengths": states,
-                "state_playback_tested": False}
+
 
 
 def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any]) -> None:

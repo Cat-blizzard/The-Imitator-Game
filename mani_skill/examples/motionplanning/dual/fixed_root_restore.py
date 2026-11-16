@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 
 from .sync_replay_metrics import LEAVES
-from .validate_sync_replay import batch_state, unbatch_state
+from .replay_support import batch_state, unbatch_state
 
 
 def restore_fixed_roots(raw: Any, state: dict[str, Any]) -> dict[str, Any]:

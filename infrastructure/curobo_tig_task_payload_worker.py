@@ -25,14 +25,24 @@ import traceback
 from typing import Any, Callable, TextIO
 import xml.etree.ElementTree as ET
 
-from curobo_tig_fast_payload_worker import FastPayloadBackend
-from curobo_tig_payload_worker import (
-    PAYLOAD_LINK, FINGER_LINKS, SOURCE_TABLE, PayloadSessionManager, SessionManager,
-    _finite_json, canonical_hash, robot_topology, world_topology,
-    self_test as legacy_self_test, validate_model, validate_request as legacy_validate_request,
-    validate_state,
-)
-from curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _vector, _tensor_json
+if __package__:
+    from .curobo_tig_fast_payload_worker import FastPayloadBackend
+    from .curobo_tig_payload_worker import (
+        PAYLOAD_LINK, FINGER_LINKS, SOURCE_TABLE, PayloadSessionManager, SessionManager,
+        _finite_json, canonical_hash, robot_topology, world_topology,
+        self_test as legacy_self_test, validate_model, validate_request as legacy_validate_request,
+        validate_state,
+    )
+    from .curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _vector, _tensor_json
+else:
+    from curobo_tig_fast_payload_worker import FastPayloadBackend
+    from curobo_tig_payload_worker import (
+        PAYLOAD_LINK, FINGER_LINKS, SOURCE_TABLE, PayloadSessionManager, SessionManager,
+        _finite_json, canonical_hash, robot_topology, world_topology,
+        self_test as legacy_self_test, validate_model, validate_request as legacy_validate_request,
+        validate_state,
+    )
+    from curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _vector, _tensor_json
 
 TASK_IDS = ("TwoRobotPickAppleBananaToBaskets-v1", "TwoRobotPickPillToRegions-v1", "TwoRobotPickFruitsToPlate-v1")
 TASK_ALIASES = dict(zip(("apple-banana", "pill", "fruits"), TASK_IDS))

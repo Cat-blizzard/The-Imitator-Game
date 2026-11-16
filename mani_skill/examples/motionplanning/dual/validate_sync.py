@@ -31,30 +31,12 @@ ROOT = Path(__file__).resolve().parents[7]
 ACTOR_NAMES = ("apple_out", "banana_out")
 
 
-def continue_success_only(terminated: Any, truncated: Any, info: dict[str, Any]) -> tuple[bool, bool]:
-    """Return executor done signal and whether native success was continued."""
-    def flag(value: Any) -> bool:
-        array = np.asarray(json_value(value))
-        if array.size != 1 or not np.isfinite(array).all() or not np.isin(array, [0, 1]).all():
-            raise ValueError("Expected one boolean signal")
-        return bool(array.reshape(-1)[0])
-    done, timeout = flag(terminated), flag(truncated)
-    continued = bool(done and not timeout and flag(info.get("success", False)) and not flag(info.get("fail", False)))
-    return bool(done and not continued), continued
+# Compatibility exports: implementations live in shared runtime modules.
+from .physical_observation import (applied_action, continue_success_only, held_substep_audit)
+from .task_targets import (physical_region, collision_vertex_region)
 
 
-def applied_action(action: dict[str, Any], *, mode: str, phase: str,
-                   keys: list[str]) -> tuple[dict[str, np.ndarray], bool]:
-    """Negative control changes only the right release gripper command."""
-    if mode not in ("positive", "retain-right") or len(keys) != 2 or set(action) != set(keys):
-        raise ValueError("Expected two canonical actions and an explicit mode")
-    actual = {key: np.asarray(action[key], dtype=np.float32).copy() for key in keys}
-    if any(a.shape != (8,) or not np.isfinite(a).all() for a in actual.values()):
-        raise ValueError("Each action must have eight finite values")
-    inject = bool(mode == "retain-right" and phase == "release" and actual[keys[1]][-1] == 1)
-    if inject:
-        actual[keys[1]][-1] = -1
-    return actual, inject
+
 
 
 def retain_right_valid(result: dict[str, Any], ticks: list[dict[str, Any]], keys: list[str]) -> bool:
@@ -76,75 +58,10 @@ def retain_right_valid(result: dict[str, Any], ticks: list[dict[str, Any]], keys
                 and not last["objects"][0]["is_grasping"])
 
 
-def physical_region(center: Any, basket_bounds: Any, object_bounds: Any) -> dict[str, Any]:
-    """Conservative full XY containment, center height, and no below-floor pose."""
-    center, basket, obj = map(lambda x: np.asarray(x, dtype=float), (center, basket_bounds, object_bounds))
-    if center.shape != (3,) or basket.shape != (2, 3) or obj.shape != (2, 3) or not all(
-            np.isfinite(x).all() for x in (center, basket, obj)):
-        raise ValueError("Expected finite center[3] and ordered AABBs[2,3]")
-    if np.any(basket[0] > basket[1]) or np.any(obj[0] > obj[1]):
-        raise ValueError("AABB endpoints must be ordered")
-    lo, hi = basket
-    xy = bool(np.all(obj[0, :2] >= lo[:2] - .002) and np.all(obj[1, :2] <= hi[:2] + .002))
-    inside = bool(xy and np.all(center[:2] >= lo[:2]) and np.all(center[:2] <= hi[:2])
-                  and lo[2] - .005 <= center[2] <= hi[2] + .01 and obj[0, 2] >= lo[2] - .005)
-    return {"inside": inside, "object_geom_center_m": center.tolist(), "basket_aabb_m": basket.tolist(),
-            "object_aabb_m": obj.tolist(), "object_xy_contained": xy,
-            "object_fully_below_rim": bool(obj[1, 2] <= hi[2]),
-            "center_z_range_m": [float(lo[2] - .005), float(hi[2] + .01)]}
 
 
-def collision_vertex_region(object_vertices: Any, object_pose: Any,
-                            basket_vertices: Any, basket_pose: Any) -> dict[str, Any]:
-    """Apply the existing region gates to tight actual collision-mesh bounds.
-
-    Vertices are complete actor-local collision meshes, finite [N,3]/[M,3]
-    metres; poses are finite XYZ/WXYZ[7]. Transform every vertex before taking
-    world min/max, rather than rotating eight corners of a local AABB. The
-    geometric centre keeps its existing definition: the local collision AABB
-    midpoint transformed by the current actor pose, not the world AABB centre.
-    No containment tolerance or below-rim requirement changes here.
-    """
-    meshes = [np.asarray(value, dtype=np.float64) for value in (object_vertices, basket_vertices)]
-    if any(vertices.ndim != 2 or vertices.shape[1:] != (3,) or not len(vertices)
-           or not np.isfinite(vertices).all() for vertices in meshes):
-        raise ValueError("Expected complete finite local collision vertices[N,3]")
-    transforms = [pose_matrix(value) for value in (object_pose, basket_pose)]
-    worlds = [vertices @ transform[:3, :3].T + transform[:3, 3]
-              for vertices, transform in zip(meshes, transforms)]
-    if not all(np.isfinite(vertices).all() for vertices in worlds):
-        raise ValueError("Transformed collision vertices must remain finite")
-    bounds = [np.stack([vertices.min(axis=0), vertices.max(axis=0)]) for vertices in worlds]
-    local_center = (meshes[0].min(axis=0) + meshes[0].max(axis=0)) / 2
-    center = local_center @ transforms[0][:3, :3].T + transforms[0][:3, 3]
-    return physical_region(center, bounds[1], bounds[0])
 
 
-def held_substep_audit(rows: list[dict[str, Any]], references: Any, *, policy: Any = None,
-                       target_names: Any = None) -> dict[str, Any]:
-    from .lift_execution import _rotation_distance
-    from .runtime_policy import LEGACY_STRICT, RuntimePolicy
-    policy = LEGACY_STRICT if policy is None else policy
-    if not isinstance(policy, RuntimePolicy):
-        raise ValueError('A validated runtime policy is required')
-    names = ACTOR_NAMES if target_names is None else tuple(target_names)
-    if len(names) != 2 or len(set(names)) != 2:
-        raise ValueError('Two canonical target names required')
-    held = [r for r in rows if r["phase"] == "lift_and_hold" or r["phase"].startswith("carry_")]
-    refs = np.asarray(references, dtype=float)
-    if not held or refs.shape != (2, 4, 4) or not np.isfinite(refs).all():
-        raise ValueError("Need paired actual attachment transforms and held substeps")
-    objects = []
-    for i, name in enumerate(names):
-        dp, dr = [], []
-        for row in held:
-            pose = np.linalg.inv(pose_matrix(row["tcp_poses"][i])) @ pose_matrix(row["object_poses"][i])
-            dp.append(float(np.linalg.norm(pose[:3, 3] - refs[i, :3, 3])))
-            dr.append(_rotation_distance(refs[i, :3, :3], pose[:3, :3]))
-        objects.append({"actor": name, "max_position_slip_m": max(dp), "max_rotation_slip_rad": max(dr)})
-    return {"status": "passed" if all(o["max_position_slip_m"] <= policy.position_slip_m and o["max_rotation_slip_rad"] <= policy.rotation_slip_rad for o in objects) else "failed",
-            "physical_substeps": len(held), "objects": objects, "position_limit_m": policy.position_slip_m, "rotation_limit_rad": policy.rotation_slip_rad,
-            "scope": "both actual grasp-relative physical poses at100Hz; not collision checking orCCD"}
 
 
 def hold_joint_substep_audit(rows: list[dict[str, Any]], control_steps: list[int]) -> dict[str, Any]:

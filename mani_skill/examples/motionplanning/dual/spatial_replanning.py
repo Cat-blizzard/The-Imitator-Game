@@ -26,8 +26,8 @@ from .held_conflict_fixture import _context
 from .grasp_collision import _signature
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
 from .trajectory_execution import as_numpy
-from .validate_grasp import json_value
-from .validate_sync_compact import compact_retime_pair, compact_topp_reconstruction, compact_phase_limits, compact_set_phase_limits, compact_kinematic_audit
+from .runtime_io import json_value
+from .phase_kinematics import compact_retime_pair, compact_topp_reconstruction, compact_phase_limits, compact_set_phase_limits, compact_kinematic_audit
 
 DT = .05
 DELAY_TICKS = tuple(range(0,41,5))

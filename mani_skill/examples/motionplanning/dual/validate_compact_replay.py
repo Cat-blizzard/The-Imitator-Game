@@ -34,32 +34,13 @@ DEFAULT_INPUT = ROOT / "infrastructure/validation/dual-arm/sync-positive-2026111
 ACTORS = ("apple_out", "banana_out")
 
 
-def unbatch_state(value: Any) -> Any:
-    from .trajectory_execution import as_numpy
-    if isinstance(value, dict): return {key: unbatch_state(v) for key, v in value.items()}
-    array = as_numpy(value)
-    if array.ndim != 2 or array.shape[0] != 1 or not np.isfinite(array).all():
-        raise ValueError("Expected one finite batched recorded-state leaf")
-    return array[0].copy()
+# Compatibility exports: implementations live in shared runtime modules.
+from .replay_support import (unbatch_state, batch_state, replay_signal)
 
 
-def batch_state(value: Any) -> Any:
-    return {key: batch_state(v) for key, v in value.items()} if isinstance(value, dict) else np.asarray(value)[None].copy()
 
 
-def replay_signal(terminated: Any, truncated: Any, info: dict[str, Any]) -> dict[str, bool]:
-    """Keep native signals and reject any non-success end of the episode."""
-    def flag(value: Any) -> bool:
-        a = np.asarray(json_value(value))
-        if a.size != 1 or not np.isfinite(a).all() or not np.isin(a, [0, 1]).all():
-            raise ValueError("Expected a single boolean signal")
-        return bool(a.reshape(-1)[0])
-    done, continued = continue_success_only(terminated, truncated, info)
-    signal = {"success": flag(info.get("success", False)), "terminated": flag(terminated),
-              "truncated": flag(truncated), "fail": flag(info.get("fail", False)),
-              "success_only_termination_continued": continued}
-    signal["unexpected_end"] = bool(done or signal["truncated"] or signal["fail"])
-    return signal
+
 
 
 def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path, report: dict[str, Any]) -> None:

@@ -224,7 +224,7 @@ def _scene_content(raw: Any) -> tuple[dict[str,Any],dict[str,Any]]:
 
 def export_initial_scene_manifest(raw: Any) -> dict[str, Any]:
     """Read a complete, repeatable initial snapshot; input elapsed_steps must be [0]."""
-    from .validate_curobo_payload import state_digest
+    from .runtime_io import state_digest
     elapsed_before = _single(raw.elapsed_steps,1,'initial elapsed step')
     if elapsed_before[0] != 0:
         raise ValueError('Complete initial scene must be recorded before any environment step')

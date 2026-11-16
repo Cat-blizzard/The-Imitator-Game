@@ -26,53 +26,15 @@ from .validate_grasp import TASK, json_value, save_report
 HERE = Path(__file__).resolve().parent
 ROOT = Path(__file__).resolve().parents[7]
 DEFAULT_INPUT = ROOT / "infrastructure/validation/dual-arm/place-positive-20261115T124829247240Z"
-STATE_LIMITS = {"pose_translation_m": 1e-6, "pose_rotation_rad": 1e-5,
-                "linear_velocity_m_s": 1e-5, "angular_velocity_rad_s": 1e-4,
-                "arm_joint_max_rad": 1e-6, "finger_max_m": 1e-7, "joint_velocity_max": 1e-5}
-ACTION_LIMITS = {"pose_translation_m": .005, "pose_rotation_rad": .05,
-                 "arm_joint_max_rad": .01, "finger_max_m": .002}
+# Compatibility exports: implementations live in shared runtime modules.
+from .replay_support import (STATE_LIMITS, ACTION_LIMITS, split_action, replay_sequence, within_limits)
 
 
-def split_action(row: Any, keys: list[str]) -> dict[str, np.ndarray]:
-    values = np.asarray(row, dtype=np.float32)
-    if len(keys) != 2 or len(set(keys)) != 2 or values.shape != (16,) or not np.isfinite(values).all():
-        raise ValueError("Expected two distinct ordered keys and one finite 16-value action")
-    if not np.isin(values[[7, 15]], [-1, 1]).all():
-        raise ValueError("This fixed-gripper recording requires OPEN/CLOSED commands")
-    return {key: values[index * 8:(index + 1) * 8].copy() for index, key in enumerate(keys)}
 
 
-def replay_sequence(recording: dict[str, Any], mode: str, *,
-                    restore: Callable[[int, dict[str, Any]], None],
-                    step: Callable[[dict[str, np.ndarray]], None],
-                    observe: Callable[[int], None]) -> dict[str, int]:
-    """Keep state-setting and physical stepping separate, including frame zero."""
-    if mode not in ("state", "action"):
-        raise ValueError("Unknown replay mode")
-    states, actions = recording["states"], recording["actions"]
-    if len(states) != len(actions) + 1 or not len(actions):
-        raise ValueError("Replay requires T actions and T+1 states")
-    resets, steps = 0, 0
-    if mode == "state":
-        for index, state in enumerate(states):
-            restore(index, state)
-            resets += 1
-            observe(index)
-    else:
-        restore(0, states[0])
-        resets += 1
-        observe(0)
-        for index, action in enumerate(actions, start=1):
-            step(split_action(action, recording["action_keys"]))
-            steps += 1
-            observe(index)
-    return {"state_restore_calls": resets, "physical_environment_steps": steps,
-            "observed_frames": len(states)}
 
 
-def within_limits(maxima: dict[str, Any], limits: dict[str, float]) -> bool:
-    return all(name in maxima and np.isfinite(maxima[name]) and 0 <= maxima[name] <= limit
-               for name, limit in limits.items())
+
 
 
 def action_outcome(rows: list[dict[str, Any]]) -> dict[str, Any]:

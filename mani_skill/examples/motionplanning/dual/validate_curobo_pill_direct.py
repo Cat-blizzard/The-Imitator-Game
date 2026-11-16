@@ -33,7 +33,9 @@ ROOT = next(p for p in Path(__file__).resolve().parents
 DEV = ROOT / "infrastructure/development/tig-dual-arm"
 if str(DEV) not in sys.path:
     sys.path.insert(0, str(DEV))
-PILL = "TwoRobotPickPillToRegions-v1"
+# Compatibility exports: implementations live in shared runtime modules.
+from .transport_recipes import (PILL, _finite, _true_pair, pill_direct_transport_recipe)
+
 RECIPE = "pill-direct-release-v1"
 EVIDENCE = ROOT / "infrastructure/validation/dual-arm/curobo-complete-20261116"
 RUNNER = DEV / "mani_skill/examples/motionplanning/dual/validate_curobo_complete.py"
@@ -60,34 +62,10 @@ LOOP_NEW = """        transport_stages = (('carry_orient_and_transport',route['a
 """
 
 
-def _finite(value: Any, shape: tuple[int, ...], label: str) -> np.ndarray:
-    result = np.asarray(value, dtype=np.float64)
-    if result.shape != shape or not np.isfinite(result).all():
-        raise ValueError(f"Expected finite {label}{shape}")
-    return result
 
 
-def _true_pair(value: Any, label: str) -> None:
-    if not isinstance(value, (tuple, list)) or len(value) != 2 or any(v is not True for v in value):
-        raise ValueError(f"Both measured {label} must be boolean True")
 
 
-def pill_direct_transport_recipe(task_id: str, route: dict[str, Any],
-                                 source_departure: dict[str, Any]) -> tuple[tuple[str, np.ndarray], ...]:
-    """Select one finite world-frame [2,3] release target, without side effects.
-
-    The shared caller has already completed its physical grasp, >=10cm lift,
-    geometric source departure and100Hz physical departure barriers. This
-    selector additionally rejects absent/nonboolean measured departure. It
-    cannot alter quaternions, limits, collision permissions or the physical tail.
-    """
-    if task_id != PILL:
-        raise ValueError("Direct-release transport is confined to the pill task")
-    if not isinstance(route, dict) or not isinstance(source_departure, dict):
-        raise ValueError("Actual route and measured source-departure mappings required")
-    _true_pair(source_departure.get("effective_measured_departure"), "geometric source departure")
-    release = _finite(route.get("release"), (2, 3), "original release XYZ")
-    return (("carry_lower", release.copy()),)
 
 
 def _validated_saved_fixture(*, args: argparse.Namespace, route: dict[str, Any],

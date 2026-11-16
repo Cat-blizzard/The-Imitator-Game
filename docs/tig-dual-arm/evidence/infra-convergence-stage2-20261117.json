@@ -1,0 +1,537 @@
+{
+  "schema": "tig-infra-convergence-stage2-release-v1",
+  "recorded_at": "2026-11-16T21:42:00.731021+00:00",
+  "status": "runtime_module_and_portability_checkpoint_passed; remaining convergence stages pending",
+  "scope": "Engineering checkpoint and representative regression; no benchmark rescore or backend performance ranking",
+  "evidence_layout": {
+    "bundle_id": "infra-convergence-20261117",
+    "bundle_path_base": "external local evidence bundle; relative paths below refer to its root",
+    "public_contents": "Selected outcomes, relative code/evidence paths and original file SHA256 only",
+    "local_absolute_paths_and_gpu_identities_included": false,
+    "full_logs_trajectories_videos_assets_or_environments_included": false
+  },
+  "source_range": {
+    "base_commit": "cef4ccf2475102432954ae4a4e6ec38955eed482",
+    "structural_checkpoint_commit": "7e8bae2acd12df2d8f8f8a18e2c7924648d23a96",
+    "commits": [
+      {
+        "commit": "61f26ffafecdbe6d325a439346a8409993a9387f",
+        "purpose": "Record observed replay frequencies and phase-entry lift measurements"
+      },
+      {
+        "commit": "542ba5c721ff620f8c559ead314b5112bb923351",
+        "purpose": "Resolve checkout-owned workers and explicit dependency paths"
+      },
+      {
+        "commit": "3e232445880eb73dcb0b1016ea80aa4928142844",
+        "purpose": "Extract runtime helpers and retain validator compatibility exports"
+      },
+      {
+        "commit": "7e8bae2acd12df2d8f8f8a18e2c7924648d23a96",
+        "purpose": "Wire generation and replay to the runtime modules"
+      }
+    ],
+    "changed_files": 52,
+    "file_types": [
+      ".py"
+    ]
+  },
+  "cpu_validation": {
+    "status": "passed",
+    "physics_steps": 0,
+    "integration_modules": 34,
+    "runtime_helper_modules": 6,
+    "integration_summary": {
+      "bundle_path": "cpu/stage2-summary.json",
+      "sha256": "bff08040670580edfea459b33877d5063749452bd0f2d8e24ef6880b9e88cd1d"
+    },
+    "helper_receipt": {
+      "bundle_path": "candidates/stage2-wiring-v2/production-helper-selftests.json",
+      "sha256": "9c24b99cf684e5110af2e2d493fdb92708eb5af06510f3feba471ea048e8ec12"
+    },
+    "compatibility_exports": {
+      "count": 57,
+      "same_objects": true,
+      "receipt": {
+        "bundle_path": "candidates/stage2-wiring-v2/production-compatibility-cpu-probe.json",
+        "sha256": "aafae9ffa9f7167133632868e0393818ffa456f35e39b272b4fdd34437416a14"
+      }
+    },
+    "worker_startup": {
+      "status": "passed",
+      "real_worker_subprocesses": 18,
+      "native_configure_init_fk_plan_requests": 0,
+      "receipt": {
+        "bundle_path": "logs/worker-path-production-receipt.json",
+        "sha256": "9843bbeed6fe557cebb85b0133f6ce8dc8a3e83a8ae5a589b1a6843fd91fe132"
+      }
+    },
+    "independent_imports": {
+      "status": "passed",
+      "project_modules": 278,
+      "all_belong_to_selected_checkout": true,
+      "receipt": {
+        "bundle_path": "logs/stage2-independent-import-probe.json",
+        "sha256": "e854f329ecbf9aecec478bc269c05fa3055b08618237bce156461aa71029b316"
+      }
+    },
+    "preserved_first_failures": {
+      "modules": [
+        "curobo_payload_refinement",
+        "curobo_payload_refinement_v2"
+      ],
+      "reason": "Missing sys import in refinement self-tests; corrected final runs passed",
+      "first_attempt": {
+        "bundle_path": "cpu/stage2-integration.json",
+        "sha256": "89c5892901e6cedf8ec19482a39c5a3e2a112cb41a5891ac4beaa2dff6026ac5"
+      },
+      "repair_attempt": {
+        "bundle_path": "cpu/stage2-integration-attempt02.json",
+        "sha256": "cd61325f21ff3816546c0faf6d1a81250b316abaebd36c60d77cb2b0674e884e"
+      }
+    }
+  },
+  "stage1": {
+    "status": "passed",
+    "scope": "stage1 implementation and one-task physical regression; final multi-task regression remains stage5",
+    "task": "TwoRobotPickPillToRegions-v1",
+    "seed": 401,
+    "backend": "mplib",
+    "cases": [
+      {
+        "kind": "native",
+        "steps": 171,
+        "result_statuses": {
+          "official": "passed",
+          "physics": "passed",
+          "quality": "passed",
+          "recording": "passed"
+        },
+        "replay_mode": null,
+        "report": {
+          "bundle_path": "native/phase1-mplib-pill-s401/report.json",
+          "sha256": "2d26145e3f61a978c116167e94bdb2ab48f9ae9b6b153a22b87dc9b4e8dde4e0"
+        },
+        "receipt": {
+          "bundle_path": "logs/phase1-mplib-pill-s401-receipt.json",
+          "sha256": "93cb6a673be9fe04e1faceeed5b5a2b66dc6f5767d13e4ac8aabac1635f159d7"
+        }
+      },
+      {
+        "kind": "strict_replay",
+        "steps": 171,
+        "result_statuses": {
+          "official": "passed",
+          "physics": "passed",
+          "quality": "passed",
+          "recording": "passed"
+        },
+        "replay_mode": "strict",
+        "report": {
+          "bundle_path": "replay/phase1-strict-mplib-pill-s401-v2/report.json",
+          "sha256": "61b73fad83a805b2281476ee80cb5c360e97c7998197c46db5953555e710e822"
+        },
+        "receipt": {
+          "bundle_path": "logs/phase1-strict-mplib-pill-s401-v2-receipt.json",
+          "sha256": "c568172d66ffa2232dd048d6d00a3fc0f0e434990e6ca9f08236fe79284f21b1"
+        }
+      },
+      {
+        "kind": "cross_version_replay",
+        "steps": 171,
+        "result_statuses": {
+          "official": "passed",
+          "physics": "passed",
+          "quality": "passed",
+          "recording": "passed"
+        },
+        "replay_mode": "cross-version",
+        "report": {
+          "bundle_path": "replay/phase1-cross-mplib-pill-s401-v2/report.json",
+          "sha256": "9f84d2dd15051ea1ea093fba934f3c49bb6193cc5db093bcfc30910dbaa0c763"
+        },
+        "receipt": {
+          "bundle_path": "logs/phase1-cross-mplib-pill-s401-v2-receipt.json",
+          "sha256": "57e2197d608f0470db808c3a23fad7d9488aa1a92089f0689d27ff58d61e538a"
+        }
+      }
+    ],
+    "legacy_equivalence": {
+      "scope": "MPLib pill seed401 legacy-default native generation only",
+      "old_report_sha256": "651bad3908cb44c1a05334c34868fb666bdc8845e2b090abb07a5e5c8081b2c1",
+      "new_report_sha256": "2d26145e3f61a978c116167e94bdb2ab48f9ae9b6b153a22b87dc9b4e8dde4e0",
+      "action_shape": [
+        171,
+        16
+      ],
+      "actions_exact": true,
+      "action_max_abs_error": 0.0,
+      "all_state_leaves_exact": true,
+      "evidence": {
+        "bundle_path": "logs/phase1-legacy-equivalence.json",
+        "sha256": "e331f2fdd0ca43d4f41fa977131f2d55156109d51ec7dd0087a46d91b856bae1"
+      }
+    },
+    "historical_inputs_or_scores_changed": false
+  },
+  "stage2_first_attempt": {
+    "commit": "7e8bae2acd12df2d8f8f8a18e2c7924648d23a96",
+    "status": "failed_as_four_case_acceptance",
+    "planner_seed": 0,
+    "protocol": {
+      "bundle_path": "protocol-stage2-structural-regression.json",
+      "sha256": "68027922c31e3faea0c078b1ca8c2da5e07e12e70f40525c60628ba648f167e0"
+    },
+    "summary": {
+      "bundle_path": "stage2-structural-regression.json",
+      "sha256": "1900c8981937dd2b40dd7862f36166e400fc3a0c0fa6f76e885e885bb8d425d8"
+    },
+    "cases": [
+      {
+        "case": "stage2-curobo-apple-s1003",
+        "task": "TwoRobotPickAppleBananaToBaskets-v1",
+        "seed": 1003,
+        "backend": "curobo",
+        "native": {
+          "status": "failed",
+          "exit_code": 1,
+          "steps": 10,
+          "result_statuses": {
+            "official": "failed",
+            "physics": "passed",
+            "quality": "unknown",
+            "recording": "passed"
+          },
+          "error_type": "IndexError",
+          "error": "7",
+          "report": {
+            "bundle_path": "native/stage2-curobo-apple-s1003/report.json",
+            "sha256": "a38cc91a6317fdd94f6b8e7de4ee17e775cbe03f0a818a45e3330ded09824a79"
+          },
+          "error_origin": {
+            "code_path": "mani_skill/examples/motionplanning/dual/curobo_scene.py",
+            "function": "_independent_finger_urdf",
+            "expression": "Path(__file__).resolve().parents[7]",
+            "line_at_7e8bae2": 327
+          }
+        },
+        "strict_replay": {
+          "status": "NOT_RUN",
+          "reason": "native first attempt failed; original evidence preserved"
+        }
+      },
+      {
+        "case": "stage2-curobo-apple-s1004",
+        "task": "TwoRobotPickAppleBananaToBaskets-v1",
+        "seed": 1004,
+        "backend": "curobo",
+        "native": {
+          "status": "failed",
+          "exit_code": 1,
+          "steps": 10,
+          "result_statuses": {
+            "official": "failed",
+            "physics": "passed",
+            "quality": "unknown",
+            "recording": "passed"
+          },
+          "error_type": "IndexError",
+          "error": "7",
+          "report": {
+            "bundle_path": "native/stage2-curobo-apple-s1004/report.json",
+            "sha256": "d7d132e3c51113ffc4888cd58ab052faf0ea8e03d133c89090ecb9dd1c14fbf6"
+          },
+          "error_origin": {
+            "code_path": "mani_skill/examples/motionplanning/dual/curobo_scene.py",
+            "function": "_independent_finger_urdf",
+            "expression": "Path(__file__).resolve().parents[7]",
+            "line_at_7e8bae2": 327
+          }
+        },
+        "strict_replay": {
+          "status": "NOT_RUN",
+          "reason": "native first attempt failed; original evidence preserved"
+        }
+      },
+      {
+        "case": "stage2-curobo-pill-s401",
+        "task": "TwoRobotPickPillToRegions-v1",
+        "seed": 401,
+        "backend": "curobo",
+        "native": {
+          "status": "failed",
+          "exit_code": 1,
+          "steps": 10,
+          "result_statuses": {
+            "official": "failed",
+            "physics": "passed",
+            "quality": "unknown",
+            "recording": "passed"
+          },
+          "error_type": "IndexError",
+          "error": "7",
+          "report": {
+            "bundle_path": "native/stage2-curobo-pill-s401/report.json",
+            "sha256": "c24550c6345d5f0eec7d44545f5165ae0ded17f6bd86e3c7681ce41c57e2afc8"
+          },
+          "error_origin": {
+            "code_path": "mani_skill/examples/motionplanning/dual/curobo_scene.py",
+            "function": "_independent_finger_urdf",
+            "expression": "Path(__file__).resolve().parents[7]",
+            "line_at_7e8bae2": 327
+          }
+        },
+        "strict_replay": {
+          "status": "NOT_RUN",
+          "reason": "native first attempt failed; original evidence preserved"
+        }
+      },
+      {
+        "case": "stage2-mplib-pill-s401",
+        "task": "TwoRobotPickPillToRegions-v1",
+        "seed": 401,
+        "backend": "mplib",
+        "native": {
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 171,
+          "result_statuses": {
+            "official": "passed",
+            "physics": "passed",
+            "quality": "passed",
+            "recording": "passed"
+          },
+          "error_type": null,
+          "error": null,
+          "report": {
+            "bundle_path": "native/stage2-mplib-pill-s401/report.json",
+            "sha256": "059684b8f244a0e40d2f6d2b6cc83fd1dbfd08273a32e7b82e865bcd0a554890"
+          },
+          "receipt": {
+            "bundle_path": "logs/native-stage2-mplib-pill-s401-receipt.json",
+            "sha256": "3caa66b1bb3b1f6413dbf1e2e1729405080e453dc57232a4b578855608907554"
+          }
+        },
+        "strict_replay": {
+          "status": "passed",
+          "exit_code": 0,
+          "actions": 171,
+          "state_frames": 172,
+          "result_statuses": {
+            "official": "passed",
+            "physics": "passed",
+            "quality": "passed",
+            "recording": "passed"
+          },
+          "report": {
+            "bundle_path": "replay/stage2-mplib-pill-s401/report.json",
+            "sha256": "00dc5152878b9af2cddf73412b64e30147c91ff9760371ac886b1d7af84ae5c5"
+          },
+          "receipt": {
+            "bundle_path": "logs/replay-stage2-mplib-pill-s401-receipt.json",
+            "sha256": "5660d3ed1707d35d6f9f56f7628ea41cd1addb20a74d6296533c3b96aa9dfb96"
+          }
+        }
+      }
+    ]
+  },
+  "path_fix": {
+    "commit": "28f68a93f740956d8018d7e4ec4ae3dc7f05ec6f",
+    "code": {
+      "code_path": "mani_skill/examples/motionplanning/dual/curobo_scene.py",
+      "sha256": "bce8f89e99a2f88d9d6a160913e9704b6d3110c6b5841f925adf4fecefdb622b"
+    },
+    "cpu_status": "passed",
+    "cpu_exit_code": 0,
+    "shallow_directory_cases": 5,
+    "derived_urdf_bytes_match_original_algorithm": true,
+    "cpu_receipt": {
+      "bundle_path": "logs/derived-urdf-path-cpu-receipt.json",
+      "sha256": "4731f052d4cc2802c47b73ea0bb3fe015b16fc95d44eeb1c8717374c68f076cd"
+    },
+    "native_and_strict_replay_regression": {
+      "status": "passed",
+      "final_outcome": "all three native and strict action replay cases passed; initial failed attempt preserved",
+      "scope": "same three cuRobo tasks, seeds, planner seed and recipes as first attempt",
+      "protocol": {
+        "bundle_path": "protocol-stage2-pathfix-regression.json",
+        "sha256": "a15ea98763be3f1887c7c0c9e4c28533dae6bf4c1dc69894557cbdb849b1dec4"
+      },
+      "source_manifest_correction": {
+        "bundle_path": "protocol-stage2-pathfix-source-correction.json",
+        "sha256": "07d720968ebd403bb3fa29bb2e7e566e2462c83e66525bba256435341b4c262f"
+      },
+      "source_identity_authority": "Actual per-run harness source_before/source_after manifests match, with clean Git identity at 28f68a9",
+      "copied_protocol_manifest_issue": "Original protocol retained; copied source_sha256 had the previous curobo_scene hash. Separate correction records the actual runner source manifest; execution arguments unchanged.",
+      "summary": {
+        "bundle_path": "stage2-pathfix-regression.json",
+        "sha256": "e713ab3e9d86f6b025ef6dca9e4adae8a1fd4284bcf1a3d42dc06d81807a645c"
+      },
+      "cases": [
+        {
+          "case": "stage2-pathfix-curobo-apple-s1003",
+          "code_commit": "28f68a93f740956d8018d7e4ec4ae3dc7f05ec6f",
+          "native": {
+            "status": "passed",
+            "exit_code": 0,
+            "steps": 192,
+            "result_statuses": {
+              "official": "passed",
+              "physics": "passed",
+              "quality": "passed",
+              "recording": "passed"
+            },
+            "source_unchanged": true,
+            "input_evidence_unchanged": true,
+            "report": {
+              "bundle_path": "native/stage2-pathfix-curobo-apple-s1003/report.json",
+              "sha256": "dedc7fb899707be87b87cba84b60cdc2ad0b6f6c39afbfc7e93fc9a122540009"
+            },
+            "receipt": {
+              "bundle_path": "logs/native-stage2-pathfix-curobo-apple-s1003-receipt.json",
+              "sha256": "6a25778bbcb6a6adf0ae47080657935560c8d325679f7b86a330f520ad136e9f"
+            }
+          },
+          "strict_replay": {
+            "status": "passed",
+            "exit_code": 0,
+            "steps": 192,
+            "result_statuses": {
+              "official": "passed",
+              "physics": "passed",
+              "quality": "passed",
+              "recording": "passed"
+            },
+            "source_unchanged": true,
+            "input_evidence_unchanged": true,
+            "report": {
+              "bundle_path": "replay/stage2-pathfix-curobo-apple-s1003/report.json",
+              "sha256": "8cb4cc926786c6a412de9e055653961a5bc70900f56922d411262e4f9658f9e9"
+            },
+            "receipt": {
+              "bundle_path": "logs/replay-stage2-pathfix-curobo-apple-s1003-receipt.json",
+              "sha256": "d7f7caff3c472783ea059ff2d7e199871dd85e53ced642570a65d998cc8ef04c"
+            },
+            "replay_mode": "strict",
+            "replay_checks_passed": 14,
+            "outcome_checks_passed": 9
+          }
+        },
+        {
+          "case": "stage2-pathfix-curobo-apple-s1004",
+          "code_commit": "28f68a93f740956d8018d7e4ec4ae3dc7f05ec6f",
+          "native": {
+            "status": "passed",
+            "exit_code": 0,
+            "steps": 187,
+            "result_statuses": {
+              "official": "passed",
+              "physics": "passed",
+              "quality": "passed",
+              "recording": "passed"
+            },
+            "source_unchanged": true,
+            "input_evidence_unchanged": true,
+            "report": {
+              "bundle_path": "native/stage2-pathfix-curobo-apple-s1004/report.json",
+              "sha256": "1fdd4e11ca0745398bd08e06d182754e8bea9385759336ca144813e5796f04e4"
+            },
+            "receipt": {
+              "bundle_path": "logs/native-stage2-pathfix-curobo-apple-s1004-receipt.json",
+              "sha256": "74fe493d4e31a07899abc3b5a013462d00a208fc4989b4e30da5e141040d94d1"
+            }
+          },
+          "strict_replay": {
+            "status": "passed",
+            "exit_code": 0,
+            "steps": 187,
+            "result_statuses": {
+              "official": "passed",
+              "physics": "passed",
+              "quality": "passed",
+              "recording": "passed"
+            },
+            "source_unchanged": true,
+            "input_evidence_unchanged": true,
+            "report": {
+              "bundle_path": "replay/stage2-pathfix-curobo-apple-s1004/report.json",
+              "sha256": "a1062f77bd08a4a8ae5fc82a7362e206fc7780fd1bb2d94d8555ec38184e0fcb"
+            },
+            "receipt": {
+              "bundle_path": "logs/replay-stage2-pathfix-curobo-apple-s1004-receipt.json",
+              "sha256": "07026e21a296d0383ac734b9d6cfa48469b5a7483956f52831e19a8e477cae4f"
+            },
+            "replay_mode": "strict",
+            "replay_checks_passed": 14,
+            "outcome_checks_passed": 9
+          }
+        },
+        {
+          "case": "stage2-pathfix-curobo-pill-s401",
+          "code_commit": "28f68a93f740956d8018d7e4ec4ae3dc7f05ec6f",
+          "native": {
+            "status": "passed",
+            "exit_code": 0,
+            "steps": 191,
+            "result_statuses": {
+              "official": "passed",
+              "physics": "passed",
+              "quality": "passed",
+              "recording": "passed"
+            },
+            "source_unchanged": true,
+            "input_evidence_unchanged": true,
+            "report": {
+              "bundle_path": "native/stage2-pathfix-curobo-pill-s401/report.json",
+              "sha256": "1c9bb50942a4cd991f30395c82300a7ae668672ad88acbf49d6e0142bb1e6210"
+            },
+            "receipt": {
+              "bundle_path": "logs/native-stage2-pathfix-curobo-pill-s401-receipt.json",
+              "sha256": "89d8110345a23bc1084b8cb3b4be1cc5fd6efd800b0e5032e24643d8670254c5"
+            }
+          },
+          "strict_replay": {
+            "status": "passed",
+            "exit_code": 0,
+            "steps": 191,
+            "result_statuses": {
+              "official": "passed",
+              "physics": "passed",
+              "quality": "passed",
+              "recording": "passed"
+            },
+            "source_unchanged": true,
+            "input_evidence_unchanged": true,
+            "report": {
+              "bundle_path": "replay/stage2-pathfix-curobo-pill-s401/report.json",
+              "sha256": "07baf7f984dc2c73b9c979bd85250d98fed61ef426d5c8cb6027eff5e62d65f9"
+            },
+            "receipt": {
+              "bundle_path": "logs/replay-stage2-pathfix-curobo-pill-s401-receipt.json",
+              "sha256": "d9d06b62aee120052fbbcc7b113fad71a90ad196aa0c9df60b43321c14215fce"
+            },
+            "replay_mode": "strict",
+            "replay_checks_passed": 14,
+            "outcome_checks_passed": 9
+          }
+        }
+      ]
+    }
+  },
+  "not_integrated": [
+    "new task-specific quality policy",
+    "new minimum-budget policy",
+    "lightweight versus diagnostic recording modes",
+    "stage3 trajectory-check deduplication candidate",
+    "stage3 contact-query reuse candidate"
+  ],
+  "limits": [
+    "Legacy strict numerical gates remain selected",
+    "One task/seed exact equivalence does not establish general behavioral equivalence",
+    "CPU and import checks are not native planner or physics acceptance",
+    "100Hz contact coverage is discrete observation, not continuous collision proof",
+    "Initial cuRobo failures are preserved and are not treated as actual collisions",
+    "No new unseen success rate or timing advantage is claimed",
+    "Historical reports, protocols and scores are not rewritten"
+  ]
+}

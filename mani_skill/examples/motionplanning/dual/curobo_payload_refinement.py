@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Isolated CPU candidate for the three fixed TIG tasks' payload geometry.
 
-This file is deliberately outside the runtime import tree. It accepts a complete
+The generation runner imports the fixed geometry recipe; diagnostic CLI options remain available. It accepts a complete
 actual Task snapshot and returns a deep copy. Apples keep every value unchanged.
 Pills retain the 25 mm grid except near the whole actor's +Y support plane:
 orthogonally rotate +Y to +Z, use the frozen complete-solid LP cover with a 2 mm
@@ -34,23 +34,21 @@ import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.spatial.transform import Rotation
 
-ROOT = next(p for p in Path(__file__).resolve().parents
-            if (p / "infrastructure/development/tig-dual-arm").is_dir())
-DEV = ROOT / "infrastructure/development/tig-dual-arm"
-for directory in (DEV, ROOT / "infrastructure"):
-    if str(directory) not in sys.path:
-        sys.path.insert(0, str(directory))
+from infrastructure.tig_runtime import resolve_runtime_paths
+RUNTIME_PATHS = resolve_runtime_paths()
+ROOT = RUNTIME_PATHS.workspace_root
+DEV = RUNTIME_PATHS.code_root
 
-from mani_skill.examples.motionplanning.dual.curobo_payload import (  # noqa: E402
+from .curobo_payload import (  # noqa: E402
     PAYLOAD_LINK, tight_convex_spheres,
 )
-from mani_skill.examples.motionplanning.dual.curobo_task_payload import (  # noqa: E402
+from .curobo_task_payload import (  # noqa: E402
     _validate_task_snapshot, task_profile_config,
 )
-from curobo_tig_payload_worker import (  # noqa: E402
+from infrastructure.curobo_tig_payload_worker import (  # noqa: E402
     canonical_hash, validate_model, validate_state,
 )
-from curobo_tig_task_payload_worker import (  # noqa: E402
+from infrastructure.curobo_tig_task_payload_worker import (  # noqa: E402
     TASK_IDS, TaskSessionManager, dispatch_task, legacy_model, legacy_state,
     validate_task_request, validation_view,
 )
@@ -531,7 +529,7 @@ def self_test() -> dict[str, Any]:
                         validate_task_request(request, task)
                         # The Task function invokes the unchanged legacy validator
                         # using its own strictly checked normalized CPU view.
-                        from curobo_tig_payload_worker import validate_request
+                        from infrastructure.curobo_tig_payload_worker import validate_request
                         validate_request(validation_view(request, task))
             if task == TASK_IDS[0]:
                 assert new == original

@@ -124,7 +124,7 @@ def prepare_exploration() -> dict[str,Any]:
     from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
     from .dual_payload_collision import DualPayloadCollisionChecker
     from .trajectory_execution import as_numpy
-    from .validate_grasp import TASK
+    from .task_targets import TASK
     EVIDENCE.mkdir(parents=True,exist_ok=True)
     if (EVIDENCE/'exploration.json').exists() or FIXTURE.exists():
         raise ValueError('Existing exploration evidence must be preserved; do not create a second task instance')

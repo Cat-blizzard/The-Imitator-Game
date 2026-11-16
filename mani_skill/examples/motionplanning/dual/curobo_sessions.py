@@ -13,7 +13,6 @@ import copy
 import hashlib
 import json
 import math
-import os
 from pathlib import Path
 import selectors
 import subprocess
@@ -114,36 +113,11 @@ class SessionTransport(Protocol):
 class _SessionProcess(CuroboProcess):
     """NDJSON transport to the new worker, retaining existing owned shutdown."""
     def __init__(self, gpu_uuid: str, log_path: Path, *, timeout_s: float = 180.,
-                 python: Path | None = None) -> None:
-        python = python or ROOT / "infrastructure/envs/curobo-tig/bin/python"
-        worker = ROOT / "infrastructure/curobo_tig_session_worker.py"
-        if not python.is_file() or not worker.is_file():
-            raise FileNotFoundError("Independent cuRobo environment/session worker is missing")
-        if (not isinstance(gpu_uuid, str) or not gpu_uuid.startswith("GPU-")
-                or not math.isfinite(timeout_s) or timeout_s <= 0):
-            raise ValueError("Explicit GPU UUID and finite positive request timeout are required")
-        environment = os.environ.copy()
-        environment.pop("PYTHONPATH", None)
-        environment.update(CUDA_VISIBLE_DEVICES=gpu_uuid, PYTHONNOUSERSITE="1",
-                           PYTHONDONTWRITEBYTECODE="1")
-        cache = ROOT / "infrastructure/tmp/curobo-v2-runtime-cache"
-        for variable, subdirectory in (("CUDA_CACHE_PATH", "cuda"),
-                                       ("TORCHINDUCTOR_CACHE_DIR", "inductor"),
-                                       ("WARP_CACHE_PATH", "warp")):
-            directory = cache / subdirectory
-            directory.mkdir(parents=True, exist_ok=True)
-            environment[variable] = str(directory)
-        self._log = log_path.open("x")
-        try:
-            self.process = subprocess.Popen(
-                [str(python), "-B", "-u", str(worker), "--serve"],
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self._log,
-                env=environment, cwd=ROOT, text=True, bufsize=1)
-        except Exception:
-            self._log.close()
-            raise
-        self.timeout_s, self.sequence, self.failed = float(timeout_s), 0, False
-        self.receipts: list[dict[str, Any]] = []
+                 python: Path | None = None,
+                 _worker: str | Path = "curobo_tig_session_worker.py",
+                 _worker_args: tuple[str, ...] = ("--serve",)) -> None:
+        super().__init__(gpu_uuid, log_path, timeout_s=timeout_s, python=python,
+            _worker=_worker, _worker_args=_worker_args)
 
     def request(self, op: str, **payload: Any) -> dict[str, Any]:
         if self.failed:

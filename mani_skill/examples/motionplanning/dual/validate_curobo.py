@@ -32,35 +32,14 @@ ROOT = Path(__file__).resolve().parents[7]
 HERE = Path(__file__).resolve().parent
 
 
-def save_json(path: Path, value: Any) -> None:
-    path.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+# Compatibility exports: implementations live in shared runtime modules.
+from .runtime_io import (save_json, git_identity)
+from .physical_observation import (check_fk)
 
 
-def git_identity(path: Path) -> dict[str, Any]:
-    def read(*args: str) -> str:
-        return subprocess.check_output(['git', '-C', str(path), *args], text=True).strip()
-    return {'path': str(path), 'commit': read('rev-parse', 'HEAD'), 'status': read('status', '--porcelain')}
 
 
-def check_fk(result: dict[str, Any], snapshot_data: dict[str, Any],
-             query: np.ndarray) -> list[dict[str, Any]]:
-    positions = np.asarray(result['positions'], dtype=float)
-    quaternions = np.asarray(result['quaternions'], dtype=float)
-    if positions.shape != (len(query), 3) or quaternions.shape != (len(query), 4):
-        raise ValueError('cuRobo FK must return position[N,3] and quaternion[N,4]')
-    names = snapshot_data['joint_names']
-    urdf = Path(snapshot_data['robot_cfg']['kinematics']['urdf_path'])
-    rows = []
-    for i, (q, p, quat) in enumerate(zip(query, positions, quaternions)):
-        expected = urdf_tcp_pose(urdf, dict(zip(names, q.tolist())))
-        row = {'query': i, 'independent_urdf': pose_error(np.r_[p, quat], expected)}
-        if i == 0:
-            row['native_sapien'] = pose_error(np.r_[p, quat], snapshot_data['tcp_pose_base_wxyz'])
-        for error in [v for v in row.values() if isinstance(v, dict)]:
-            if error['position_m'] > 1e-5 or error['rotation_rad'] > 1e-4:
-                raise ValueError(f'cuRobo/TIG TCP or joint mapping mismatch: {row}')
-        rows.append(row)
-    return rows
+
 
 
 class ReachCapture:

@@ -13,7 +13,7 @@ Reserved payload slots, proof, count, hash and attachment sphere rows change
 together. All robot geometry, world geometry, actual state, source manifest,
 limits and collision permissions are preserved. The geometry-only bounded
 cache contains immutable sphere tuples and proof JSON; every return is copied.
-This candidate is outside the runtime import tree. --emit-patch prints a
+The generation runner imports this fixed geometry recipe. --emit-patch prints a
 reviewable fixed-task-v2 lazy-import proposal and never modifies runtime.
 """
 from __future__ import annotations
@@ -33,14 +33,12 @@ from typing import Any, Callable
 import numpy as np
 from scipy.spatial import ConvexHull
 
-ROOT = next(p for p in Path(__file__).resolve().parents
-            if (p / 'infrastructure/development/tig-dual-arm').is_dir())
-DEV = ROOT / 'infrastructure/development/tig-dual-arm'
-for directory in (DEV, ROOT / 'infrastructure'):
-    if str(directory) not in sys.path:
-        sys.path.insert(0, str(directory))
-from mani_skill.examples.motionplanning.dual import curobo_payload_refinement as v1  # noqa: E402
-from curobo_tig_payload_worker import validate_request as legacy_validate_request  # noqa: E402
+from infrastructure.tig_runtime import resolve_runtime_paths
+RUNTIME_PATHS = resolve_runtime_paths()
+ROOT = RUNTIME_PATHS.workspace_root
+DEV = RUNTIME_PATHS.code_root
+from . import curobo_payload_refinement as v1  # noqa: E402
+from infrastructure.curobo_tig_payload_worker import validate_request as legacy_validate_request  # noqa: E402
 
 E = ROOT / 'infrastructure/validation/dual-arm/curobo-complete-20261116'
 CANDIDATES = E / 'candidates/fruit_payload_v2'
@@ -180,7 +178,7 @@ def proposed_runner_source(source: str) -> str:
 
 def interface_patch() -> str:
     source = _base_runner_source()
-    name = RUNNER.relative_to(ROOT).as_posix()
+    name = RUNNER.relative_to(DEV).as_posix()
     return ''.join(difflib.unified_diff(source.splitlines(keepends=True),
         proposed_runner_source(source).splitlines(keepends=True), fromfile='a/' + name, tofile='b/' + name))
 

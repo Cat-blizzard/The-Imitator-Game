@@ -19,7 +19,6 @@ from pathlib import Path
 import resource
 import shutil
 import signal
-import subprocess
 import time
 import traceback
 from typing import Any
@@ -28,23 +27,22 @@ import numpy as np
 
 from .curobo_backend import pose_error, trajectory_from_result
 from .curobo_scene import _matrix, _pose, _shape_mesh
-from .curobo_sessions import _SessionProcess
+from .curobo_task_payload import SelectedWorkerProcess
 from .initial_scene_manifest import save_initial_scene_manifest
 from .trajectory_execution import as_numpy, bind_arm
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
 from .runtime_policy import LEGACY_STRICT, RuntimePolicy, policy_from_report, resolved_policy_record
-from .validate_curobo import check_fk, git_identity, save_json
-from .validate_curobo_sessions import verify_finger_spheres
-from .validate_curobo_payload import (audit_payload_spheres,
-    install_full_robot_contact_capture, state_digest)
-from .validate_grasp import json_value
-from .validate_multitask import termination_handler
-from .validate_sync import held_substep_audit
-from .validate_sync_compact import (SOLVER_LIMIT_FRACTION, compact_kinematic_audit,
+from infrastructure.tig_runtime import resolve_runtime_paths
+from .runtime_io import git_identity, save_json, json_value, termination_handler, state_digest
+from .physical_observation import (check_fk, verify_finger_spheres, audit_payload_spheres,
+    install_full_robot_contact_capture, held_substep_audit, make_checker, measured_source_departure)
+from .phase_kinematics import (SOLVER_LIMIT_FRACTION, compact_kinematic_audit,
     compact_phase_limits, compact_retime_pair, compact_route_positions,
     compact_set_phase_limits, compact_topp_reconstruction)
 
-ROOT = Path(__file__).resolve().parents[7]
+RUNTIME_PATHS = resolve_runtime_paths()
+ROOT = RUNTIME_PATHS.workspace_root
+CODE_ROOT = RUNTIME_PATHS.code_root
 HERE = Path(__file__).resolve().parent
 TASKS = ('TwoRobotPickAppleBananaToBaskets-v1', 'TwoRobotPickPillToRegions-v1',
          'TwoRobotPickFruitsToPlate-v1')
@@ -245,55 +243,6 @@ def approach_endpoint_geometry(raw: Any, adapter: Any, pairs: Any) -> list[dict[
     return rows
 
 
-def measured_source_departure(checker: Any, *, refresh: bool = True) -> tuple[bool,bool]:
-    """Read actual source departure without changing original support permissions.
-
-    A never-registered tabletop exception deliberately leaves its original
-    ``support_released`` flag false. Such a source is currently absent only
-    when a fresh measured receipt proves every actual convex piece exceeds
-    the original numeric band and no FCL piece touches the source. Candidate
-    receipts are never read. This adapter has no latch; the existing physical
-    recorder separately latches its >=3mm/no-native-contact transition.
-    """
-    from .table_support_collision import NUMERICAL_TOP_TOLERANCE_M
-    if type(refresh) is not bool:
-        raise ValueError('Measured source refresh policy must be an actual boolean')
-    if checker is None or not getattr(checker,'attached',False):
-        return False,False
-    supports = getattr(checker,'_supports',())
-    if len(supports) != 2:
-        raise ValueError('Two canonical measured source-support checkers required')
-    if all(getattr(support,'support_released',None) is True for support in supports):
-        return True,True
-    if refresh:
-        checker.refresh()
-        supports = checker._supports
-    departure = []
-    for support in supports:
-        if getattr(support,'support_released',None) is True:
-            departure.append(True)
-            continue
-        receipt = getattr(support,'_support_state_receipt',None)
-        accepted = False
-        if (getattr(support,'_initial_support_exists',None) is False
-                and isinstance(receipt,dict) and receipt.get('mode') == 'measured_refresh'
-                and receipt.get('all_pieces_separated') is True
-                and receipt.get('fcl_touching_pieces') == []
-                and receipt.get('separation_numeric_band_m') == NUMERICAL_TOP_TOLERANCE_M):
-            pieces = receipt.get('pieces')
-            targets = getattr(support,'_target_names',None)
-            if isinstance(pieces,list) and pieces and targets:
-                actual_names = [piece.get('target') for piece in pieces if isinstance(piece,dict)]
-                if (len(actual_names) == len(pieces) == len(targets)
-                        and all(isinstance(name,str) for name in actual_names)
-                        and set(actual_names) == set(targets)):
-                    try:
-                        gaps = np.asarray([piece['bottom_minus_table_top_m'] for piece in pieces],dtype=float)
-                        accepted = bool(np.isfinite(gaps).all() and np.all(gaps > NUMERICAL_TOP_TOLERANCE_M))
-                    except (KeyError,TypeError,ValueError):
-                        accepted = False
-        departure.append(accepted)
-    return tuple(departure)
 
 
 def source_departure_evidence(checker: Any) -> dict[str,Any]:
@@ -360,38 +309,6 @@ def enforce_pair_validation(validation: dict[str,Any], *, require_safe_pair: boo
         raise RuntimeError('Paired exact collision validation rejected candidate')
 
 
-class SelectedWorkerProcess(_SessionProcess):
-    """Original supervised session protocol with an explicitly selected worker file."""
-    def __init__(self, gpu_uuid: str, log_path: Path, worker_script: Path, *,
-                 task_id: str, timeout_s: float = 180.) -> None:
-        python = ROOT/'infrastructure/envs/curobo-tig/bin/python'
-        worker_script = worker_script.resolve()
-        if not python.is_file() or not worker_script.is_file() or worker_script.suffix != '.py':
-            raise FileNotFoundError('Independent Python and an existing worker Python file required')
-        if (not gpu_uuid.startswith('GPU-') or ',' in gpu_uuid
-                or not math.isfinite(timeout_s) or timeout_s <= 0):
-            raise ValueError('One explicit GPU UUID and positive timeout required')
-        environment = os.environ.copy()
-        environment.pop('PYTHONPATH', None)
-        environment.update(CUDA_VISIBLE_DEVICES=gpu_uuid, PYTHONNOUSERSITE='1',
-            PYTHONDONTWRITEBYTECODE='1', PYTHONUNBUFFERED='1')
-        cache = ROOT/'infrastructure/tmp/curobo-v2-runtime-cache'
-        for variable, subdirectory in (('CUDA_CACHE_PATH','cuda'),
-                ('TORCHINDUCTOR_CACHE_DIR','inductor'), ('WARP_CACHE_PATH','warp')):
-            directory = cache/subdirectory
-            directory.mkdir(parents=True, exist_ok=True)
-            environment[variable] = str(directory)
-        self._log = log_path.open('x', encoding='utf-8')
-        try:
-            self.process = subprocess.Popen([str(python), '-B', '-u', str(worker_script), '--serve',
-                '--task-id',task_id],
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self._log,
-                env=environment, cwd=ROOT, text=True, encoding='utf-8', bufsize=1)
-        except BaseException:
-            self._log.close()
-            raise
-        self.timeout_s, self.sequence, self.failed = float(timeout_s), 0, False
-        self.receipts: list[dict[str, Any]] = []
 
 
 def make_solvers(env: Any, output: Path, report: dict[str, Any], capture: Any) -> list[Any]:
@@ -449,17 +366,6 @@ def make_solvers(env: Any, output: Path, report: dict[str, Any], capture: Any) -
         for i, agent in enumerate(env.unwrapped.agent.agents)]
 
 
-def make_checker(raw: Any, solvers: list[Any], adapter: Any) -> Any:
-    """Reuse each existing task's measured support adapter and common checker interface."""
-    if adapter.task_id == TASKS[1]:
-        from .pill_support_collision import PillDualPayloadCollisionChecker
-        return PillDualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=adapter.targets)
-    if adapter.task_id == TASKS[2]:
-        from .support_surface_collision import SourceSupportDualPayloadCollisionChecker
-        return SourceSupportDualPayloadCollisionChecker.from_solvers(raw, *solvers,
-            targets=adapter.targets, source_supports=adapter.initial_supports)
-    from .dual_payload_collision import DualPayloadCollisionChecker
-    return DualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=adapter.targets)
 
 
 def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *,
@@ -468,7 +374,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
     if report['execution_configuration'].get('transport_recipe','standard') != transport_policy:
         raise ValueError('Transport selection differs from the common execution configuration')
     if transport_policy == 'pill-direct-release-v1':
-        from .validate_curobo_pill_direct import pill_direct_transport_recipe
+        from .transport_recipes import pill_direct_transport_recipe
         if transport_recipe is None:
             transport_recipe = pill_direct_transport_recipe
         elif transport_recipe is not pill_direct_transport_recipe:
@@ -499,7 +405,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
         verify_dual_placement)
     from .multitask_adapters import get_task_adapter
     from .multitask_recording import make_physics_capture, finalize_physics_capture, save_task_geometry
-    from .validate_path_conflict import _state_arrays
+    from .runtime_io import _state_arrays
 
     env = raw = capture = worker = checker = original_hook = None
     frames: list[Any] = []
@@ -1083,12 +989,13 @@ def main() -> int:
     args.mode = 'positive'
     output = args.output_dir
     output.mkdir(parents=True,exist_ok=False)
-    sources = list(HERE.glob('*.py'))+[ROOT/f'infrastructure/{name}' for name in
-        ('curobo_tig_worker.py','curobo_tig_session_worker.py','curobo_tig_payload_worker.py',
-         'curobo_tig_fast_payload_worker.py','curobo_tig_task_payload_worker.py')]
+    sources = list(HERE.glob('*.py')) + [CODE_ROOT/'infrastructure/tig_runtime.py']
+    sources.extend((CODE_ROOT/'infrastructure').glob('curobo_tig*_worker.py'))
     if args.worker_script:
         sources.append(args.worker_script.resolve())
-    sources = list(dict.fromkeys(sources))
+    # An explicit selected worker owns its basename in the archive. Its actual
+    # input path and SHA remain in source_sha256, including external overrides.
+    sources = list({source.name: source for source in sources}.values())
     archive = output/'source'
     archive.mkdir()
     for source in sources:
@@ -1096,7 +1003,7 @@ def main() -> int:
     report: dict[str,Any] = {'status':'running','seed':args.seed,'planner_seed':args.planner_seed,
         'task':args.task,'mode':args.mode,'backend':args.backend,
         'worker_script':str(args.worker_script.resolve()) if args.worker_script else (
-            str(ROOT/'infrastructure/curobo_tig_task_payload_worker.py') if args.backend == 'curobo' else None),
+            str(CODE_ROOT/'infrastructure/curobo_tig_task_payload_worker.py') if args.backend == 'curobo' else None),
         'approach_recipe':args.approach_recipe,
         'payload_refinement':args.payload_refinement,
         'transport_recipe':args.transport_recipe,
@@ -1113,8 +1020,8 @@ def main() -> int:
         'standard_recording_replay_evaluated':False,
         'source_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
         'official_tig':git_identity(ROOT/'The-Imitator-Game'),
-        'runtime_tig':git_identity(HERE.parents[3]),
-        'official_curobo':git_identity(ROOT/'infrastructure/backends/curobo')}
+        'runtime_tig':git_identity(CODE_ROOT),
+        'official_curobo':git_identity(RUNTIME_PATHS.curobo_source)}
     save_json(output/'report.json',report)
     started = time.monotonic()
     try:

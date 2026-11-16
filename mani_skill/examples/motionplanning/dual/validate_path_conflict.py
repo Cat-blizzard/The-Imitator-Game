@@ -46,29 +46,12 @@ CONFIGURATION = {
 }
 
 
-def interarm_contact_rows(contacts: Any, identities: dict[Any, tuple[int, str]]) -> list[dict[str, Any]]:
-    """Read all physical interarm contact manifolds, including zero impulses."""
-    result = []
-    for contact in contacts:
-        sides = [identities.get(body.entity) for body in contact.bodies]
-        if len(sides) != 2 or any(side is None for side in sides) or sides[0][0] == sides[1][0]:
-            continue
-        points = [{"position_m": np.asarray(p.position).tolist(),
-                   "normal": np.asarray(p.normal).tolist(),
-                   "impulse_Ns": np.asarray(p.impulse).tolist(),
-                   "separation_m": float(p.separation)} for p in contact.points]
-        result.append({"bodies": [{"robot_index": s[0], "link": s[1]} for s in sides], "points": points})
-    return result
+# Compatibility exports: implementations live in shared runtime modules.
+from .runtime_io import (_state_arrays)
+from .physical_observation import (interarm_contact_rows)
 
 
-def _state_arrays(value: Any, prefix: str = "") -> dict[str, np.ndarray]:
-    from .trajectory_execution import as_numpy
-    if isinstance(value, dict):
-        result: dict[str, np.ndarray] = {}
-        for name, child in value.items():
-            result.update(_state_arrays(child, prefix + "/" + str(name)))
-        return result
-    return {prefix: as_numpy(value).copy()}
+
 
 
 def _assert_unchanged(before: dict[str, np.ndarray], raw: Any) -> None:

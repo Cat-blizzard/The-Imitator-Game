@@ -25,12 +25,20 @@ import traceback
 from types import SimpleNamespace
 from typing import Any
 
-from curobo_tig_task_payload_worker import (
-    TaskPayloadBackend, TaskSessionManager, canonical_task, dispatch_task, serve_task,
-    self_test as task_self_test,
-)
-from curobo_tig_payload_worker import _rotation, canonical_hash
-from curobo_tig_worker import _finite_json, _matrix, _vector
+if __package__:
+    from .curobo_tig_task_payload_worker import (
+        TaskPayloadBackend, TaskSessionManager, canonical_task, dispatch_task, serve_task,
+        self_test as task_self_test,
+    )
+    from .curobo_tig_payload_worker import _rotation, canonical_hash
+    from .curobo_tig_worker import _finite_json, _matrix, _vector
+else:
+    from curobo_tig_task_payload_worker import (
+        TaskPayloadBackend, TaskSessionManager, canonical_task, dispatch_task, serve_task,
+        self_test as task_self_test,
+    )
+    from curobo_tig_payload_worker import _rotation, canonical_hash
+    from curobo_tig_worker import _finite_json, _matrix, _vector
 
 
 def native_policy(planner: Any) -> dict[str, Any]:
