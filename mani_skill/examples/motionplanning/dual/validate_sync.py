@@ -94,6 +94,32 @@ def physical_region(center: Any, basket_bounds: Any, object_bounds: Any) -> dict
             "center_z_range_m": [float(lo[2] - .005), float(hi[2] + .01)]}
 
 
+def collision_vertex_region(object_vertices: Any, object_pose: Any,
+                            basket_vertices: Any, basket_pose: Any) -> dict[str, Any]:
+    """Apply the existing region gates to tight actual collision-mesh bounds.
+
+    Vertices are complete actor-local collision meshes, finite [N,3]/[M,3]
+    metres; poses are finite XYZ/WXYZ[7]. Transform every vertex before taking
+    world min/max, rather than rotating eight corners of a local AABB. The
+    geometric centre keeps its existing definition: the local collision AABB
+    midpoint transformed by the current actor pose, not the world AABB centre.
+    No containment tolerance or below-rim requirement changes here.
+    """
+    meshes = [np.asarray(value, dtype=np.float64) for value in (object_vertices, basket_vertices)]
+    if any(vertices.ndim != 2 or vertices.shape[1:] != (3,) or not len(vertices)
+           or not np.isfinite(vertices).all() for vertices in meshes):
+        raise ValueError("Expected complete finite local collision vertices[N,3]")
+    transforms = [pose_matrix(value) for value in (object_pose, basket_pose)]
+    worlds = [vertices @ transform[:3, :3].T + transform[:3, 3]
+              for vertices, transform in zip(meshes, transforms)]
+    if not all(np.isfinite(vertices).all() for vertices in worlds):
+        raise ValueError("Transformed collision vertices must remain finite")
+    bounds = [np.stack([vertices.min(axis=0), vertices.max(axis=0)]) for vertices in worlds]
+    local_center = (meshes[0].min(axis=0) + meshes[0].max(axis=0)) / 2
+    center = local_center @ transforms[0][:3, :3].T + transforms[0][:3, 3]
+    return physical_region(center, bounds[1], bounds[0])
+
+
 def held_substep_audit(rows: list[dict[str, Any]], references: Any) -> dict[str, Any]:
     from .lift_execution import _rotation_distance
     held = [r for r in rows if r["phase"] == "lift_and_hold" or r["phase"].startswith("carry_")]
@@ -149,7 +175,6 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any]) -
     from .dual_payload_collision import DualPayloadCollisionChecker
     from .dual_arm_execution import (plan_dual_pose, execute_dual_reach, close_dual_and_confirm,
                                     execute_dual_held_move, release_dual_and_confirm, verify_dual_placement)
-    from mani_skill.envs.tasks.tabletop.dual_tasks._008_pick_apple_banana_baskets import world_aabb_from_local_mesh
 
     env, raw, original_hook = None, None, None
     frames, ticks, substeps, keys = [], [], [], []
@@ -321,11 +346,17 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any]) -
         schedule = plan("retreat", retreat_poses, closed=False)
         if not finish("retreat", execute_dual_reach(captured, schedule, checker)): return
 
+        local_meshes = {}
+        for actor in (*targets, *baskets):
+            mesh = actor.get_first_collision_mesh(to_world_frame=False)
+            if mesh is None:
+                raise ValueError(f"No complete native collision mesh for {actor.name}")
+            local_meshes[id(actor)] = np.asarray(mesh.vertices, dtype=np.float64).copy()
+
         def predicate(index: int) -> Any:
             def measure(actor: Any) -> dict[str, Any]:
-                return physical_region(as_numpy(raw._get_actor_geom_center(actor))[0],
-                    as_numpy(world_aabb_from_local_mesh(baskets[index], raw.device))[0],
-                    as_numpy(world_aabb_from_local_mesh(actor, raw.device))[0])
+                return collision_vertex_region(local_meshes[id(actor)], as_numpy(actor.pose.raw_pose)[0],
+                    local_meshes[id(baskets[index])], as_numpy(baskets[index].pose.raw_pose)[0])
             return measure
         begin("verify_placement")
         result = verify_dual_placement(captured, checker, targets, region_predicates=(predicate(0), predicate(1)))
@@ -386,6 +417,41 @@ def self_test() -> dict[str, Any]:
     bounds = [[-.2, -.2, 0], [.2, .2, .1]]
     assert physical_region([0, 0, .05], bounds, [[-.1, -.1, .02], [.1, .1, .08]])["inside"]
     assert not physical_region([0, 0, .05], bounds, [[-.1, -.1, .02], [.3, .1, .08]])["inside"]
+    # A rotated triangular prism fits while its empty local-box corners do not.
+    # Keep the old local-box centre so only the bounds representation changes.
+    from itertools import product
+    prism = np.array([[x, y, z] for x, y in ((0., 0.), (.1, 0.), (0., .1)) for z in (0., .02)])
+    basket_mesh = np.array(list(product((-.08, .08), (-.01, .09), (0., .1))))
+    pose = np.array([0., 0., .02, np.cos(np.pi/8), 0., 0., np.sin(np.pi/8)])
+    identity = np.array([0., 0., 0., 1., 0., 0., 0.])
+    prism_before, basket_before, pose_before = prism.copy(), basket_mesh.copy(), pose.copy()
+    tight = collision_vertex_region(prism, pose, basket_mesh, identity)
+    assert tight["inside"]
+    matrix = pose_matrix(pose)
+    corners = np.array(list(product((0., .1), (0., .1), (0., .02))))
+    coarse = corners @ matrix[:3, :3].T + matrix[:3, 3]
+    assert not physical_region(tight["object_geom_center_m"],
+        tight["basket_aabb_m"], [coarse.min(axis=0), coarse.max(axis=0)])["inside"]
+    np.testing.assert_allclose(tight["object_geom_center_m"], [.0, np.sqrt(.005), .03], atol=1e-14)
+    assert not np.allclose(tight["object_geom_center_m"], np.mean(tight["object_aabb_m"], axis=0))
+    # Above-rim geometry remains diagnostic; the centre/floor/XY gates still apply.
+    assert physical_region([0, 0, .05], bounds, [[-.1, -.1, .02], [.1, .1, .3]])["inside"]
+    for moved in (pose + [.2, 0, 0, 0, 0, 0, 0], pose + [0, 0, -.03, 0, 0, 0, 0],
+                  pose + [0, 0, .1, 0, 0, 0, 0]):
+        assert not collision_vertex_region(prism, moved, basket_mesh, identity)["inside"]
+    assert not collision_vertex_region(prism, pose, basket_mesh, identity + [.2, 0, 0, 0, 0, 0, 0])["inside"]
+    assert all(np.array_equal(a, b) for a, b in ((prism, prism_before), (basket_mesh, basket_before), (pose, pose_before)))
+    rejected = 0
+    for bad_vertices, bad_pose in ((np.empty((0, 3)), pose), (np.zeros((3, 2)), pose),
+                                   ([[0., 0., np.nan]], pose), (prism, np.zeros(7)),
+                                   (prism, np.r_[np.nan, pose[1:]])):
+        try:
+            collision_vertex_region(bad_vertices, bad_pose, basket_mesh, identity)
+        except ValueError:
+            rejected += 1
+        else:
+            raise AssertionError("Malformed collision geometry was accepted")
+    assert rejected == 5
     rows = [{"control_step": i // 5, "sim_timestep_s": .01, "left_qpos": [0.] * 9, "right_qpos": [0.] * 9} for i in range(15)]
     assert hold_joint_substep_audit(rows, [1, 2])["status"] == "passed"
     rows[-1]["left_qpos"][0] = .01
@@ -396,7 +462,11 @@ def self_test() -> dict[str, Any]:
     held["object_poses"] = [pose, [.01, 0, .1, 1, 0, 0, 0]]
     assert held_substep_audit([held], [np.eye(4), np.eye(4)])["status"] == "failed"
     return {"status": "passed", "checks": ["continue native success only, preserve failure and truncation", "right release fault only",
-        "release control rejects errors", "full XY and height bounds", "both100Hz joint envelopes", "both held object envelopes"]}
+        "release control rejects errors", "full XY and height bounds",
+        "actual collision vertices eliminate rotated empty corners and preserve local-box centre",
+        "actual outside XY floor centre-height and moved basket still reject; rim remains diagnostic",
+        "invalid collision meshes and poses reject without input mutation",
+        "both100Hz joint envelopes", "both held object envelopes"]}
 
 
 def main() -> int:

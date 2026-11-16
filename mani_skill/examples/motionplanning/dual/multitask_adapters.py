@@ -30,7 +30,7 @@ TASK_IDS = (
     "TwoRobotPickFruitsToPlate-v1",
 )
 ALIASES = dict(zip(("apple-banana", "pill", "fruits"), TASK_IDS))
-ADAPTER_VERSION = "m1-task-adapters-v12"
+ADAPTER_VERSION = "m1-task-adapters-v13-tight-basket-bounds"
 DESTINATION_CONTENTS_POLICY_VERSION = "paired-applebanana-basket-contents-v1"
 DESTINATION_CONTENTS_PHASES = ("release", "retreat", "verify_placement")
 PILL_RELEASE_CLEARANCE_M = .015
@@ -629,11 +629,17 @@ class TaskAdapter:
                 if actor is not self.targets[index]:
                     raise ValueError("Region callback received the wrong canonical target actor")
                 if self.task_id == TASK_IDS[0]:
-                    from .validate_sync import physical_region
-                    from mani_skill.envs.tasks.tabletop.dual_tasks._008_pick_apple_banana_baskets import world_aabb_from_local_mesh
-                    return physical_region(_array(self.raw._get_actor_geom_center(actor))[0],
-                        _array(world_aabb_from_local_mesh(self.destination_actors[index], self.raw.device))[0],
-                        _array(world_aabb_from_local_mesh(actor, self.raw.device))[0])
+                    from .validate_sync import collision_vertex_region
+                    basket = self.destination_actors[index]
+                    # _vertices caches every native local collision part and
+                    # refreshes its measured pose. The region helper transforms
+                    # the original vertices, preserving the local-box centre.
+                    self._vertices(actor)
+                    self._vertices(basket)
+                    return collision_vertex_region(self._local_geometry[id(actor)],
+                        np.r_[_single(actor.pose.p, 3, "object origin"), _single(actor.pose.q, 4, "object WXYZ")],
+                        self._local_geometry[id(basket)],
+                        np.r_[_single(basket.pose.p, 3, "basket origin"), _single(basket.pose.q, 4, "basket WXYZ")])
                 origin = _single(actor.pose.p, 3, "object origin")
                 if self.task_id == TASK_IDS[1]:
                     table_bounds = _bounds(self._vertices(self.destination_supports[index]))
@@ -702,7 +708,7 @@ class TaskAdapter:
             "official_max_episode_steps": 200,
             "official_success_conjunction": " AND ".join(self.official_predicate_keys),
             "official_static_or_upright_required": False,
-            "physical_region_policy": {TASK_IDS[0]: "unchanged-applebanana-physical-region",
+            "physical_region_policy": {TASK_IDS[0]: "actual-collision-vertices-tight-world-AABB-original-local-center-v1",
                 TASK_IDS[1]: "full-collision-geometry-XY-and-native-origin-height-no-penetration",
                 TASK_IDS[2]: "full-collision-vertices-in-native-goal-disk-native-origin-height-no-penetration-v5"}[self.task_id],
             "route_difference_from_official": "same applebanana selected release recipe" if self.task_id == TASK_IDS[0]
@@ -1029,6 +1035,34 @@ def self_test() -> dict[str, Any]:
         assert not proof["allowed"] and proof["reason"] == "invalid_current_native_geometry"
     apple_in.get_first_collision_mesh = original_mesh
     assert apple_adapter.destination_contents_contact_proof(0, "apple_in", "release", [point])["allowed"]
+    # The public apple/banana region callback must use complete vertices too,
+    # without requiring the raw task's old rotated-local-AABB helper.
+    local_prism = np.array([[x, y, z] for x, y in ((0., 0.), (.1, 0.), (0., .1)) for z in (0., .02)])
+    prism_actor = actor("apple_out", [0, 0, .02])
+    prism_actor.pose.q = np.array([[np.cos(np.pi/8), 0., 0., np.sin(np.pi/8)]])
+    prism_actor.get_first_collision_mesh = lambda to_world_frame=False: SimpleNamespace(vertices=local_prism.copy())
+    tight_basket = actor("basket_a", [0, 0, 0])
+    tight_basket.get_first_collision_mesh = lambda to_world_frame=False: SimpleNamespace(vertices=
+        np.array(list(itertools.product((-.08, .08), (-.01, .09), (0., .1)))))
+    region_raw = SimpleNamespace(agent=SimpleNamespace(agents=agents), table_scene=SimpleNamespace(table=table),
+        apple_out=prism_actor, banana_out=banana, apple_in=apple_in, banana_in=banana_in,
+        basket_apple=tight_basket, basket_banana=basket_b,
+        scene=SimpleNamespace(actors={a.name: a for a in (table, prism_actor, banana, apple_in, banana_in, tight_basket, basket_b)}))
+    region_adapter = get_task_adapter("apple-banana", region_raw)
+    region = region_adapter.region_predicates()[0]
+    assert region(prism_actor)["inside"]
+    prism_actor.pose.p[0, 0] = .2
+    assert not region(prism_actor)["inside"]
+    prism_actor.pose.p[0, 0] = 0
+    assert region(prism_actor)["inside"]
+    assert region_adapter.configuration()["physical_region_policy"] == "actual-collision-vertices-tight-world-AABB-original-local-center-v1"
+    try:
+        region(banana)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Region callback accepted the wrong target identity")
+    tests.append("basket region callback uses complete transformed vertices, live poses and original local-box centre")
     snapshot = apple_adapter.destination_contents_pose_snapshot()
     assert np.asarray(snapshot['destination_contents_poses']).shape == (2, 7)
     assert np.asarray(snapshot['destination_basket_poses']).shape == (2, 7)
