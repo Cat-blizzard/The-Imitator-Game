@@ -162,8 +162,22 @@ class _Phase:
         actual = {arm.key: np.asarray(action[arm.key], dtype=np.float32).copy() for arm in self.arms}
         before = as_numpy(self.env.unwrapped.elapsed_steps).copy()
         row: dict[str, Any] = {"phase": label, "step": self.report["environment_steps"] + 1,
-                               "action": {key: value.tolist() for key, value in actual.items()}}
+                               "action": {key: value.tolist() for key, value in actual.items()},
+                               "control_command_submitted": False}
         try:
+            if self.held and getattr(self.checker, "measured_attachment_prediction", False):
+                current = self.observe()
+                receipt = self.checker.validate_measured_command(
+                    *(actual[arm.key][:7] for arm in self.arms),
+                    grasping=tuple(bool(obj["is_grasping"]) for obj in current["objects"]),
+                    max_joint_step_rad=JOINT_STEP)
+                row["attachment_geometry"] = receipt
+                if receipt["status"] != "passed":
+                    row["control_command_submitted"] = False
+                    self.report["trace"].append(row)
+                    self.report.update(status="aborted", reason=receipt["reason"])
+                    return None
+            row["control_command_submitted"] = True
             _, _, terminated, truncated, _ = self.env.step(actual)
             self.report["environment_steps"] += 1
             self.report["settling_steps"] += int(label == "settling")
@@ -795,8 +809,69 @@ def self_test() -> dict[str, Any]:
     reject(lambda: close_dual_and_confirm(env, Checker(env, held=False), env.targets, policy=None))
     assert not env.actions
     checks.append("invalid policy rejects before any paired step")
+    class MeasuredChecker(Checker):
+        """Business-only snapshot spy; real FCL is covered by its own fixture."""
+        def __init__(self, env: Env, *, prediction: bool = True, reject_collision: bool = False):
+            super().__init__(env)
+            self.measured_attachment_prediction = prediction
+            self.reject_collision = reject_collision
+            self.refresh_count = 0; self.prediction_calls = []; self.current_step = None
+        def refresh(self) -> None:
+            self.refresh_count += 1; self.current_step = int(self.env.elapsed_steps[0])
+        def validate_measured_command(self, left: Any, right: Any, *, grasping: Any,
+                                      max_joint_step_rad: float) -> dict[str, Any]:
+            self.prediction_calls.append({"step": int(self.env.elapsed_steps[0]),
+                "refresh_count": self.refresh_count, "grasping": list(grasping)})
+            assert max_joint_step_rad == JOINT_STEP
+            if int(self.env.elapsed_steps[0]) != self.current_step:
+                raise RuntimeError("fixture: stale physical control-step snapshot")
+            reason = ("attachment_grasp_unconfirmed" if not all(grasping) else
+                      "updated_candidate_collision" if self.reject_collision else None)
+            return {"status": "rejected" if reason else "passed", "reason": reason,
+                    "geometry_epoch": self.refresh_count, "control_step": self.current_step}
+
+    default_env = Env(); default_checker = Checker(default_env)
+    default_result = execute_dual_held_move(default_env, schedule(default_env), default_checker, default_env.targets)
+    explicit_env = Env(); explicit_checker = MeasuredChecker(explicit_env, prediction=False)
+    explicit_result = execute_dual_held_move(explicit_env, schedule(explicit_env), explicit_checker, explicit_env.targets)
+    updated_env = Env(); updated_checker = MeasuredChecker(updated_env)
+    updated_result = execute_dual_held_move(updated_env, schedule(updated_env), updated_checker, updated_env.targets)
+    for result in (default_result, explicit_result, updated_result): assert result["status"] == "passed"
+    assert len(default_env.actions) == len(explicit_env.actions) == len(updated_env.actions)
+    for default, explicit, updated in zip(default_env.actions, explicit_env.actions, updated_env.actions):
+        assert all(np.array_equal(default[key], explicit[key]) and np.array_equal(default[key], updated[key]) for key in default)
+    assert not explicit_checker.prediction_calls
+    assert len(updated_checker.prediction_calls) == len(updated_env.actions)
+    assert updated_checker.refresh_count == len(updated_env.actions) + 1
+    assert all(row["attachment_geometry"]["status"] == "passed" and row["control_command_submitted"]
+               for row in updated_result["trace"])
+    checks.append("default and explicit legacy retain identical paired actions; opt-in reuses exactly initial+post-tick refreshes")
+    for cause in ("unconfirmed", "collision", "stale"):
+        env = Env(); checker = MeasuredChecker(env, reject_collision=cause == "collision")
+        phase = _Phase(env, checker, "measured-command-negative-fixture", held=True)
+        assert phase.preflight()
+        if cause == "unconfirmed": env.grasp[1] = False
+        if cause == "stale": env.elapsed_steps += 1  # Telemetry mutation, no fake or real step.
+        before = env.elapsed_steps.copy()
+        assert phase.tick(phase.hold(-1), "moving") is None
+        assert not env.actions and phase.report["environment_steps"] == 0
+        assert np.array_equal(env.elapsed_steps, before) and checker.refresh_count == 1
+        row = phase.report["trace"][-1]
+        assert row["control_command_submitted"] is False
+        if cause == "stale": assert row["elapsed_step_delta_on_error"] == [0]
+        else: assert phase.report["reason"] == ("attachment_grasp_unconfirmed" if cause == "unconfirmed" else "updated_candidate_collision")
+    checks.append("actual grasp-false, rejected geometry and stale snapshot submit zero additional fake environment steps")
+    env = Env(mode="slip_right"); checker = MeasuredChecker(env)
+    result = execute_dual_held_move(env, schedule(env), checker, env.targets)
+    assert result["status"] == "aborted" and result["reason"] == "position_slip" and len(env.actions) == 1
+    assert result["trace"][-1]["objects"][1]["position_slip_m"] > LEGACY_STRICT.position_slip_m
+    checks.append("measured prediction never reanchors or bypasses original fixed-reference slip quality monitor")
     return {"status": "passed", "gpu_used": False, "native_physics_tested": False,
-            "checks": checks, "check_count": len(checks)}
+            "checks": checks, "check_count": len(checks),
+            "measured_prediction_fake_ticks": len(updated_env.actions),
+            "measured_prediction_refreshes": updated_checker.refresh_count,
+            "negative_cases_additional_fake_ticks": 0,
+            "physics_steps": 0}
 
 
 if __name__ == "__main__":

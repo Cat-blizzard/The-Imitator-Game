@@ -20,6 +20,7 @@ from typing import Any, Callable
 
 import numpy as np
 
+from .recording_policy import (RecordingPolicy, resolve_recording_policy, write_compact_physics)
 from .trajectory_execution import as_numpy
 from .runtime_io import json_value, recording_summary, save_report
 from .physical_observation import applied_action, continue_success_only
@@ -123,7 +124,7 @@ def contact_class(other: dict, index: int, released: bool, phase: str,
                   initial: tuple, destinations: tuple) -> str:
     if other.get('robot_index') == index and other.get('link_name') in ('panda_leftfinger','panda_rightfinger'):
         return 'own_finger_allowed'
-    placement = phase in ('release','retreat','verify_placement')
+    placement = phase in ('release','retreat','verify_placement','observe_task_outcome')
     if placement and other.get('actor') == destinations[index]: return 'destination_support'
     if not placement and not released and other.get('actor') == initial[index]: return 'initial_support'
     return 'forbidden'
@@ -166,13 +167,17 @@ def make_physics_capture(env: Any, raw: Any, adapter: Any, args: Any, report: di
                          checker_provider: Callable[[], Any] = lambda: None,
                          support_release_provider: Callable[[], tuple[bool, bool]] | None = None,
                          contact_policy: Callable[[dict, str], str] | None = None,
-                         hard_step_budget: int = 200) -> Any:
+                         hard_step_budget: int = 200,
+                         recording_policy: RecordingPolicy | None = None) -> Any:
     """Create the shared observer; caller installs ``capture.record_substep``.
 
     Existing lists are retained by identity. ``target_phases=None`` preserves
     synchronous rows and classification. Optional callbacks only read caller
     state. They never modify physical poses, collision permissions or physics.
     """
+    selected_recording = resolve_recording_policy(recording_policy)
+    if not selected_recording.diagnostic:
+        report['recording_policy'] = selected_recording.record()
     agents, targets = (raw.left_agent, raw.right_agent), adapter.targets
     if type(hard_step_budget) is not int or hard_step_budget not in (200, 400):
         raise ValueError('Declared official200 or separate engineering400 budget required')
@@ -224,6 +229,8 @@ def make_physics_capture(env: Any, raw: Any, adapter: Any, args: Any, report: di
             return measurement()
 
         def frame(self) -> None:
+            if not selected_recording.diagnostic:
+                return
             frame = as_numpy(env.render())
             if frame.ndim == 4 and frame.shape[0] == 1: frame = frame[0]
             if frame.ndim != 3 or frame.shape[-1] != 3 or frame.dtype != np.uint8:
@@ -310,6 +317,7 @@ def make_physics_capture(env: Any, raw: Any, adapter: Any, args: Any, report: di
                 return contacts
 
     captured = Capture()
+    captured.recording_policy = selected_recording
     captured.original_hook = original_hook
     return captured
 
@@ -326,8 +334,13 @@ def rename_held_audit_targets(audit: dict[str, Any], names: tuple[str, str]) -> 
 def finalize_physics_capture(env: Any, raw: Any, captured: Any, output: Path, report: dict[str, Any],
                              frames: list, ticks: list, substeps: list, keys: list,
                              original_hook: Any, *, attachment_count: Any = None,
-                             robot_contacts: list[dict[str, Any]] | None = None) -> None:
+                             robot_contacts: list[dict[str, Any]] | None = None,
+                             recording_policy: RecordingPolicy | None = None) -> None:
     """Preserve partial recordings after success, safety failure or exceptions."""
+    import sys
+    selected_recording = resolve_recording_policy(
+        getattr(captured, 'recording_policy', None) if recording_policy is None else recording_policy)
+    active_error = sys.exc_info()[1]
     import imageio.v2 as imageio
     import torch
     errors = report.setdefault('artifact_errors', [])
@@ -338,7 +351,8 @@ def finalize_physics_capture(env: Any, raw: Any, captured: Any, output: Path, re
             try: report[name] = read()
             except Exception as exc: errors.append(f'final {name}: {type(exc).__name__}: {exc}')
         if original_hook is not None: raw._after_simulation_step = original_hook
-    for filename, rows in (('ticks.jsonl', ticks), ('physics-substeps.jsonl', substeps)):
+    selected_rows = (('ticks.jsonl', ticks), ('physics-substeps.jsonl', substeps)) if selected_recording.diagnostic else (('ticks.jsonl', ticks),)
+    for filename, rows in selected_rows:
         try:
             with (output / filename).open('w') as f:
                 for row in rows: f.write(json.dumps(json_value(row), allow_nan=False) + '\n')
@@ -355,7 +369,10 @@ def finalize_physics_capture(env: Any, raw: Any, captured: Any, output: Path, re
             report['recording'] = recording_summary(output / 'trajectory.h5', len(ticks), actions)
             report['recording']['action_key_order'] = keys
         except Exception as exc: errors.append(f'record check: {type(exc).__name__}: {exc}')
-    if frames:
+    if not selected_recording.diagnostic:
+        report['recording_policy'] = selected_recording.record()
+        report['video'] = {'status': 'not_selected', 'reason': 'recording_mode_normal', 'path': None}
+    if selected_recording.diagnostic and frames:
         try:
             imageio.mimsave(output / 'execution.mp4', [frames[0]] * 10 + frames + [frames[-1]] * 20, fps=20, macro_block_size=1)
             imageio.imwrite(output / 'preview.png', frames[-1])
@@ -398,6 +415,24 @@ def finalize_physics_capture(env: Any, raw: Any, captured: Any, output: Path, re
     report['physical_substeps'] = len(substeps)
     if 'attachment_capture' in report and attachment_count is not None:
         report['attachment_capture']['count_at_end'] = attachment_count
+    if not selected_recording.diagnostic:
+        try:
+            held_audit = report.get('held_physics_audit')
+            if held_audit is None and any(r.get('phase') == 'lift_and_hold' or str(r.get('phase', '')).startswith('carry_') for r in substeps):
+                references = report.get('attachment_capture', {}).get('T_tcp_objects')
+                if references is not None:
+                    from .runtime_policy import policy_from_report
+                    from .physical_observation import held_substep_audit
+                    held_audit = held_substep_audit(substeps, references, policy=policy_from_report(report),
+                        target_names=report.get('target_names'))
+            report['compact_physical_summary'] = write_compact_physics(
+                output, report, ticks, substeps, robot_contacts, active_error=active_error, held_audit=held_audit)
+            report['physical_archive_selection'] = {
+                'physics-substeps.jsonl': 'not_selected', 'all-robot-contacts.json': 'not_selected',
+                'physics-events.jsonl': 'written', 'physics-summary.json': 'written',
+                'monitoring': 'full100Hz lists retained in memory; original audits unchanged'}
+        except Exception as exc:
+            errors.append(f'compact physics: {type(exc).__name__}: {exc}')
     if errors: report['status'] = 'failed'
 
 

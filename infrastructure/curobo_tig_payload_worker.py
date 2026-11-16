@@ -115,12 +115,15 @@ def validate_model(model: Any, robot_cfg: dict[str, Any], world: dict[str, Any],
     """Validate immutable reserved topology and exact target ownership on CPU."""
     required_model = {"link_name", "capacity", "target_obstacle_names", "target_actor_name", "finger_links"}
     optional_model = {"schema", "sphere_count", "spheres_actor_local", "geometry_sha256", "shape_coverage",
-                      "sphere_pitch_m", "physical_inertial"}
+                      "sphere_pitch_m", "physical_inertial", "grasp_stable_steps"}
     if (not isinstance(model, dict) or not required_model <= set(model)
             or set(model) - required_model - optional_model - extra_fields):
         raise ValueError("payload_model has unexpected or missing fields")
     if model["link_name"] != PAYLOAD_LINK or model["finger_links"] != FINGER_LINKS:
         raise ValueError("payload/finger links must be the declared Panda physical links")
+    grasp_steps = model.get("grasp_stable_steps", 5)
+    if type(grasp_steps) is not int or grasp_steps < 1:
+        raise ValueError("grasp_stable_steps must be a positive integer")
     capacity = model["capacity"]
     if isinstance(capacity, bool) or not isinstance(capacity, int) or not 1 <= capacity <= 32768:
         raise ValueError("payload capacity must be an integer in [1,32768]")
@@ -197,7 +200,10 @@ def validate_state(state: Any, model: dict[str, Any], robot_cfg: dict[str, Any],
     if not isinstance(confirmation, dict):
         raise ValueError("actual shared-executor grasp confirmation is required")
     required_stable, observed = confirmation.get("stable_steps_required"), confirmation.get("stable_steps_observed")
-    if (isinstance(required_stable, bool) or not isinstance(required_stable, int) or required_stable < 5
+    grasp_steps = model.get("grasp_stable_steps", 5)
+    if type(grasp_steps) is not int or grasp_steps < 1:
+        raise ValueError("grasp_stable_steps must be a positive integer")
+    if (isinstance(required_stable, bool) or not isinstance(required_stable, int) or required_stable < grasp_steps
             or not isinstance(observed, list) or len(observed) != 2
             or any(isinstance(v, bool) or not isinstance(v, int) or v < required_stable for v in observed)
             or not isinstance(confirmation.get("confirmation_report_sha256"), str)

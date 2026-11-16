@@ -3,10 +3,10 @@
 The original T paired actions [T,16] are submitted without replanning or state
 correction. A reset wrapper restores source frame zero exactly once BEFORE
 RecordEpisode captures its initial state; all later states arise from physics.
-Existing replay error limits, physical contact policies, support release and
-held-slip audits remain unchanged. Both task-specific placements, real release,
-at least 8 cm retreat and the final common 20-tick stable window are independent
-acceptance gates. Three TaskAdapters are exposed without assuming new results.
+Existing physical contact policies, support release and held-slip audits remain
+active. The serialized source policy selects quality stages. Diagnostic retains
+the all-state reproducibility gate; normal keeps robot/target replay checks and
+reports background errors independently. No historical report is re-scored.
 """
 from __future__ import annotations
 
@@ -43,6 +43,8 @@ from .replay_support import (ACTION_LIMITS, STATE_LIMITS, batch_state, replay_se
 from .runtime_io import json_value, save_json, termination_handler
 from .runtime_policy import LEGACY_STRICT, RuntimePolicy, policy_from_report, resolved_policy_record
 from .run_results import update_run_results_from_file
+from .recording_policy import (RecordingPolicy, archive_report, recording_policy_from_report,
+                               write_robot_contacts)
 
 HERE = Path(__file__).resolve().parent
 RUNTIME_PATHS = resolve_runtime_paths()
@@ -51,7 +53,9 @@ WORKSPACE_ROOT = RUNTIME_PATHS.workspace_root
 CRITICAL_SOURCES = ('dual_arm_execution.py', 'dual_payload_collision.py',
                     'multitask_recording.py', 'multitask_adapters.py',
                     'validate_sync.py', 'validate_curobo_payload.py')
-OPEN_PHASES = {'preparation', 'pregrasp', 'descend', 'release', 'retreat', 'verify_placement'}
+OPEN_PHASES = {'preparation', 'pregrasp', 'descend', 'release', 'retreat', 'verify_placement',
+               'observe_task_outcome'}
+SELECTED_COMPLETION_CONTRACT = 'selected-runtime-policy-v1'
 REPLAY_MODES = ('strict', 'cross-version')
 STAGE2_HELPERS = ('runtime_io.py', 'physical_observation.py', 'replay_support.py',
                   'phase_kinematics.py', 'task_targets.py', 'transport_recipes.py')
@@ -92,6 +96,104 @@ def _read_rows(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def source_completion_contract(report: dict[str, Any]) -> str:
+    """Distinguish selected quality from the historical complete strict closure."""
+    contract = report.get('completion_contract')
+    _require(contract is None or contract == SELECTED_COMPLETION_CONTRACT, 'Unknown completion contract')
+    _require(report.get('status') == 'passed' and report.get('mode') == 'positive'
+             and report.get('official_200_step_complete') is True,
+             'A passed official200 positive recording is required')
+    if contract == SELECTED_COMPLETION_CONTRACT:
+        _require(report.get('selected_policy_complete') is True,
+                 'Source selected runtime policy is incomplete')
+        _require(report.get('project_complete_physical_closure') is None,
+                 'Selected contract cannot claim an unevaluated legacy closure')
+        return contract
+    _require(report.get('project_complete_physical_closure') is True,
+             'Legacy source requires complete strict physical closure')
+    return 'legacy-strict-closure'
+
+
+def input_artifact_names(report: dict[str, Any]) -> tuple[str, ...]:
+    """A missing storage marker retains the full legacy diagnostic contract."""
+    policy = recording_policy_from_report(report)
+    common = ('trajectory.h5', 'trajectory.json', 'ticks.jsonl', 'report.json',
+              'task-geometry.json', 'task-geometry.npz')
+    if policy.diagnostic:
+        return common + ('physics-substeps.jsonl', 'all-robot-contacts.json', 'execution.mp4')
+    return common + ('physics-events.jsonl', 'physics-summary.json')
+
+
+def replay_state_validation(errors: list[dict[str, Any]], bindings: Any,
+                            storage: RecordingPolicy) -> dict[str, Any]:
+    """Separate background reproducibility from task replay, preserving both."""
+    required = {'articulations/panda_wristcam-agent-0','articulations/panda_wristcam-agent-1'}
+    _require(len(bindings) == 2, 'Replay state validation requires two explicit target bindings')
+    required.update('actors/'+binding.state_name for binding in bindings)
+    _require(len(required) == 4 and bool(errors), 'Missing paired robot/target replay measurements')
+    task,background=[],[]
+    for sample in errors:
+        entities=sample.get('per_entity',{})
+        _require(required <= set(entities), 'Replay error sample lacks an explicit robot or target')
+        task.append({'per_entity':{key:value for key,value in entities.items() if key in required}})
+        background.append({'per_entity':{key:value for key,value in entities.items() if key not in required}})
+    full=summarize_errors(errors);selected=summarize_errors(task);other=summarize_errors(background)
+    full_ok=within_limits(full['global'],ACTION_LIMITS)
+    task_ok=within_limits(selected['global'],ACTION_LIMITS)
+    return {'profile':'legacy-all-state-v1' if storage.diagnostic else 'task-outcome-v1',
+        'required_checks':({'all_state_errors_within_existing_action_limits':full_ok} if storage.diagnostic
+            else {'robot_and_target_state_errors_within_existing_action_limits':task_ok}),
+        'task_errors':selected,'background_errors':other,
+        'diagnostics':{'all_state_errors_within_existing_action_limits':full_ok,
+            'background_errors_within_existing_action_limits':within_limits(other['global'],ACTION_LIMITS),
+            'background_equality_required_for_acceptance':storage.diagnostic,
+            'actual_background_collision_monitoring':'unchanged full100Hz robot/world and object/interarm channels'}}
+
+
+def validate_compact_source(directory: Path, report: dict[str, Any], count: int,
+                            segments: list[str]) -> dict[str, Any]:
+    """Validate declared compact observations without inventing raw substeps."""
+    summary = json.loads((directory/'physics-summary.json').read_text())
+    events = _read_rows(directory/'physics-events.jsonl')
+    _require(isinstance(summary, dict) and summary == report.get('compact_physical_summary'),
+             'Compact physical summary and report differ')
+    _require(summary.get('schema') == 'tig-compact-physical-observations-v1',
+             'Unknown compact observation schema')
+    monitor = report.get('physical_monitoring')
+    _require(isinstance(monitor, dict) and summary.get('physical_monitoring') == monitor,
+             'Compact physical monitoring identity differs')
+    expected = count*5
+    for key in ('expected_substeps', 'observed_substeps', 'robot_world_observed_substeps'):
+        _require(type(monitor.get(key)) is int and monitor[key] == expected,
+                 'Compact physical monitoring count differs: '+key)
+    _require(monitor.get('coverage_complete') is True and monitor.get('robot_world_coverage_complete') is True,
+             'Compact source lacks complete object/interarm and robot/world coverage')
+    for key in ('forbidden_contact_count', 'interarm_forbidden_count', 'robot_world_forbidden_count'):
+        _require(type(monitor.get(key)) is int and monitor[key] == 0,
+                 'Positive compact source has forbidden contact evidence: '+key)
+    _require(summary.get('actual_substeps') == summary.get('actual_robot_world_substeps') == expected
+             and summary.get('expected_substeps_per_control') == 5
+             and summary.get('control_substep_counts') == {str(i):5 for i in range(1,count+1)}
+             and summary.get('partial_control_steps') == []
+             and summary.get('observed_control_steps_without_completed_tick') == [],
+             'Compact per-control physical observation coverage differs')
+    _require(type(summary.get('event_count')) is int and summary['event_count'] == len(events)
+             and all(isinstance(event, dict) and isinstance(event.get('kind'), str) for event in events),
+             'Compact event inventory differs')
+    _require([event.get('phase') for event in events if event['kind'] == 'phase_observed'] == segments,
+             'Compact observed phases differ from action phases')
+    _require(not any(event['kind'] in ('forbidden_contact', 'held_grasp_missing_observed',
+                    'native_time_limit_observed', 'capture_exception', 'run_exception') for event in events),
+             'Positive compact source contains physical/time/exception incidents')
+    selection = report.get('physical_archive_selection', {})
+    _require(selection.get('physics-events.jsonl') == selection.get('physics-summary.json') == 'written'
+             and selection.get('physics-substeps.jsonl') == selection.get('all-robot-contacts.json') == 'not_selected',
+             'Compact artifact selection receipt differs')
+    _require(report.get('video', {}).get('status') == 'not_selected', 'Normal source video selection differs')
+    return {'status':'passed', 'actual_substeps':expected, 'event_count':len(events),
+            'raw_substeps_required':False, 'evidence':'declared compact observations, counters and events'}
+
+
 def source_identity(directory: Path, report: dict[str, Any], replay_mode: str = 'strict',
                     *, current_directory: Path = HERE) -> dict[str, Any]:
     """Always authenticate the archive; only cross-version permits changed runtime files."""
@@ -113,6 +215,10 @@ def source_identity(directory: Path, report: dict[str, Any], replay_mode: str = 
     stage2 = bool(set(recorded) & set(STAGE2_HELPERS))
     if stage2:
         critical += STAGE2_HELPERS + INFRASTRUCTURE_SOURCES
+    stage4 = ('runtime_profiles.py' in recorded or 'runtime_profile' in report or 'recording_policy' in report
+              or report.get('completion_contract') == SELECTED_COMPLETION_CONTRACT)
+    if stage4:
+        critical += ('runtime_profiles.py', 'recording_policy.py', 'task_outcome.py', 'run_results.py')
     _require(set(critical) <= set(recorded), 'Source lacks critical execution identities')
     paths = current_source_paths(current_directory)
     archive = (directory/'source').resolve()
@@ -132,7 +238,7 @@ def source_identity(directory: Path, report: dict[str, Any], replay_mode: str = 
             'source_archive_sha256': recorded, 'current_source_sha256': current,
             'current_source_paths': {name: str(paths[name]) if name in paths else None for name in sorted(current_names)},
             'source_differences': differences, 'critical_sources': list(critical),
-            'source_runtime_generation': 'stage2' if stage2 else 'legacy',
+            'source_runtime_generation': 'stage4' if stage4 else 'stage2' if stage2 else 'legacy',
             'critical_execution_sources_match': not critical_differences,
             'critical_source_differences': critical_differences,
             'current_source_equality_required': replay_mode == 'strict'}
@@ -216,6 +322,30 @@ def load_recording(directory: Path, task: str | None = None, *,
     report = json.loads((directory/'report.json').read_text())
     _require(replay_mode in REPLAY_MODES, 'Unknown replay mode')
     policy = policy_from_report(report)
+    contract = source_completion_contract(report)
+    if contract == SELECTED_COMPLETION_CONTRACT or 'runtime_profile' in report:
+        _require(policy.max_episode_steps == 200 and policy.last_completion_step == 199,
+                 'Profile source must preserve the official200/last199 boundary')
+    storage = recording_policy_from_report(report)
+    artifacts = input_artifact_names(report)
+    _require(all((directory/name).is_file() for name in artifacts), 'Source lacks declared required artifacts')
+    profile = report.get('runtime_profile')
+    if profile is not None:
+        _require(isinstance(profile, dict) and profile.get('schema') == 'tig-task-runtime-profile-v1'
+                 and profile.get('task_id') == report.get('task')
+                 and profile.get('profile_id') == policy.policy_id
+                 and profile.get('policy_sha256') == resolved_policy_record(policy)['sha256'],
+                 'Source profile metadata differs from serialized policy')
+        overrides = profile.get('overrides')
+        _require(isinstance(overrides, dict) and all(key in policy.to_dict()
+            and key not in ('policy_id','schema_version','max_episode_steps','last_completion_step')
+            for key in overrides),
+            'Source profile overrides disagree with serialized policy')
+        _require(RuntimePolicy.from_dict(dict(policy.to_dict(),**overrides)) == policy,
+                 'Source profile override values differ from serialized policy')
+        if policy.policy_id == 'legacy-strict-v1':
+            _require(policy == LEGACY_STRICT and not overrides,
+                     'The frozen legacy profile cannot contain changed values or overrides')
     metadata = json.loads((directory/'trajectory.json').read_text())
     json.dumps([report, metadata], allow_nan=False)
     ticks = _read_rows(directory/'ticks.jsonl')
@@ -225,10 +355,6 @@ def load_recording(directory: Path, task: str | None = None, *,
     canonical = ALIASES.get(task, task) if task is not None else info.get('env_id')
     _require(canonical in TASK_IDS and report.get('task') == info.get('env_id') == canonical,
              'Source and selected task identities disagree')
-    _require(report.get('status') == 'passed' and report.get('mode') == 'positive'
-             and report.get('project_complete_physical_closure') is True
-             and report.get('official_200_step_complete') is True,
-             'A passed complete official200 positive recording is required')
     _require(report.get('max_episode_steps') == info.get('max_episode_steps') == policy.max_episode_steps == 200
              and kwargs.get('max_episode_steps', 200) == 200, 'Official200 metadata disagrees')
     _require(kwargs.get('control_mode') == 'pd_joint_pos' and kwargs.get('sim_backend') == 'cpu'
@@ -319,6 +445,10 @@ def load_recording(directory: Path, task: str | None = None, *,
     retreat_options = [['retreat']] if policy.require_retreat else [[], ['retreat']]
     final_options = [['verify_placement']] if policy.require_final_stability else [[], ['verify_placement']]
     valid_tails = [['release']+retreat+final for retreat in retreat_options for final in final_options]
+    if contract == SELECTED_COMPLETION_CONTRACT:
+        tail = ['release'] + (['retreat'] if policy.require_retreat else [])
+        valid_tails = ([tail+['verify_placement']] if policy.require_final_stability
+                       else [tail,tail+['observe_task_outcome']])
     _require(segments[:5] == prefix and release_index >= 5
              and segments[release_index:] in valid_tails
              and all(phase.startswith('carry_') for phase in segments[5:release_index]),
@@ -329,20 +459,26 @@ def load_recording(directory: Path, task: str | None = None, *,
              and flags['success'][-(policy.final_stable_steps if policy.require_final_stability else 1):].all(),
              'Source lacks its resolved real grasp/release/final stability gates')
     stages = report.get('stages', [])
+    if 'phase_step_counts' in report:
+        _require(report['phase_step_counts'] == dict(counts), 'Source phase count receipt differs')
     _require([stage.get('name') for stage in stages] == segments[1:] and all(
         stage.get('status') == 'passed' and stage.get('environment_steps') == counts[stage['name']]
         for stage in stages), 'Source stage receipts disagree')
     identity = source_identity(directory, report, replay_mode)
     geometry = load_geometry(directory, report)
+    compact = None if storage.diagnostic else validate_compact_source(directory, report, count, segments)
     return {'actions': actions, 'states': states, 'ticks': ticks, 'report': report, 'metadata': metadata,
             'native_flags': flags, 'action_keys': list(ACTION_KEYS), 'target_names': target_names,
             'task': canonical, 'source_sha256': report['source_sha256'], 'target_bindings': target_bindings,
             'runtime_policy': policy, 'geometry': geometry, 'source_identity': identity,
+            'recording_policy': storage, 'completion_contract': contract,
             'receipt': {'action_steps': count, 'state_frames': count+1, 'phase_counts': dict(counts),
                         'task': canonical, 'replay_mode': replay_mode,
                         'critical_execution_sources_match': identity['critical_execution_sources_match'],
                         'source_archive_integrity': 'passed', 'task_geometry_integrity': 'passed',
                         'runtime_policy_origin': 'source report' if 'runtime_policy' in report else 'legacy fallback',
+                        'completion_contract':contract, 'recording_mode':storage.mode,
+                        'required_input_artifacts':list(artifacts), 'compact_source':compact,
                         'target_state_bindings': binding_receipt}}
 
 
@@ -386,7 +522,8 @@ def restore_initial_fixed_roots(raw: Any, state: dict[str, Any]) -> dict[str, An
 
 
 def outcome(rows: list[dict[str, Any]], expected_steps: int, *,
-            policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
+            policy: RuntimePolicy = LEGACY_STRICT,
+            completion_contract: str | None = None) -> dict[str, Any]:
     """Apply the source's resolved limits; legacy callers retain the same gates."""
     from .sync_replay_metrics import _rows
     _rows(rows)
@@ -399,6 +536,20 @@ def outcome(rows: list[dict[str, Any]], expected_steps: int, *,
     final = ticks[-final_count:]
     rises = [float(retreat[-1]['objects'][side]['tcp_pose'][2]-release[-1]['objects'][side]['tcp_pose'][2])
              if release and retreat else 0. for side in (0, 1)]
+    def consecutive(values: list[dict[str, Any]], predicate: Any) -> int:
+        count = 0
+        for row in values:
+            count = count+1 if predicate(row) else 0
+        return count
+    release_count = consecutive(release, lambda row: all(
+        obj['fingers_open'] and not obj['is_grasping'] for obj in row['objects']))
+    final_observed = consecutive(ticks, lambda row: row['phase'] == 'verify_placement'
+        and row['native_success'] and all(obj['placement_valid'] for obj in row['objects']))
+    final_observed = min(final_observed, ticks[-1]['consecutive_stable_placement_steps']) if ticks else 0
+    selected = completion_contract == SELECTED_COMPLETION_CONTRACT
+    final_outcome = bool(ticks) and ticks[-1]['native_success'] and all(
+        obj['fingers_open'] and not obj['is_grasping'] and obj.get('physical_region', {}).get('inside') is True
+        and obj.get('official_region') is True for obj in ticks[-1]['objects'])
     checks = {'all_actions_observed': len(ticks) == expected_steps,
         'both_grasp_sequences_match': bool(ticks) and all(obj['grasp_matches_reference'] for row in ticks for obj in row['objects']),
         'both_physically_released_last_three': len(release) >= policy.release_stable_steps
@@ -417,7 +568,42 @@ def outcome(rows: list[dict[str, Any]], expected_steps: int, *,
         'final_official_success': len(final) == final_count and all(row['native_success'] for row in final),
         'no_failure_or_truncation': all(not row['native_truncated'] and not row['native_fail']
             and (not row['native_terminated'] or row['native_success']) for row in ticks)}
-    return {'status': 'passed' if all(checks.values()) else 'failed', 'checks': checks,
+    if selected:
+        checks.update(both_physically_released=release_count >= policy.release_stable_steps,
+            selected_retreat_observed=None if not policy.require_retreat else (
+                all(value >= policy.minimum_retreat_m for value in rises)
+                and bool(release and retreat and release[-1]['frame'] < retreat[0]['frame'])),
+            selected_final_stability_observed=None if not policy.require_final_stability else (
+                final_observed >= policy.final_stable_steps
+                and all(row['phase'] == 'verify_placement' for row in final)
+                and all(obj['placement_valid'] for row in final for obj in row['objects'])),
+            final_task_outcome_observed=(checks['final_official_success'] if policy.require_final_stability else final_outcome))
+        # Historical names are only measurements of their literal old windows.
+        # Unselected quality is not a passing strict closure observation.
+        if policy.release_stable_steps != 3:
+            checks['both_physically_released_last_three'] = None
+        if not policy.require_retreat or policy.minimum_retreat_m != .08:
+            checks['both_actual_retreats_at_least80mm'] = None
+        if not policy.require_retreat:
+            checks['release_retreat_order'] = None
+        if not policy.require_final_stability or policy.final_stable_steps != 20:
+            checks['common_final20_window'] = None
+        if not policy.require_final_stability:
+            checks['both_final_placements_valid'] = None
+    measurements = {
+        'release':{'consecutive_observed':release_count, 'required':policy.release_stable_steps,
+                   'physically_released':release_count >= policy.release_stable_steps},
+        'retreat':{'selected':policy.require_retreat,
+                   'gains_m':rises if policy.require_retreat else None,
+                   'minimum_m':policy.minimum_retreat_m},
+        'final_stability':{'selected':policy.require_final_stability,
+            'consecutive_observed':final_observed if policy.require_final_stability else None,
+            'required':policy.final_stable_steps,
+            'placement_valid':all(obj['placement_valid'] for row in final for obj in row['objects'])
+                if policy.require_final_stability and len(final) == final_count else None}}
+    return {'status': 'passed' if all(value for value in checks.values() if value is not None) else 'failed',
+            'checks': checks, 'measurements':measurements,
+            'completion_contract':completion_contract,
             'actual_retreat_tcp_rise_m': rises, 'release_steps': len(release),
             'placement_steps': sum(row['phase'] == 'verify_placement' for row in ticks),
             'runtime_policy': resolved_policy_record(policy),
@@ -472,6 +658,9 @@ def measure_replay_lift(rows: list[dict[str, Any]], target_names: Any) -> dict[s
 
 def video_timing(directory: Path, actions: int, report: dict[str, Any]) -> dict[str, Any]:
     """Count actual video frames against T+1 states plus declared presentation padding."""
+    if not recording_policy_from_report(report).diagnostic:
+        _require(report.get('video', {}).get('status') == 'not_selected', 'Normal video omission is undeclared')
+        return {'status':'not_selected', 'reason':'recording_mode_normal'}
     import imageio.v2 as imageio
     video = report.get('video', {})
     before, after = video.get('padding_frames_before'), video.get('padding_frames_after')
@@ -512,6 +701,9 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
     placement_anchor: list[np.ndarray] | None = None
     stable_count = 0
     policy = recording.get('runtime_policy', policy_from_report(recording['report']))
+    storage = RecordingPolicy(getattr(args, 'recording_mode', 'diagnostic'))
+    contract = recording.get('completion_contract', 'legacy-strict-closure')
+    report['recording_policy'] = storage.record()
     _require(isinstance(policy, RuntimePolicy), 'A validated source runtime policy is required')
     try:
         metadata = recording['metadata']
@@ -566,7 +758,7 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
             capture = make_physics_capture(env, raw, adapter, SimpleNamespace(mode='positive'), report,
                 frames, ticks, substeps, keys, checker_provider=lambda: checker,
                 support_release_provider=lambda: measured_source_departure(checker),
-                hard_step_budget=policy.max_episode_steps)
+                hard_step_budget=policy.max_episode_steps, recording_policy=storage)
             original_hook = capture.original_hook
             install_full_robot_contact_capture(raw, capture, adapter, contacts)
             raw._after_simulation_step = capture.record_substep
@@ -613,7 +805,8 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
                 if phase == 'close_and_confirm':
                     changed = float(np.max(np.abs(fingers-previous_fingers[side])))
                     close_counts[side] = close_counts[side]+1 if grasp and changed <= .0002 else 0
-                if phase == 'verify_placement':
+                if (phase == 'verify_placement' or phase == 'observe_task_outcome'
+                        or not policy.require_final_stability and phase in ('release','retreat')):
                     obj.update(physical_region=adapter.region_predicates()[side](actor),
                                official_region=_flag(evaluation[adapter.official_predicate_keys[side]], 'official region'))
                 row['objects'].append(obj)
@@ -638,7 +831,9 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
                     else:
                         stable_count += 1
                     for obj in row['objects']:
-                        obj['placement_valid'] = not drifted
+                        # On drift the native verifier starts a new window at
+                        # this basic-valid sample (count=1), with a new anchor.
+                        obj['placement_valid'] = True
                 row['consecutive_stable_placement_steps'] = stable_count
             prior_poses, previous_fingers = poses, fingers_now
             rows.append(row)
@@ -685,14 +880,20 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
 
         report['sequence'] = replay_sequence(recording, 'action', restore=restore, step=step, observe=observe)
         report['trajectory_errors'] = summarize_errors(errors)
+        state_validation = replay_state_validation(errors,recording['target_bindings'],storage)
+        report['replay_validation_profile'] = state_validation['profile']
+        report['task_trajectory_errors'] = state_validation['task_errors']
+        report['background_trajectory_errors'] = state_validation['background_errors']
+        report['replay_diagnostics'] = state_validation['diagnostics']
         objects = summarize_objects(rows)
         for obj, name in zip(objects['objects'], adapter.target_names):
             obj['actor'] = name  # Existing numerical reducer has legacy apple/banana labels only.
         report['object_errors'] = objects
-        report['outcome'] = outcome(rows, len(recording['actions']), policy=policy)
+        report['outcome'] = outcome(rows, len(recording['actions']), policy=policy,
+            completion_contract=contract)
         report['held_physics_audit'] = rename_held_audit_targets(
             held_substep_audit(substeps, references, policy=policy), adapter.target_names)
-        checks = {'all_state_errors_within_existing_action_limits': within_limits(report['trajectory_errors']['global'], ACTION_LIMITS),
+        checks = {**state_validation['required_checks'],
             'all_frames_observed': len(rows) == len(recording['states']),
             'one_initial_restore_only': report['state_restore_frames'] == [0] and len(restores) == 1,
             'one_control_step_per_original_action': int(as_numpy(raw.elapsed_steps)[0]) == len(recording['actions']),
@@ -714,15 +915,20 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
             for name in ('success', 'terminated', 'truncated'))
         report['checks'] = checks
         report['status'] = 'passed' if all(checks.values()) else 'failed'
+        if contract == SELECTED_COMPLETION_CONTRACT:
+            report['completion_contract'] = contract
+            report['selected_policy_complete'] = all(checks.values())
+            report['project_complete_physical_closure'] = None
     finally:
         report['replay_lift_measurement'] = measure_replay_lift(rows, recording['target_names'])
-        save_json(output/'all-robot-contacts.json', contacts)
-        with (output/'frames.jsonl').open('w') as handle:
-            for row in rows:
-                handle.write(json.dumps(json_value(row), allow_nan=False)+'\n')
+        write_robot_contacts(output, contacts, policy=storage)
+        if storage.diagnostic:
+            with (output/'frames.jsonl').open('w') as handle:
+                for row in rows:
+                    handle.write(json.dumps(json_value(row), allow_nan=False)+'\n')
         if env is not None:
             finalize_physics_capture(env, raw, capture, output, report, frames, ticks, substeps,
-                                     keys, original_hook, robot_contacts=contacts)
+                                     keys, original_hook, robot_contacts=contacts, recording_policy=storage)
         if measured:
             with h5py.File(output/'trajectory.h5', 'r') as handle:
                 group = handle[next(iter(handle))]
@@ -737,7 +943,8 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
                 'all_submitted_actions_match_H5': action_equal,
                 'initial_restore_precedes_RecordEpisode_frame0': True}
             report['video_timing'] = video_timing(output, len(applied), report)
-            if report['standard_recording_timing']['status'] != 'passed' or report['video_timing']['status'] != 'passed':
+            if (report['standard_recording_timing']['status'] != 'passed'
+                    or storage.diagnostic and report['video_timing']['status'] != 'passed'):
                 report['status'] = 'failed'
         report['observed_state_frames'], report['applied_action_steps'] = len(measured), len(applied)
 
@@ -786,7 +993,8 @@ def self_test() -> dict[str, Any]:
         'arm_joint_max_rad': .01, 'finger_max_m': .002}, ACTION_LIMITS)
     assert not within_limits({'pose_translation_m': .005001, 'pose_rotation_rad': .05,
         'arm_joint_max_rad': .01, 'finger_max_m': .002}, ACTION_LIMITS)
-    assert HERE.is_relative_to(CODE_ROOT) and RUNTIME_PATHS.workspace_root == WORKSPACE_ROOT
+    assert CODE_ROOT.is_dir() and (HERE/Path(__file__).name).is_file()
+    assert RUNTIME_PATHS.workspace_root == WORKSPACE_ROOT
     assert len(TASK_IDS) == 3
     from .physical_observation import measured_source_departure
     def support() -> Any:
@@ -963,7 +1171,128 @@ def self_test() -> dict[str, Any]:
         'lift_measurement_uses_observed_phase_entry': True,
         'missing_lift_measurement_is_unknown': True,
         'measured_source_departure_provider_reused': True,
-        'physical3mm_and_no_contact_gate_preserved': True, 'gpu_initialized': False}
+        'physical3mm_and_no_contact_gate_preserved': True, 'gpu_initialized': False,
+        'stage4': stage4_self_test()}
+
+
+def stage4_self_test() -> dict[str, Any]:
+    """Synthetic contract/storage/selected-observation checks, without physics."""
+    rejected = []
+    def reject(name: str, call: Any) -> None:
+        try: call()
+        except (ValueError, RuntimeError, AssertionError, KeyError): rejected.append(name)
+        else: raise AssertionError('Expected rejection: '+name)
+    legacy = dict(status='passed',mode='positive',official_200_step_complete=True,
+                  project_complete_physical_closure=True)
+    assert source_completion_contract(legacy) == 'legacy-strict-closure'
+    reject('legacy_incomplete', lambda:source_completion_contract(dict(legacy,project_complete_physical_closure=None)))
+    selected = dict(legacy,completion_contract=SELECTED_COMPLETION_CONTRACT,
+                    selected_policy_complete=True,project_complete_physical_closure=None)
+    assert source_completion_contract(selected) == SELECTED_COMPLETION_CONTRACT
+    for name, changes in [('selected_incomplete',{'selected_policy_complete':None}),
+        ('invented_legacy_closure',{'project_complete_physical_closure':True}),
+        ('unknown_contract',{'completion_contract':'unknown'})]:
+        reject(name,lambda changes=changes:source_completion_contract(dict(selected,**changes)))
+    policy = RuntimePolicy.from_dict(dict(LEGACY_STRICT.to_dict(),policy_id='task-default-v1',
+        release_stable_steps=4, final_stable_steps=5, minimum_settle_budget=0,
+        require_retreat=False,require_final_stability=False))
+    def samples(phases: list[str]) -> list[dict[str, Any]]:
+        rows=[]
+        for frame,phase in enumerate(['initial']+phases):
+            objects=[{'tcp_pose':[0.,0.,.1,1.,0.,0.,0.],'grasp_matches_reference':True,
+                'fingers_open':True,'is_grasping':False,'placement_valid':phase=='verify_placement',
+                'physical_region':{'inside':True},'official_region':True} for _ in (0,1)]
+            success=frame==len(phases) or phase=='verify_placement'
+            rows.append({'frame':frame,'phase':phase,'objects':objects,
+                'native_success':success,'native_terminated':success,
+                'native_truncated':False,'native_fail':False,
+                'consecutive_stable_placement_steps':sum(p=='verify_placement' for p in phases[:frame])})
+        return rows
+    rows=samples(['release']*4+['observe_task_outcome']*2)
+    value=outcome(rows,6,policy=policy,completion_contract=SELECTED_COMPLETION_CONTRACT)
+    assert value['status']=='passed' and value['measurements']['release']['consecutive_observed']==4
+    assert value['checks']['both_actual_retreats_at_least80mm'] is None
+    assert value['checks']['common_final20_window'] is None
+    assert value['measurements']['final_stability']['consecutive_observed'] is None
+    assert outcome(samples(['release']*4),4,policy=policy,
+                   completion_contract=SELECTED_COMPLETION_CONTRACT)['status']=='passed'
+    for key,new_value in [('is_grasping',True),('fingers_open',False),
+                          ('physical_region',{'inside':False}),('official_region',False)]:
+        altered=copy.deepcopy(rows);altered[-1]['objects'][0][key]=new_value
+        assert outcome(altered,6,policy=policy,completion_contract=SELECTED_COMPLETION_CONTRACT)['status']=='failed'
+    with_final=RuntimePolicy.from_dict(dict(policy.to_dict(),require_final_stability=True))
+    final=outcome(samples(['release']*4+['verify_placement']*5),9,policy=with_final,
+        completion_contract=SELECTED_COMPLETION_CONTRACT)
+    assert final['status']=='passed' and final['measurements']['final_stability']['consecutive_observed']==5
+    assert final['checks']['common_final20_window'] is None
+    assert outcome(samples(['release']*4+['verify_placement']*4),8,policy=with_final,
+        completion_contract=SELECTED_COMPLETION_CONTRACT)['status']=='failed'
+    normal=dict(recording_policy=RecordingPolicy('normal').record(),video={'status':'not_selected'})
+    assert 'execution.mp4' not in input_artifact_names(normal)
+    assert 'physics-summary.json' in input_artifact_names(normal)
+    assert 'execution.mp4' in input_artifact_names({})
+    assert video_timing(Path('/unopened-normal-video'),1,normal)['status']=='not_selected'
+    bindings=[SimpleNamespace(state_name='target0'),SimpleNamespace(state_name='target1')]
+    entities={key:{'pose_translation_m':0.,'pose_rotation_rad':0.} for key in
+        ('actors/target0','actors/target1','articulations/panda_wristcam-agent-0',
+         'articulations/panda_wristcam-agent-1','actors/background')}
+    entities['actors/background']['pose_translation_m']=.1
+    differences=[{'per_entity':entities}]
+    task_only=replay_state_validation(differences,bindings,RecordingPolicy('normal'))
+    assert all(task_only['required_checks'].values())
+    assert not task_only['diagnostics']['all_state_errors_within_existing_action_limits']
+    assert task_only['background_errors']['per_entity']['actors/background']['pose_translation_m']==.1
+    assert not all(replay_state_validation(differences,bindings,RecordingPolicy('diagnostic'))['required_checks'].values())
+    for key in ('actors/target0','articulations/panda_wristcam-agent-0'):
+        changed=copy.deepcopy(differences);changed[0]['per_entity'][key]['pose_translation_m']=.006
+        assert not all(replay_state_validation(changed,bindings,RecordingPolicy('normal'))['required_checks'].values())
+    broken=copy.deepcopy(normal);broken['recording_policy']['sha256']='0'*64
+    reject('recording_policy_hash',lambda:input_artifact_names(broken))
+    with tempfile.TemporaryDirectory() as temporary:
+        directory=Path(temporary);source=directory/'source';source.mkdir()
+        current=directory/'current';current.mkdir();infra=current/'infrastructure';infra.mkdir()
+        names=set(CRITICAL_SOURCES+STAGE2_HELPERS+INFRASTRUCTURE_SOURCES+
+                  ('runtime_profiles.py','recording_policy.py','task_outcome.py','run_results.py'))
+        hashes={}
+        for name in names:
+            payload=('# synthetic identity fixture '+name+'\n').encode()
+            (source/name).write_bytes(payload)
+            path=(infra if name in INFRASTRUCTURE_SOURCES else current)/name;path.write_bytes(payload)
+            hashes[name]=hashlib.sha256(payload).hexdigest()
+        identity_report={'source_sha256':hashes,'completion_contract':SELECTED_COMPLETION_CONTRACT}
+        assert source_identity(directory,identity_report,current_directory=current)['critical_execution_sources_match']
+        for name in ('runtime_profiles.py','recording_policy.py','task_outcome.py','run_results.py'):
+            path=current/name;original=path.read_bytes();path.write_text('# current changed\n')
+            reject('strict_current_'+name,lambda:source_identity(directory,identity_report,current_directory=current))
+            assert source_identity(directory,identity_report,'cross-version',current_directory=current)[
+                'critical_source_differences']==[name]
+            path.write_bytes(original);(source/name).write_text('# archive changed\n')
+            for mode in REPLAY_MODES:
+                reject('archive_'+mode+'_'+name,lambda mode=mode:source_identity(
+                    directory,identity_report,mode,current_directory=current))
+            (source/name).write_bytes(original)
+        monitor={'observed_substeps':5,'expected_substeps':5,'robot_world_observed_substeps':5,
+            'coverage_complete':True,'robot_world_coverage_complete':True,
+            'forbidden_contact_count':0,'interarm_forbidden_count':0,'robot_world_forbidden_count':0}
+        summary={'schema':'tig-compact-physical-observations-v1','physical_monitoring':monitor,
+            'actual_substeps':5,'actual_robot_world_substeps':5,'expected_substeps_per_control':5,
+            'control_substep_counts':{'1':5},'partial_control_steps':[],
+            'observed_control_steps_without_completed_tick':[],'event_count':1}
+        compact=dict(normal,compact_physical_summary=summary,physical_monitoring=monitor,
+            physical_archive_selection={'physics-events.jsonl':'written','physics-summary.json':'written',
+                'physics-substeps.jsonl':'not_selected','all-robot-contacts.json':'not_selected'})
+        save_json(directory/'physics-summary.json',summary)
+        (directory/'physics-events.jsonl').write_text(json.dumps({'kind':'phase_observed','phase':'preparation'})+'\n')
+        assert validate_compact_source(directory,compact,1,['preparation'])['status']=='passed'
+        changed=copy.deepcopy(compact);changed['physical_monitoring']['coverage_complete']=False
+        reject('incomplete_compact_coverage',lambda:validate_compact_source(directory,changed,1,['preparation']))
+        (directory/'physics-events.jsonl').write_text('')
+        reject('compact_event_inventory',lambda:validate_compact_source(directory,compact,1,['preparation']))
+    return {'status':'passed','rejected_inputs':rejected,'source_policy_re_resolution':False,
+            'optional_zero_and_positive_outcome_ticks':True,'nonlegacy_release4_final5':True,
+            'unselected_legacy_gates_remain_unknown':True,'normal_video_not_opened':True,
+            'normal_robot_target_gate_and_full_background_diagnostics':True,
+            'physical_environment_steps':0}
 
 
 def main() -> int:
@@ -974,6 +1303,8 @@ def main() -> int:
     parser.add_argument('--output-dir', type=Path)
     parser.add_argument('--replay-mode', choices=REPLAY_MODES, default='strict',
                         help='strict requires source runtime identity; cross-version records source differences')
+    parser.add_argument('--recording-mode', choices=('diagnostic','normal'), default='diagnostic',
+                        help='output artifact selection; source mode is read from its recorded policy')
     args = parser.parse_args()
     if args.self_test:
         print(json.dumps(self_test(), allow_nan=False)); return 0
@@ -993,9 +1324,7 @@ def main() -> int:
     sources = list(paths.values())
     for source in sources:
         shutil.copy2(source, archive/source.name)
-    input_files = ('trajectory.h5', 'trajectory.json', 'ticks.jsonl', 'physics-substeps.jsonl',
-                   'all-robot-contacts.json', 'report.json', 'execution.mp4',
-                   'task-geometry.json', 'task-geometry.npz')
+    input_files = input_artifact_names(recording['report'])
     input_hashes = {name: hashlib.sha256((args.input_dir/name).read_bytes()).hexdigest() for name in input_files}
     input_hashes.update({'source/'+name: digest for name, digest in
                          recording['source_identity']['source_archive_sha256'].items()})
@@ -1006,6 +1335,7 @@ def main() -> int:
         'replay_mode': args.replay_mode, 'replay_source_identity': recording['source_identity'],
         'runtime_policy': resolved_policy_record(recording['runtime_policy']),
         'runtime_policy_origin': recording['receipt']['runtime_policy_origin'],
+        'recording_policy': RecordingPolicy(args.recording_mode).record(),
         'runtime_paths': RUNTIME_PATHS.as_dict(),
         'source_sha256': {str(source): hashlib.sha256(source.read_bytes()).hexdigest() for source in sources},
         'replanning_performed': False, 'per_tick_state_correction': False,
@@ -1013,10 +1343,16 @@ def main() -> int:
         'physical_attachments_created': False, 'continuous_collision_detection': False,
         'contact_policy': 'unchanged physical_observation.contact_allowed and multitask_recording',
         'source_video_timing': video_timing(args.input_dir, len(recording['actions']), recording['report'])}
-    save_json(output/'report.json', report)
+    if recording['completion_contract'] == SELECTED_COMPLETION_CONTRACT:
+        report.update(completion_contract=SELECTED_COMPLETION_CONTRACT,
+            selected_policy_complete=None, project_complete_physical_closure=None)
+    if 'runtime_profile' in recording['report']:
+        report['runtime_profile'] = copy.deepcopy(recording['report']['runtime_profile'])
+    save_json(output/'report.json', archive_report(report, RecordingPolicy(args.recording_mode)))
     started = time.monotonic()
     try:
-        _require(report['source_video_timing']['status'] == 'passed', 'Source video T+1/padding timing disagrees')
+        _require(report['source_video_timing']['status'] in ('passed','not_selected'),
+                 'Source video T+1/padding timing disagrees')
         native_run(args, recording, output, report)
     except BaseException as error:
         report.update(status='failed', error_type=type(error).__name__, error=str(error), traceback=traceback.format_exc())
@@ -1027,7 +1363,7 @@ def main() -> int:
         report['status'] = 'failed'
     report = json_value(report)
     update_run_results_from_file(report, output/'ticks.jsonl')
-    save_json(output/'report.json', report)
+    save_json(output/'report.json', archive_report(report, RecordingPolicy(args.recording_mode)))
     print(json.dumps({'status': report['status'], 'report': str(output/'report.json')}), flush=True)
     return 0 if report['status'] == 'passed' else 1
 

@@ -5,8 +5,9 @@ environment, reading artifacts or changing thresholds. The publication helper
 also reads tick JSONL and preserves the final report if that input is damaged.
 Physics describes explicit monitoring/incident facts; quality separately applies
 recorded policy to measured receipts. Unknown observations remain null/unknown.
-Only acceptance retains the legacy complete-run decision, including its existing
-engineering and recording failure policy. No section certifies continuous safety.
+Acceptance identifies the recorded completion contract and retains its complete-run
+decision, including engineering and recording failures. No section certifies
+continuous safety.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA = "tig-run-results-v1"
+SELECTED_COMPLETION_CONTRACT = "selected-runtime-policy-v1"
 
 
 def _flag(value: Any) -> bool | None:
@@ -288,28 +290,63 @@ def _quality(report: Mapping[str, Any]) -> dict[str, Any]:
             return None
         return all(value >= limit if minimum else value <= limit for value in values)
 
+    def window_receipt(receipt: Mapping[str, Any], threshold: Any, fact: str) -> bool | None:
+        """Require measured consecutive counts, the recorded limit and a fact.
+
+        An explicit different limit is incompatible evidence, rather than a
+        receipt for the selected policy. Missing numeric observations remain
+        unknown, and a legacy boolean cannot fill a new incomplete receipt.
+        """
+        expected, recorded = _integer(threshold), _integer(receipt.get("required"))
+        agrees = None if expected is None or recorded is None else recorded == expected
+        observed = _integer(receipt.get("consecutive_observed"))
+        enough = None if expected is None or observed is None else observed >= expected
+        return _all([agrees, enough, _flag(receipt.get(fact))])
+
     replay = report.get("mode") == "action-replay"
     if replay:
         outcome = _mapping(report.get("outcome"))
         outcome_checks = _mapping(outcome.get("checks"))
+        measurements = _mapping(outcome.get("measurements"))
         grasp = _mapping(report.get("attachment_capture")).get("grasp_stable_steps_observed")
         add("grasp_stability", None if _integer(limits["grasp_stable_steps"]) is None else
             _count_at_least(grasp, limits["grasp_stable_steps"]),
             "report.attachment_capture.grasp_stable_steps_observed")
-        release = _flag(outcome_checks.get("both_physically_released_last_three")) \
-            if limits["release_stable_steps"] == 3 else None
-        add("release_stability", release, "report.outcome.checks.both_physically_released_last_three (3-tick receipt)")
+        if "release" in measurements:
+            release = window_receipt(_mapping(measurements.get("release")),
+                                     limits["release_stable_steps"], "physically_released")
+            release_source = "report.outcome.measurements.release (consecutive_observed + required + physically_released)"
+        else:
+            release = _flag(outcome_checks.get("both_physically_released_last_three")) \
+                if limits["release_stable_steps"] == 3 else None
+            release_source = "report.outcome.checks.both_physically_released_last_three (3-tick legacy receipt)"
+        add("release_stability", release, release_source)
         lift = _mapping(report.get("replay_lift_measurement"))
         lift_gains = lift.get("gains_m") if lift.get("status") == "observed" else None
         add("minimum_lift", measured_pair(lift_gains, limits["min_lift_m"], minimum=True),
             "report.replay_lift_measurement.gains_m (observed phase-start to phase-end)")
-        rise = measured_pair(outcome.get("actual_retreat_tcp_rise_m"), limits["minimum_retreat_m"], minimum=True)
-        add("minimum_retreat", rise, "report.outcome.actual_retreat_tcp_rise_m", required=limits["require_retreat"])
-        window = _flag(outcome_checks.get("common_final20_window")) if limits["final_stable_steps"] == 20 else None
-        placement = _flag(outcome_checks.get("both_final_placements_valid"))
-        add("final_stability", _all([window, placement]),
-            "report.outcome.checks.common_final20_window + both_final_placements_valid (20-tick receipt)",
-            required=limits["require_final_stability"])
+        if "retreat" in measurements:
+            retreat = _mapping(measurements.get("retreat"))
+            expected, recorded = limits["minimum_retreat_m"], retreat.get("minimum_m")
+            valid_recorded = type(recorded) in (int, float) and math.isfinite(recorded)
+            agrees = None if expected is None or not valid_recorded else recorded == expected
+            rise = _all([_flag(retreat.get("selected")), agrees,
+                         measured_pair(retreat.get("gains_m"), expected, minimum=True)])
+            rise_source = "report.outcome.measurements.retreat (selected + gains_m + minimum_m)"
+        else:
+            rise = measured_pair(outcome.get("actual_retreat_tcp_rise_m"), limits["minimum_retreat_m"], minimum=True)
+            rise_source = "report.outcome.actual_retreat_tcp_rise_m (legacy receipt)"
+        add("minimum_retreat", rise, rise_source, required=limits["require_retreat"])
+        if "final_stability" in measurements:
+            final = _mapping(measurements.get("final_stability"))
+            placement = _all([_flag(final.get("selected")),
+                window_receipt(final, limits["final_stable_steps"], "placement_valid")])
+            final_source = "report.outcome.measurements.final_stability (selected + consecutive_observed + required + placement_valid)"
+        else:
+            window = _flag(outcome_checks.get("common_final20_window")) if limits["final_stable_steps"] == 20 else None
+            placement = _all([window, _flag(outcome_checks.get("both_final_placements_valid"))])
+            final_source = "report.outcome.checks.common_final20_window + both_final_placements_valid (20-tick legacy receipt)"
+        add("final_stability", placement, final_source, required=limits["require_final_stability"])
     else:
         for name, key in (("close_and_confirm", "grasp_stable_steps"), ("release", "release_stable_steps")):
             add("grasp_stability" if name == "close_and_confirm" else "release_stability",
@@ -388,7 +425,8 @@ def _physics(report: Mapping[str, Any], events: list[dict[str, Any]]) -> dict[st
                 "robot_world_coverage_complete": robot_complete,
                 "positive_complete_robot_world_coverage": robot_coverage,
                 "coverage_complete": complete, "positive_complete_coverage": coverage},
-            "legacy_closure": _flag(report.get("project_complete_physical_closure")),
+            "legacy_closure": None if report.get("completion_contract") == SELECTED_COMPLETION_CONTRACT
+                else _flag(report.get("project_complete_physical_closure")),
             "legacy_replay_contact_check": _flag(_mapping(report.get("checks")).get("no_forbidden100Hz_contacts")),
             "evidence_scope": "explicit physical-monitoring counters and incident receipts; no raw stream reread",
             "legacy_status_quality_or_recording_used_to_infer_physics": False}
@@ -414,22 +452,29 @@ def _recording(report: Mapping[str, Any], events: list[dict[str, Any]]) -> dict[
     for field in ("recording_actions_and_Tplus1_verified", "input_evidence_unchanged"):
         if field in report:
             checks[field] = _receipt(_flag(report.get(field)), f"report.{field}")
+    video_not_selected = (_mapping(report.get("video")).get("status") == "not_selected"
+        and _mapping(_mapping(report.get("recording_policy")).get("resolved")).get("mode") == "normal")
     for field in ("standard_recording_timing", "video_timing"):
         row = _mapping(report.get(field))
-        if row:
+        if field == "video_timing" and video_not_selected:
+            checks[field] = {"value": None, "status": "not_required", "required": False,
+                "source": "report.video.status=not_selected + report.recording_policy.resolved.mode=normal"}
+        elif row:
             checks[field] = _receipt(_terminal_check(row.get("status")), f"report.{field}.status")
     errors = [event for event in events if event["kind"] == "recording_error"]
-    value = False if errors else _all([check["value"] for check in checks.values()])
+    value = False if errors else _all([check["value"] for check in checks.values()
+                                     if check.get("required") is not False])
     return {"status": _status(value), "checks": checks, "errors": copy.deepcopy(errors),
-            "video_reported_written": isinstance(report.get("video"), Mapping),
+            "video_reported_written": False if video_not_selected else isinstance(report.get("video"), Mapping),
             "evidence_scope": "existing report receipts only; H5/video/files not read"}
 
 
 def summarize_run(report: Mapping[str, Any], ticks: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """Return independent JSON sections without changing either input.
 
-    Legacy status remains the phase-1 input in ``acceptance``. It never
-    supplies an official observation or a physics conclusion. This function
+    Recorded status remains the complete-run input in ``acceptance``, under
+    its declared completion contract. It never supplies an official observation
+    or a physics conclusion. This function
     does not backfill/re-score a historical report or inspect external files.
     """
     if not isinstance(report, Mapping) or not isinstance(ticks, (list, tuple)) \
@@ -442,9 +487,28 @@ def summarize_run(report: Mapping[str, Any], ticks: Sequence[Mapping[str, Any]])
         events.append({"kind": "official_observation_conflict", "source": "report.official_task_evaluation vs final tick"})
     legacy_status = report.get("status")
     acceptance = True if legacy_status == "passed" else False if legacy_status == "failed" else None
+    selected_contract = report.get("completion_contract") == SELECTED_COMPLETION_CONTRACT
+    acceptance_result = {"status": _status(acceptance),
+        "policy": SELECTED_COMPLETION_CONTRACT if selected_contract else "phase1-legacy-acceptance-unchanged",
+        "completion_contract": report.get("completion_contract") if isinstance(report.get("completion_contract"), str) else None,
+        "run_acceptance": _receipt(acceptance, "report.status"),
+        "selected_policy_complete": _flag(report.get("selected_policy_complete")) if selected_contract else None,
+        "legacy_acceptance": _receipt(None if selected_contract else acceptance,
+            "not evaluated under selected-runtime-policy-v1" if selected_contract else "report.status"),
+        "exit_code_if_finalized": 0 if acceptance is True else 1 if acceptance is False else None,
+        "legacy_exit_code_if_finalized": None if selected_contract else
+            0 if acceptance is True else 1 if acceptance is False else None,
+        "observed_exit_code": report.get("exit_code") if type(report.get("exit_code")) is int else None,
+        "legacy_official_200_step_complete": _flag(report.get("official_200_step_complete")),
+        "legacy_project_complete_physical_closure": None if selected_contract else
+            _flag(report.get("project_complete_physical_closure")),
+        "scope": "recorded selected-policy decision; not a legacy strict closure verdict" if selected_contract else
+            "legacy decision; not recomputed from new result sections",
+        "legacy_report_fields_modified": False}
     results = {"schema": SCHEMA, "official": official,
         "execution": {"status": "running" if legacy_status == "running" else "terminal" if acceptance is not None else "unknown",
-                      "legacy_status": legacy_status if isinstance(legacy_status, str) else None,
+                      "run_status": legacy_status if isinstance(legacy_status, str) else None,
+                      "legacy_status": legacy_status if isinstance(legacy_status, str) and not selected_contract else None,
                       "last_phase": report.get("stage") if isinstance(report.get("stage"), str) else None,
                       "environment_steps": _integer(report.get("total_environment_steps")),
                       "native_truncation_observed": official["native_truncation_observed"],
@@ -452,14 +516,7 @@ def summarize_run(report: Mapping[str, Any], ticks: Sequence[Mapping[str, Any]])
                       "failure_categories": list(dict.fromkeys(row["kind"] for row in events)),
                       "error_type": report.get("error_type") if isinstance(report.get("error_type"), str) else None},
         "physics": _physics(report, events), "quality": _quality(report),
-        "acceptance": {"status": _status(acceptance), "policy": "phase1-legacy-acceptance-unchanged",
-                       "legacy_acceptance": _receipt(acceptance, "report.status"),
-                       "legacy_exit_code_if_finalized": 0 if acceptance is True else 1 if acceptance is False else None,
-                       "observed_exit_code": report.get("exit_code") if type(report.get("exit_code")) is int else None,
-                       "legacy_official_200_step_complete": _flag(report.get("official_200_step_complete")),
-                       "legacy_project_complete_physical_closure": _flag(report.get("project_complete_physical_closure")),
-                       "scope": "legacy decision; not recomputed from new result sections",
-                       "legacy_report_fields_modified": False},
+        "acceptance": acceptance_result,
         "recording": _recording(report, events), "events": events}
     # A rejected input is preferable to a silently non-JSON result.
     json.dumps(results, allow_nan=False)
@@ -639,6 +696,94 @@ def self_test() -> dict[str, Any]:
     replay["replay_lift_measurement"]["status"] = "unknown"
     assert summarize_run(replay, ticks)["quality"]["checks"]["minimum_lift"]["value"] is None
     checks.append("legacy replay metadata and old contact claims cannot replace missing monitoring or measurements")
+    selected = copy.deepcopy(monitored)
+    selected.update(status="passed", mode="action-replay", artifact_errors=[],
+        completion_contract=SELECTED_COMPLETION_CONTRACT, selected_policy_complete=True,
+        project_complete_physical_closure=None,
+        attachment_capture={"grasp_stable_steps_observed": [5, 5]},
+        replay_lift_measurement={"status": "observed", "gains_m": [.11, .12]})
+    selected_limits = copy.deepcopy(result["quality"]["policy"]["resolved"])
+    selected_limits.update(release_stable_steps=4, final_stable_steps=5)
+    selected["runtime_policy"] = {"resolved": selected_limits}
+    selected["outcome"] = {"checks": {"both_physically_released_last_three": None,
+        "common_final20_window": None, "both_final_placements_valid": True},
+        "measurements": {
+            "release": {"consecutive_observed": 4, "required": 4, "physically_released": True},
+            "final_stability": {"consecutive_observed": 5, "required": 5,
+                "placement_valid": True, "selected": True},
+            "retreat": {"selected": True, "gains_m": [.081, .082], "minimum_m": .08}}}
+    selected_summary = summarize_run(selected, ticks)
+    assert selected_summary["quality"]["status"] == "passed"
+    assert selected_summary["acceptance"]["policy"] == SELECTED_COMPLETION_CONTRACT
+    assert selected_summary["acceptance"]["selected_policy_complete"] is True
+    assert selected_summary["acceptance"]["legacy_acceptance"]["status"] == "unknown"
+    assert selected_summary["acceptance"]["legacy_project_complete_physical_closure"] is None
+    assert selected_summary["physics"]["legacy_closure"] is None
+    assert selected_summary["execution"]["legacy_status"] is None
+    for section, field, value in (("release", "required", 3),
+            ("release", "consecutive_observed", 3), ("release", "physically_released", False),
+            ("final_stability", "required", 20), ("final_stability", "consecutive_observed", 4),
+            ("final_stability", "placement_valid", False), ("final_stability", "selected", False),
+            ("retreat", "minimum_m", .07), ("retreat", "gains_m", [.079, .082]),
+            ("retreat", "selected", False)):
+        inconsistent = copy.deepcopy(selected)
+        inconsistent["outcome"]["measurements"][section][field] = value
+        assert summarize_run(inconsistent, ticks)["quality"]["status"] == "failed", (section, field)
+    incomplete = copy.deepcopy(selected)
+    incomplete["outcome"]["measurements"]["release"] = {}
+    incomplete["outcome"]["checks"]["both_physically_released_last_three"] = True
+    assert summarize_run(incomplete, ticks)["quality"]["status"] == "unknown"
+    for field, value in (("required", True), ("required", 4.),
+            ("consecutive_observed", 4.), ("consecutive_observed", [4, 4])):
+        malformed = copy.deepcopy(selected)
+        malformed["outcome"]["measurements"]["release"][field] = value
+        assert summarize_run(malformed, ticks)["quality"]["status"] == "unknown"
+    checks.append("replay numeric release4/final5 windows require matching policy limits, consecutive counts and observed facts")
+    optional = copy.deepcopy(selected)
+    optional["runtime_policy"]["resolved"].update(require_retreat=False, require_final_stability=False)
+    optional["outcome"]["measurements"]["retreat"] = {"selected": False, "gains_m": None, "minimum_m": .08}
+    optional["outcome"]["measurements"]["final_stability"] = {"selected": False,
+        "consecutive_observed": None, "required": 5, "placement_valid": None}
+    optional_summary = summarize_run(optional, ticks)
+    assert optional_summary["quality"]["status"] == "passed"
+    assert optional_summary["quality"]["checks"]["minimum_retreat"]["status"] == "not_required"
+    assert optional_summary["quality"]["checks"]["final_stability"]["status"] == "not_required"
+    # Even a stray old closure flag cannot turn this contract into a legacy verdict.
+    optional["project_complete_physical_closure"] = True
+    assert summarize_run(optional, ticks)["physics"]["legacy_closure"] is None
+    assert summarize_run(optional, ticks)["acceptance"]["legacy_project_complete_physical_closure"] is None
+    checks.append("unselected quality phases are not_required and selected-policy completion never claims legacy closure")
+    old_replay = copy.deepcopy(selected)
+    del old_replay["completion_contract"]
+    del old_replay["runtime_policy"]
+    old_replay["outcome"] = {"checks": {"both_physically_released_last_three": True,
+        "common_final20_window": True, "both_final_placements_valid": True},
+        "actual_retreat_tcp_rise_m": [.081, .082]}
+    assert summarize_run(old_replay, ticks)["quality"]["status"] == "passed"
+    checks.append("legacy replay 3/20 boolean receipts remain supported when numeric measurements are absent")
+    normal = copy.deepcopy(monitored)
+    normal.update(status="passed", artifact_errors=[], video={"status": "not_selected"},
+        recording_policy={"resolved": {"mode": "normal"}}, video_timing={"status": "failed"})
+    normal_summary = summarize_run(normal, ticks)
+    assert normal_summary["recording"]["status"] == "passed"
+    assert normal_summary["recording"]["video_reported_written"] is False
+    assert normal_summary["recording"]["checks"]["video_timing"]["status"] == "not_required"
+    normal["recording_policy"]["resolved"]["mode"] = "debug"
+    assert summarize_run(normal, ticks)["recording"]["status"] == "failed"
+    normal["recording_policy"]["resolved"]["mode"] = "normal"
+    normal["artifact_errors"] = ["video: OSError: disk full"]
+    failed_normal = summarize_run(normal, ticks)
+    assert failed_normal["recording"]["status"] == "failed"
+    assert failed_normal["official"]["final_success"] is True
+    assert failed_normal["quality"]["status"] == failed_normal["physics"]["status"] == "passed"
+    selected_failure = copy.deepcopy(selected)
+    selected_failure.update(status="failed", artifact_errors=["video: OSError: disk full"])
+    failure_summary = summarize_run(selected_failure, ticks)
+    assert failure_summary["official"]["final_success"] is True
+    assert failure_summary["recording"]["status"] == failure_summary["acceptance"]["status"] == "failed"
+    assert failure_summary["acceptance"]["selected_policy_complete"] is True
+    assert failure_summary["acceptance"]["legacy_acceptance"]["value"] is None
+    checks.append("normal not-selected video is not_required; recording errors retain independent official and quality facts")
     updated = copy.deepcopy(report); updated["results"] = {"old": True}
     original = copy.deepcopy(updated); value = update_run_results(updated, ticks)
     assert updated["results"] is value and {k:v for k,v in updated.items() if k != "results"} == {
