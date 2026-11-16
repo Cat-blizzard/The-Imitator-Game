@@ -1,6 +1,6 @@
 # TIG 双臂执行与 cuRobo：成果保存快照
 
-当前开发进度见[运行去重与质量策略检查点](RUNTIME-STRATEGIES.md)：阶段 3 的去重已通过 MPLib／cuRobo 药瓶两例原生生成和严格动作回放，动作与状态保持不变；阶段 4 的任务配置、可选收尾、常规／诊断录制和公开生成／回放入口已接入，CPU 检查通过，最终新策略原生回归仍为 **NOT_RUN**。阶段 1、2 的证据分别见[发布快照](INFRA-CONVERGENCE.md)和[独立 checkout 检查点](PORTABLE-RUNTIME.md)。后续遵循[检查分层与质量配置约定](CHECKS-AND-QUALITY.md)，旧轨迹与评分保留。下文为历史快照。
+当前进度见[最终本地验收](INFRA-CONVERGENCE-ACCEPTANCE.md)：五阶段收敛已完成，统一配置、独立结果、运行去重、可选质量与normal/diagnostic录制均接通。最终运行版本 `f390fdf` 的四个代表案例及第三个水果任务原生／严格回放分别为171、191、192、187、196步；可选配置、legacy、旧轨迹跨版本回放和实际未释放负例另存验证。命令见[运行指南](RUNTIME-STRATEGIES.md)。阶段1、2的证据分别见[发布快照](INFRA-CONVERGENCE.md)和[独立checkout检查点](PORTABLE-RUNTIME.md)。旧轨迹、评分和下文历史快照保留。
 
 2026-11-17 后续修复：快照 PR 已合入 fork `main`（`f65ebc6`）。基于该版本完成放置几何、MPLib 终点与收尾预算修复；同一源码的四例代表运行及实际动作回放均通过，见 [修复与验收说明](REPAIR-20261117.md)。下文保留前次快照保存时的状态与历史结果。
 
