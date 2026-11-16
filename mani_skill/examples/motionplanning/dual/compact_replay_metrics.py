@@ -19,8 +19,8 @@ import numpy as np
 
 from .replay_metrics import ACTION_KEYS, pose_errors
 from .sync_replay_metrics import LEAVES, _array, _flag, _require, _rows, summarize_objects
-from .validate_grasp import TASK
-from .validate_replay import ACTION_LIMITS
+from .task_targets import TASK
+from .replay_support import ACTION_LIMITS
 
 
 def load_compact_recording(directory: Path) -> dict[str, Any]:

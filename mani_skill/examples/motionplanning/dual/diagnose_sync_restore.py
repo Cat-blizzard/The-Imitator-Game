@@ -29,8 +29,8 @@ import numpy as np
 
 from . import validate_sync_replay as original
 from .replay_metrics import compare_states, pose_errors, summarize_errors
-from .validate_grasp import json_value, save_report
-from .validate_replay import ACTION_LIMITS, split_action, within_limits
+from .runtime_io import json_value, save_report
+from .replay_support import ACTION_LIMITS, split_action, within_limits
 
 HERE = Path(__file__).resolve().parent
 ROOT = original.ROOT

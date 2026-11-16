@@ -21,7 +21,7 @@ from .grasp_execution import _actions_valid
 from .lift_execution import _rotation_distance
 from .trajectory_execution import as_numpy
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
-from .validate_sync import continue_success_only
+from .physical_observation import continue_success_only
 
 GIVER_HOLD = 'giver_hold'
 RECEIVER_CLOSE = 'receiver_close'

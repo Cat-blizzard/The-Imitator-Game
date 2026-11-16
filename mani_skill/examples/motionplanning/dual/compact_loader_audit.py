@@ -20,7 +20,7 @@ import numpy as np
 from .compact_replay_metrics import load_compact_recording
 from .replay_metrics import ACTION_KEYS
 from .sync_replay_metrics import LEAVES
-from .validate_grasp import TASK
+from .task_targets import TASK
 
 HERE = Path(__file__).resolve().parent
 OPEN_PHASES = {"preparation", "pregrasp", "descend", "release", "retreat", "verify_placement"}

@@ -32,24 +32,58 @@ from typing import Any
 import h5py
 import numpy as np
 
+from infrastructure.tig_runtime import resolve_runtime_paths
+
 from .multitask_adapters import ALIASES, TASK_IDS
 from .task_replay_alias import load_target_bindings, target_state, validate_live_bindings
 from .replay_metrics import ACTION_KEYS, compare_states, pose_errors, summarize_errors
 from .sync_replay_metrics import _array, _flag, _require, summarize_objects
-from .validate_compact_replay import batch_state, replay_signal, unbatch_state
-from .validate_replay import ACTION_LIMITS, STATE_LIMITS, replay_sequence, within_limits
-from .validate_curobo import save_json
-from .validate_grasp import json_value
+from .replay_support import (ACTION_LIMITS, STATE_LIMITS, batch_state, replay_sequence,
+                             replay_signal, unbatch_state, within_limits)
+from .runtime_io import json_value, save_json, termination_handler
 from .runtime_policy import LEGACY_STRICT, RuntimePolicy, policy_from_report, resolved_policy_record
 from .run_results import update_run_results_from_file
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[6]
+RUNTIME_PATHS = resolve_runtime_paths()
+CODE_ROOT = RUNTIME_PATHS.code_root
+WORKSPACE_ROOT = RUNTIME_PATHS.workspace_root
 CRITICAL_SOURCES = ('dual_arm_execution.py', 'dual_payload_collision.py',
                     'multitask_recording.py', 'multitask_adapters.py',
                     'validate_sync.py', 'validate_curobo_payload.py')
 OPEN_PHASES = {'preparation', 'pregrasp', 'descend', 'release', 'retreat', 'verify_placement'}
 REPLAY_MODES = ('strict', 'cross-version')
+STAGE2_HELPERS = ('runtime_io.py', 'physical_observation.py', 'replay_support.py',
+                  'phase_kinematics.py', 'task_targets.py', 'transport_recipes.py')
+INFRASTRUCTURE_SOURCES = ('tig_runtime.py', 'curobo_tig_worker.py',
+    'curobo_tig_payload_worker.py', 'curobo_tig_task_payload_worker.py',
+    'curobo_tig_fast_payload_worker.py', 'curobo_tig_seed_policy_worker.py',
+    'curobo_tig_session_worker.py')
+
+
+def current_source_paths(current_directory: Path = HERE) -> dict[str, Path]:
+    """Read this checkout's dual modules and infrastructure, never a saved archive.
+
+    An explicit flat current_directory supports isolated CPU fixtures; its
+    infrastructure lives underneath it. A real dual package uses its checkout's
+    infrastructure, independently of the external dependency workspace.
+    """
+    current_directory = Path(current_directory).resolve()
+    if current_directory == HERE:
+        infrastructure = CODE_ROOT/'infrastructure'
+    elif current_directory.parts[-4:] == ('mani_skill', 'examples', 'motionplanning', 'dual'):
+        infrastructure = current_directory.parents[3]/'infrastructure'
+    else:
+        infrastructure = current_directory/'infrastructure'
+    sources = {path.name: path for path in current_directory.glob('*.py') if path.is_file()}
+    # Actual worker code belongs to infrastructure even if another same-named
+    # file exists among the dual modules. A missing worker remains missing.
+    for name in INFRASTRUCTURE_SOURCES:
+        sources.pop(name, None)
+        path = infrastructure/name
+        if path.is_file():
+            sources[name] = path
+    return sources
 
 
 def _read_rows(path: Path) -> list[dict[str, Any]]:
@@ -76,10 +110,18 @@ def source_identity(directory: Path, report: dict[str, Any], replay_mode: str = 
     _require({path.name for path in (directory/'source').iterdir() if path.is_file()} == set(recorded),
              'Source archive file inventory differs from its manifest')
     critical = CRITICAL_SOURCES + (('runtime_policy.py',) if 'runtime_policy' in report else ())
+    stage2 = bool(set(recorded) & set(STAGE2_HELPERS))
+    if stage2:
+        critical += STAGE2_HELPERS + INFRASTRUCTURE_SOURCES
     _require(set(critical) <= set(recorded), 'Source lacks critical execution identities')
-    current_names = set(recorded) | {path.name for path in current_directory.glob('*.py') if path.is_file()}
-    current = {name: hashlib.sha256((current_directory/name).read_bytes()).hexdigest()
-               if (current_directory/name).is_file() else None for name in sorted(current_names)}
+    paths = current_source_paths(current_directory)
+    archive = (directory/'source').resolve()
+    _require(not Path(current_directory).resolve().is_relative_to(archive)
+             and all(not path.resolve().is_relative_to(archive) for path in paths.values()),
+             'Current execution sources cannot be the recorded source archive')
+    current_names = set(recorded) | set(paths)
+    current = {name: hashlib.sha256(paths[name].read_bytes()).hexdigest() if name in paths else None
+               for name in sorted(current_names)}
     differences = {name: {'source_sha256': recorded.get(name), 'current_sha256': current[name]}
                    for name in sorted(current_names) if recorded.get(name) != current[name]}
     critical_differences = [name for name in critical if name in differences]
@@ -88,7 +130,9 @@ def source_identity(directory: Path, report: dict[str, Any], replay_mode: str = 
                  'Current execution/contact dependency differs from source: '+', '.join(critical_differences))
     return {'replay_mode': replay_mode, 'source_archive_integrity': 'passed',
             'source_archive_sha256': recorded, 'current_source_sha256': current,
+            'current_source_paths': {name: str(paths[name]) if name in paths else None for name in sorted(current_names)},
             'source_differences': differences, 'critical_sources': list(critical),
+            'source_runtime_generation': 'stage2' if stage2 else 'legacy',
             'critical_execution_sources_match': not critical_differences,
             'critical_source_differences': critical_differences,
             'current_source_equality_required': replay_mode == 'strict'}
@@ -454,9 +498,8 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
     from .multitask_adapters import get_task_adapter
     from .multitask_recording import make_physics_capture, finalize_physics_capture, rename_held_audit_targets
     from .trajectory_execution import as_numpy
-    from .validate_curobo_payload import install_full_robot_contact_capture
-    from .validate_curobo_complete import make_checker, measured_source_departure
-    from .validate_sync import held_substep_audit
+    from .physical_observation import (held_substep_audit, install_full_robot_contact_capture,
+                                       make_checker, measured_source_departure)
     env, raw, capture, checker, original_hook, adapter = None, None, None, None, None, None
     frames, ticks, substeps, contacts, measured, rows, errors, applied = [], [], [], [], [], [], [], []
     keys = recording['action_keys']
@@ -743,9 +786,9 @@ def self_test() -> dict[str, Any]:
         'arm_joint_max_rad': .01, 'finger_max_m': .002}, ACTION_LIMITS)
     assert not within_limits({'pose_translation_m': .005001, 'pose_rotation_rad': .05,
         'arm_joint_max_rad': .01, 'finger_max_m': .002}, ACTION_LIMITS)
-    assert ROOT == Path('/data/jxc/ld/ZeroWAM-for-TIG')
+    assert HERE.is_relative_to(CODE_ROOT) and RUNTIME_PATHS.workspace_root == WORKSPACE_ROOT
     assert len(TASK_IDS) == 3
-    from .validate_curobo_complete import measured_source_departure
+    from .physical_observation import measured_source_departure
     def support() -> Any:
         return SimpleNamespace(support_released=False, _initial_support_exists=False,
             _target_names={'piece0'}, _support_state_receipt={
@@ -834,6 +877,52 @@ def self_test() -> dict[str, Any]:
         (source/'unlisted.py').write_text('# unauthenticated file\n')
         for mode in REPLAY_MODES:
             reject(lambda mode=mode: source_identity(directory, identity_report, mode, current_directory=current))
+        (source/'unlisted.py').unlink()
+        (current/'runtime_policy.py').write_bytes((source/'runtime_policy.py').read_bytes())
+        first_helper = STAGE2_HELPERS[0]
+        payload = ('# '+first_helper+'\n').encode()
+        (source/first_helper).write_bytes(payload); (current/first_helper).write_bytes(payload)
+        hashes[first_helper] = hashlib.sha256(payload).hexdigest()
+        for mode in REPLAY_MODES:
+            reject(lambda mode=mode: source_identity(directory, identity_report, mode, current_directory=current))
+        infrastructure = current/'infrastructure'; infrastructure.mkdir()
+        for name in STAGE2_HELPERS+INFRASTRUCTURE_SOURCES:
+            payload = ('# '+name+'\n').encode()
+            (source/name).write_bytes(payload)
+            location = infrastructure/name if name in INFRASTRUCTURE_SOURCES else current/name
+            location.write_bytes(payload)
+            hashes[name] = hashlib.sha256(payload).hexdigest()
+        modern = source_identity(directory, identity_report, current_directory=current)
+        assert modern['source_runtime_generation'] == 'stage2'
+        assert set(STAGE2_HELPERS+INFRASTRUCTURE_SOURCES) <= set(modern['critical_sources'])
+        # A same-named dual file cannot stand in for actual infrastructure code.
+        worker = 'curobo_tig_task_payload_worker.py'
+        (current/worker).write_text('# not the worker being executed\n')
+        assert source_identity(directory, identity_report, current_directory=current)['critical_execution_sources_match']
+        for name in ('tig_runtime.py', 'physical_observation.py', worker):
+            location = infrastructure/name if name in INFRASTRUCTURE_SOURCES else current/name
+            original = location.read_bytes()
+            location.write_text('# changed current runtime dependency\n')
+            reject(lambda: source_identity(directory, identity_report, current_directory=current))
+            changed = source_identity(directory, identity_report, 'cross-version', current_directory=current)
+            assert changed['critical_source_differences'] == [name]
+            assert changed['current_source_paths'][name] == str(location)
+            location.write_bytes(original)
+            original = (source/name).read_bytes()
+            (source/name).write_text('# changed archived runtime dependency\n')
+            for mode in REPLAY_MODES:
+                reject(lambda mode=mode: source_identity(directory, identity_report, mode, current_directory=current))
+            (source/name).write_bytes(original)
+        reject(lambda: source_identity(directory, identity_report, current_directory=source))
+        absent_worker = copy.deepcopy(identity_report)
+        absent_worker['source_sha256'].pop(worker)
+        original = (source/worker).read_bytes(); (source/worker).unlink()
+        for mode in REPLAY_MODES:
+            reject(lambda mode=mode: source_identity(directory, absent_worker, mode, current_directory=current))
+        (source/worker).write_bytes(original)
+        isolated = resolve_runtime_paths(code_root=current,
+            environ={'TIG_WORKSPACE': str(directory/'dependencies')})
+        assert isolated.code_root == current and isolated.workspace_root == directory/'dependencies'
     assert policy_from_report({}) is LEGACY_STRICT
     assert policy_from_report({'runtime_policy': resolved_policy_record()}) == LEGACY_STRICT
     shorter = RuntimePolicy.from_dict(dict(LEGACY_STRICT.to_dict(), final_stable_steps=5))
@@ -866,6 +955,10 @@ def self_test() -> dict[str, Any]:
         'rejected_inputs': rejected, 'source_departure_negative_cases': departure_negatives,
         'strict_and_cross_version_archive_integrity_verified': True,
         'strict_runtime_policy_source_gate_verified': True,
+        'complete_stage2_runtime_and_worker_sources_required': True,
+        'runtime_helper_worker_current_changes_rejected_only_in_strict': True,
+        'archived_runtime_helper_worker_changes_rejected_in_both_modes': True,
+        'recorded_archive_cannot_substitute_for_current_sources': True,
         'source_resolved_release_retreat_final_limits_verified': True,
         'lift_measurement_uses_observed_phase_entry': True,
         'missing_lift_measurement_is_unknown': True,
@@ -890,12 +983,14 @@ def main() -> int:
     if not re.fullmatch(r'GPU-[0-9a-fA-F-]+', gpu) or any(os.environ.get(f'MANI_SKILL_L{i}') for i in (1, 2, 3)):
         parser.error('One explicit rendering GPU UUID and L0 are required')
     faulthandler.enable(); resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    from .validate_multitask import termination_handler
     signal.signal(signal.SIGTERM, termination_handler)
     recording = load_recording(args.input_dir, args.task, replay_mode=args.replay_mode)
     output = args.output_dir.resolve(); output.mkdir(parents=True, exist_ok=False)
     archive = output/'source'; archive.mkdir()
-    sources = list(HERE.glob('*.py'))
+    paths = current_source_paths()
+    _require(set(STAGE2_HELPERS+INFRASTRUCTURE_SOURCES) <= set(paths),
+             'Current checkout lacks complete runtime helpers or infrastructure workers')
+    sources = list(paths.values())
     for source in sources:
         shutil.copy2(source, archive/source.name)
     input_files = ('trajectory.h5', 'trajectory.json', 'ticks.jsonl', 'physics-substeps.jsonl',
@@ -911,11 +1006,12 @@ def main() -> int:
         'replay_mode': args.replay_mode, 'replay_source_identity': recording['source_identity'],
         'runtime_policy': resolved_policy_record(recording['runtime_policy']),
         'runtime_policy_origin': recording['receipt']['runtime_policy_origin'],
+        'runtime_paths': RUNTIME_PATHS.as_dict(),
         'source_sha256': {str(source): hashlib.sha256(source.read_bytes()).hexdigest() for source in sources},
         'replanning_performed': False, 'per_tick_state_correction': False,
         'hidden_contact_or_sleep_state_restored': False, 'controller_reset_after_restoration': False,
         'physical_attachments_created': False, 'continuous_collision_detection': False,
-        'contact_policy': 'unchanged validate_curobo_payload.contact_allowed and multitask_recording',
+        'contact_policy': 'unchanged physical_observation.contact_allowed and multitask_recording',
         'source_video_timing': video_timing(args.input_dir, len(recording['actions']), recording['report'])}
     save_json(output/'report.json', report)
     started = time.monotonic()

@@ -1,4 +1,4 @@
-"""Isolated fixed-task-v4: both fruit link7 solids use tight25mm coverage.
+"""Fixed-task-v4: both fruit link7 solids use tight25mm coverage.
 
 The unchanged v3 exporter/validator supplies actual PhysX collision vertices,
 scale and shape-local XYZ/WXYZ poses. The unchanged six-LP full-solid cell
@@ -18,17 +18,16 @@ from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
-import sys
 import time
 from typing import Any, Callable
 
 import numpy as np
 
-ROOT=next(p for p in Path(__file__).resolve().parents if (p/'infrastructure/development/tig-dual-arm').is_dir())
-DEV=ROOT/'infrastructure/development/tig-dual-arm'
-for directory in (DEV,ROOT/'infrastructure'):
-    if str(directory) not in sys.path:sys.path.insert(0,str(directory))
-from mani_skill.examples.motionplanning.dual import curobo_fruit_link7_v3 as v3
+from infrastructure.tig_runtime import resolve_runtime_paths
+RUNTIME_PATHS = resolve_runtime_paths()
+ROOT = RUNTIME_PATHS.workspace_root
+DEV = RUNTIME_PATHS.code_root
+from . import curobo_fruit_link7_v3 as v3
 
 v1,v2=v3.v1,v3.v2
 LINK,FRUIT=v3.LINK,v3.FRUIT

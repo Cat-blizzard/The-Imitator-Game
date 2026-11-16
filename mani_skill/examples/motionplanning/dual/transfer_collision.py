@@ -21,7 +21,7 @@ from .held_collision import _pair_result
 from .table_support_collision import (NumericalTableSupportCollisionChecker, NUMERICAL_TOP_TOLERANCE_M,
                                       TABLE_NAME, _rigid_transform)
 from .trajectory_execution import as_numpy
-from .validate_held_path_conflict import physical_contact_points
+from .physical_observation import physical_contact_points
 
 ROBOTS = ('left', 'right')
 PHASES = ('giver_hold', 'receiver_contact', 'receiver_confirmed', 'giver_release',

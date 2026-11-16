@@ -21,10 +21,10 @@ from typing import Any, Callable
 import numpy as np
 
 from .trajectory_execution import as_numpy
-from .validate_grasp import json_value, recording_summary, save_report
-from .validate_sync import applied_action, continue_success_only
-from .validate_path_conflict import interarm_contact_rows
-from .validate_held_path_conflict import classify_interarm_contacts, physical_contact_points
+from .runtime_io import json_value, recording_summary, save_report
+from .physical_observation import applied_action, continue_success_only
+from .physical_observation import interarm_contact_rows
+from .physical_observation import classify_interarm_contacts, physical_contact_points
 
 PHYSICAL_SUPPORT_CLEARANCE_M = .003
 RECORDING_VERSION = 'multitask-recording-v06-verified-destination-contents'

@@ -19,7 +19,7 @@ import h5py
 import numpy as np
 
 from .replay_metrics import ACTION_KEYS, load_recording, pose_errors
-from .validate_replay import ACTION_LIMITS, STATE_LIMITS
+from .replay_support import ACTION_LIMITS, STATE_LIMITS
 
 ACTORS = ("apple_out", "banana_out")
 ACTION_STEPS = 323

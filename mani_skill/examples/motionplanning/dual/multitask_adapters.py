@@ -45,7 +45,7 @@ PILL_GRASP_POLICY = "fixed-model-specific-grasp-heights-v7"
 
 def task_phase_limits(configuration: dict[str, Any], task_id: str, phase: str) -> dict[str, Any]:
     """Resolve task-only phase limits through the existing common limit format."""
-    from .validate_sync_compact import compact_phase_limits
+    from .phase_kinematics import compact_phase_limits
     canonical = ALIASES.get(task_id, task_id)
     if canonical not in TASK_IDS: raise ValueError(f'Unsupported task {task_id}')
     limits = compact_phase_limits(configuration, phase)
@@ -231,7 +231,7 @@ def basket_contents_geometry_proof(target_vertices: Any, contents_vertices: Any,
     [-5mm floor,+10mm rim] centre-height band. No raw separation, normal, impulse
     or official success predicate is changed. Identity/phase gates are separate.
     """
-    from .validate_sync import physical_region
+    from .task_targets import physical_region
     arrays = [_array(v) for v in (target_vertices, contents_vertices, basket_vertices)]
     for vertices in arrays:
         bounds = _bounds(vertices)
@@ -478,8 +478,8 @@ class TaskAdapter:
         """Return ((left_pre,left_grasp),(right_pre,right_grasp)), world poses."""
         import sapien
         if self.task_id == TASK_IDS[0]:
-            from .validate_grasp import grasp_poses
-            from .validate_banana import banana_grasp_poses
+            from .task_targets import grasp_poses
+            from .task_targets import banana_grasp_poses
             return grasp_poses(self.raw), banana_grasp_poses(self.raw)
         approaching = np.array([0., 0., -1.])
         agents = tuple(self.raw.agent.agents)
@@ -539,7 +539,7 @@ class TaskAdapter:
         """World TCP XYZ[2,3]; pill/fruits require two measured side captures."""
         centers = np.stack([_single(actor.pose.p, 3, "destination origin") for actor in self.destination_actors])
         if self.task_id == TASK_IDS[0]:
-            from .validate_sync_compact import RELEASE_TCP_OFFSETS_BASKET_M
+            from .task_targets import RELEASE_TCP_OFFSETS_BASKET_M
             offsets = np.asarray(RELEASE_TCP_OFFSETS_BASKET_M)
         else:
             if any(row is None for row in self._release_captures):
@@ -629,7 +629,7 @@ class TaskAdapter:
                 if actor is not self.targets[index]:
                     raise ValueError("Region callback received the wrong canonical target actor")
                 if self.task_id == TASK_IDS[0]:
-                    from .validate_sync import collision_vertex_region
+                    from .task_targets import collision_vertex_region
                     basket = self.destination_actors[index]
                     # _vertices caches every native local collision part and
                     # refreshes its measured pose. The region helper transforms
@@ -960,7 +960,7 @@ def self_test() -> dict[str, Any]:
     assert task_phase_limits(fake_limits,'fruits','carry_lower')['nominal_acceleration_limit_rad_s2'] == 2.6
     assert serial.configuration()["grasp_policy"] == PILL_GRASP_POLICY
     assert np.allclose(serial.configuration()["pregrasp_local_tcp_offset_m"], [[0,0,-.09],[0,0,-.08]])
-    from .validate_sync_compact import compact_phase_limits
+    from .phase_kinematics import compact_phase_limits
     for task_id in TASK_IDS:
         for phase in ("pregrasp", "descend", "lift_and_hold", "carry_orient_and_transport", "carry_lower", "retreat"):
             assert task_phase_limits(fake_limits, task_id, phase) == compact_phase_limits(fake_limits, phase)
