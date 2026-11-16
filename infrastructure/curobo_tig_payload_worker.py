@@ -27,12 +27,14 @@ import time
 from typing import Any, Callable
 
 if __package__:
+    from .curobo_tig_session_worker import _validate_request_fields
     from .curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _finite_json, _matrix, _tensor_json, _vector
     from .curobo_tig_session_worker import (
         ResidentBackend, SessionManager, canonical_hash, robot_topology, serve,
         validate_request as validate_empty_request, world_topology, _pose, _tensor_identity,
     )
 else:
+    from curobo_tig_session_worker import _validate_request_fields
     from curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _finite_json, _matrix, _tensor_json, _vector
     from curobo_tig_session_worker import (
         ResidentBackend, SessionManager, canonical_hash, robot_topology, serve,
@@ -108,13 +110,14 @@ def sphere_box_gaps(spheres: Any, box_pose: list[float], dimensions: Any) -> lis
     return result
 
 
-def validate_model(model: Any, robot_cfg: dict[str, Any], world: dict[str, Any]) -> None:
+def validate_model(model: Any, robot_cfg: dict[str, Any], world: dict[str, Any], *,
+                   extra_fields: frozenset[str] = frozenset()) -> None:
     """Validate immutable reserved topology and exact target ownership on CPU."""
     required_model = {"link_name", "capacity", "target_obstacle_names", "target_actor_name", "finger_links"}
     optional_model = {"schema", "sphere_count", "spheres_actor_local", "geometry_sha256", "shape_coverage",
                       "sphere_pitch_m", "physical_inertial"}
     if (not isinstance(model, dict) or not required_model <= set(model)
-            or set(model) - required_model - optional_model):
+            or set(model) - required_model - optional_model - extra_fields):
         raise ValueError("payload_model has unexpected or missing fields")
     if model["link_name"] != PAYLOAD_LINK or model["finger_links"] != FINGER_LINKS:
         raise ValueError("payload/finger links must be the declared Panda physical links")
@@ -153,14 +156,15 @@ def validate_model(model: Any, robot_cfg: dict[str, Any], world: dict[str, Any])
         raise ValueError("payload self-collision exceptions must be exactly its own two fingers")
 
 
-def validate_state(state: Any, model: dict[str, Any], robot_cfg: dict[str, Any]) -> None:
+def validate_state(state: Any, model: dict[str, Any], robot_cfg: dict[str, Any], *,
+                   source_names: tuple[str, ...] = (SOURCE_TABLE,)) -> None:
     """Check measured-state shapes and narrowly declared permissions on CPU."""
     if not isinstance(state, dict) or set(state) != {
             "contact_allowed", "source_support_allowed", "source_support_obstacle_names", "attachment"}:
         raise ValueError("payload_state has unexpected or missing fields")
     if any(type(state[k]) is not bool for k in ("contact_allowed", "source_support_allowed")):
         raise ValueError("collision permissions must be explicit booleans")
-    expected_support = [SOURCE_TABLE] if state["source_support_allowed"] else []
+    expected_support = list(source_names) if state["source_support_allowed"] else []
     if state["source_support_obstacle_names"] != expected_support:
         raise ValueError("source-support permission is limited to the one exact tabletop")
     attachment = state["attachment"]
@@ -224,28 +228,28 @@ def validate_state(state: Any, model: dict[str, Any], robot_cfg: dict[str, Any])
         raise ValueError("payload inertia must be positive semidefinite")
 
 
-def validate_request(request: Any) -> dict[str, Any]:
-    """Reuse all existing NDJSON/version/profile/finger validations unchanged."""
-    _finite_json(request)
+def _validate_payload_request(request: Any, *, profile_validator: Callable[[str, dict[str, Any]], Any] | None = None,
+                              model_fields: frozenset[str] = frozenset(),
+                              scan_finite: bool = True) -> dict[str, Any]:
+    """Validate the original payload schema, sharing measured-state fields."""
+    if scan_finite:
+        _finite_json(request)
     if not isinstance(request, dict):
         raise ValueError("request must be a mapping")
     operation = request.get("op")
-    reduced = deepcopy(request)
+    _validate_request_fields(request, payload_link=PAYLOAD_LINK,
+        profile_validator=profile_validator, scan_finite=False)
     if operation == "init_session":
-        reduced.pop("payload_model", None)
-    elif operation == "update_session":
-        reduced.pop("payload_state", None)
-    if operation in {"init_session", "update_session"}:
-        kin = reduced.get("robot_cfg", {}).get("kinematics", {})
-        kin.pop("extra_links", None)
-        kin.pop("extra_collision_spheres", None)
-        kin["collision_link_names"] = [n for n in kin.get("collision_link_names", []) if n != PAYLOAD_LINK]
-    validate_empty_request(reduced)
-    if operation == "init_session":
-        validate_model(request.get("payload_model"), request["robot_cfg"], request["world"])
+        validate_model(request.get("payload_model"), request["robot_cfg"], request["world"],
+                       extra_fields=model_fields)
     elif operation == "update_session" and "payload_state" not in request:
         raise ValueError("each measured update requires explicit complete payload_state")
     return request
+
+
+def validate_request(request: Any) -> dict[str, Any]:
+    """Legacy payload entry point with the original model/source defaults."""
+    return _validate_payload_request(request)
 
 
 class PayloadBackend(ResidentBackend):
