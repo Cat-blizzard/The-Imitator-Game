@@ -1,5 +1,10 @@
 # Dual-Arm Motion Planning (Imitator Game tasks)
 
+Fork development follows the [checks and quality policy](../../../../docs/tig-dual-arm/CHECKS-AND-QUALITY.md).
+Execution and physical validity remain mandatory; task-specific quality settings,
+separate outcome reporting, and lighter generation auditing are migration work.
+Existing strict validation runs retain their original criteria and scores.
+
 This folder contains the scripted **motion-planning solutions** that generate
 the dual-panda demonstration dataset for the Imitator Game benchmark.
 

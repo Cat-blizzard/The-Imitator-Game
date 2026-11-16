@@ -119,7 +119,13 @@ def plan_pose(
                           for index in planner.move_group_joint_indices)
     if planner_names != tuple(controller_joint_names):
         raise ValueError("Planner and controller joint order differ")
-    result = solver.move_to_pose_with_screw(pose, dry_run=True)
+    # Native screw Success describes a linearized twist residual; verify its
+    # actual TCP endpoint before passing the path to paired scene validation.
+    if __package__:
+        from .planning_endpoint import checked_screw_plan
+    else:  # Preserve the direct CPU self-test command.
+        from planning_endpoint import checked_screw_plan
+    result = checked_screw_plan(solver, pose)
     return ArmTrajectory.from_planner_result(
         result, action_key=action_key, planner_joint_names=planner_names,
         controller_joint_names=controller_joint_names,
@@ -248,25 +254,33 @@ def self_test() -> dict[str, Any]:
 
         def __init__(self) -> None:
             self.env_agent = SimpleNamespace(control_mode="pd_joint_pos")
+            self.base_env = SimpleNamespace(control_timestep=.05)
+            self.robot = SimpleNamespace(get_qpos=lambda: irregular.positions_rad[:1].copy())
             self.planner = SimpleNamespace(user_joint_names=list(names),
-                                           move_group_joint_indices=list(range(7)))
+                move_group_joint_indices=list(range(7)), TOPP=lambda *args: None,
+                transform_goal_to_wrt_base=lambda pose: pose.copy(), move_group="tcp",
+                link_name_2_idx={"tcp": 0},
+                pinocchio_model=SimpleNamespace(compute_forward_kinematics=lambda q: None,
+                    get_link_pose=lambda _: np.array([0., 0., 0., 1., 0., 0., 0.])))
             self.gripper_state = -1
             self.calls = 0
 
         def move_to_pose_with_screw(self, pose: Any, *, dry_run: bool = False) -> Any:
-            assert pose == "fixture_pose" and dry_run is True
+            assert np.array_equal(pose, fixture_pose) and dry_run is True
             self.calls += 1
+            self.planner.TOPP(irregular.positions_rad.copy(), .05)
             return source
 
+    fixture_pose = np.array([0., 0., 0., 1., 0., 0., 0.])
     solver = DryRunFixture()
-    planned = plan_pose(solver, "fixture_pose", action_key="left",
+    planned = plan_pose(solver, fixture_pose, action_key="left",
                         controller_joint_names=names)
     assert solver.calls == 1 and planned.gripper_command == -1
-    reject(lambda: plan_pose(solver, "fixture_pose", action_key="left",
+    reject(lambda: plan_pose(solver, fixture_pose, action_key="left",
                              controller_joint_names=names[::-1]))
     assert solver.calls == 1
     solver.env_agent.control_mode = "pd_joint_delta_pos"
-    reject(lambda: plan_pose(solver, "fixture_pose", action_key="left",
+    reject(lambda: plan_pose(solver, fixture_pose, action_key="left",
                              controller_joint_names=names))
     assert solver.calls == 1
     imported = ArmTrajectory.from_planner_result(

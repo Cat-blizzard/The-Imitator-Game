@@ -50,9 +50,9 @@ TASKS = ('TwoRobotPickAppleBananaToBaskets-v1', 'TwoRobotPickPillToRegions-v1',
 LAST_COMPLETION_STEP = 199
 FINAL_STABLE_STEPS = 20
 MINIMUM_SETTLE_BUDGET = 3
-APPROACH_RECIPES = ('standard-8cm', 'compact-4cm')
+APPROACH_RECIPES = ('standard-8cm', 'compact-4cm', 'compact-5cm')
 PAYLOAD_REFINEMENTS = ('baseline', 'fixed-task-v1', 'fixed-task-v2', 'fixed-task-v3', 'fixed-task-v4')
-TRANSPORT_RECIPES = ('standard', 'pill-direct-release-v1')
+TRANSPORT_RECIPES = ('standard', 'pill-direct-release-v1', 'direct-release-v2')
 # Existing executors require three stable endpoint ticks, five stable grasp
 # ticks, and three released ticks. These are lower bounds, never promises that
 # a future trajectory will fit. The known final placement window is reserved
@@ -85,9 +85,9 @@ def execution_configuration(task_id: str = TASKS[0], *,
         'airborne_hover_steps': 0, 'final_common_placement_steps': FINAL_STABLE_STEPS,
         'retreat_command_m': .081, 'minimum_actual_retreat_m': .08,
         'min_actual_height_gain_m': [.10, .10],
-        'route': 'merge-lift-direct-release' if transport_recipe == 'pill-direct-release-v1' else 'merge-lift',
+        'route': 'merge-lift-direct-release' if transport_recipe != 'standard' else 'merge-lift',
         'transport_recipe': transport_recipe,
-        'transport_phase_sequence': ['carry_lower'] if transport_recipe == 'pill-direct-release-v1' else [
+        'transport_phase_sequence': ['carry_lower'] if transport_recipe != 'standard' else [
             'carry_orient_and_transport','carry_lower'],
         'execution_profile': 'execution',
         'diagnostic_hover_removed': 'two development five-tick windows; continuous100Hz held monitoring remains',
@@ -97,7 +97,7 @@ def execution_configuration(task_id: str = TASKS[0], *,
             'cuRobo native payload and both fruit-arm panda_link7 conservative sphere geometry only; physical model, control and acceptance thresholds unchanged'
             if payload_refinement in ('fixed-task-v3','fixed-task-v4') else
             'cuRobo native payload representation only; physical model, control and acceptance thresholds unchanged'),
-        'pregrasp_distance_m': .04 if approach_recipe == 'compact-4cm' else None,
+        'pregrasp_distance_m': {'compact-4cm':.04,'compact-5cm':.05}.get(approach_recipe),
         'pregrasp_contact_permission': False, 'descend_contact_permission': 'corresponding own two fingers only',
         'approach_geometry_policy': 'fixed recipe with measured whole-end-effector positive-Z clearance check; same goals for both backends',
         'task_execution_parameters': parameters,
@@ -142,14 +142,23 @@ def configured_payload_snapshot(snapshot: dict[str,Any], policy: str, geometry_m
     raise ValueError('Unknown payload refinement policy')
 
 
-def phase_budget(before: int, scheduled: int, phase: str) -> dict[str, int]:
+def phase_budget(before: int, scheduled: int, phase: str, *,
+                 transport_recipe: str = 'standard') -> dict[str, Any]:
     """Reserve a measured phase's exact schedule plus future mandatory tick minima."""
     if (type(before) is not int or type(scheduled) is not int or before < 0
-            or scheduled < 1 or phase not in FUTURE_MINIMUM_TICKS):
+            or scheduled < 1 or phase not in FUTURE_MINIMUM_TICKS
+            or transport_recipe not in TRANSPORT_RECIPES):
         raise ValueError('Known phase, nonnegative elapsed steps and positive schedule length required')
     reserve = FUTURE_MINIMUM_TICKS[phase]
+    # A direct route has no intermediate carry_orient_and_transport stop.
+    # Reserve only the phases that will actually execute, while retaining the
+    # original three stable endpoint ticks for every remaining movement.
+    removed = (MINIMUM_SETTLE_BUDGET if transport_recipe != 'standard'
+               and phase in ('pregrasp','descend','lift_and_hold') else 0)
+    reserve -= removed
     available = LAST_COMPLETION_STEP - before - scheduled - reserve
     receipt = {'elapsed_before': before, 'scheduled_steps': scheduled,
+        'transport_recipe': transport_recipe, 'removed_intermediate_minimum_ticks': removed,
         'reserved_future_minimum_steps': reserve,
         'last_permitted_completion_step': LAST_COMPLETION_STEP,
         'available_current_settle_steps': available,
@@ -167,12 +176,13 @@ def approach_pairs(grasp_pairs: Any, recipe: str) -> tuple[tuple[Any,Any],tuple[
         raise ValueError('Expected two pregrasp/grasp pairs and a fixed recipe')
     if recipe == 'standard-8cm':
         return tuple(tuple(pair) for pair in grasp_pairs)
+    distance = {'compact-4cm':.04,'compact-5cm':.05}[recipe]
     result = []
     for _,grasp in grasp_pairs:
         transform = _matrix(np.r_[grasp.p,grasp.q])
         if not np.allclose(transform[:3,2],[0.,0.,-1.],rtol=0,atol=1e-6):
             raise ValueError('The compact recipe requires the task adapter downward grasp orientation')
-        pre = sapien.Pose(np.asarray(grasp.p,dtype=float)+[0.,0.,.04],grasp.q)
+        pre = sapien.Pose(np.asarray(grasp.p,dtype=float)+[0.,0.,distance],grasp.q)
         result.append((pre,grasp))
     return tuple(result)
 
@@ -448,6 +458,12 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             transport_recipe = pill_direct_transport_recipe
         elif transport_recipe is not pill_direct_transport_recipe:
             raise ValueError('The fixed pill recipe requires its reviewed route selector')
+    elif transport_policy == 'direct-release-v2':
+        from .transport_routes import direct_release_stages
+        if transport_recipe is None:
+            transport_recipe = direct_release_stages
+        elif transport_recipe is not direct_release_stages:
+            raise ValueError('The direct-release-v2 recipe requires its declared route selector')
     elif transport_recipe is not None:
         raise ValueError('A transport callback requires an explicit fixed recipe')
     report['transport_recipe'] = transport_policy
@@ -618,10 +634,22 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             else:
                 limits = compact_phase_limits(report['execution_configuration'],name)
                 compact_set_phase_limits(solvers,limits)
-                original_schedule = plan_dual_pose(*solvers,poses,
-                    gripper_commands=(-1,-1) if closed else (1,1))
+                for solver in solvers:
+                    solver.last_endpoint_audit = None
+                try:
+                    original_schedule = plan_dual_pose(*solvers,poses,
+                        gripper_commands=(-1,-1) if closed else (1,1))
+                finally:
+                    row['endpoint_audits'] = [s.last_endpoint_audit for s in solvers]
+                    for i,audit in enumerate(row['endpoint_audits']):
+                        if audit is not None:
+                            save_json(output/f'{name}-arm-{i}-endpoint-audit.json',json_value(audit))
                 raw_results = tuple(s.last_native_result for s in solvers)
                 traces = tuple(s.last_native_parameterization for s in solvers)
+                for i,result in enumerate(raw_results):
+                    # Retain the initial native return separately. These files
+                    # bind the accepted correction to the actual retimed path.
+                    save_json(output/f'{name}-arm-{i}-accepted-native-result.json',json_value(result))
                 retimed,certificate = compact_retime_pair(raw_results,traces,
                     velocity_limit=velocity,acceleration_limit=acceleration)
                 row['phase_limit_configuration'] = limits
@@ -645,7 +673,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
                 right_positions=trajectories[1].positions_rad,target_times=schedule.target_times_s,
                 left_commands=schedule.left_commands,right_commands=schedule.right_commands)
             row['budget'] = phase_budget(int(as_numpy(raw.elapsed_steps)[0]),schedule.num_steps,
-                name if budget_phase is None else budget_phase)
+                name if budget_phase is None else budget_phase,transport_recipe=transport_policy)
             phase_budgets[name] = row['budget']
             checker.refresh()
             checker.set_target_contacts_allowed((contact or closed,)*2)
@@ -824,6 +852,12 @@ def self_test() -> dict[str,Any]:
     standard = execution_configuration(TASKS[1])
     assert direct['route'] == 'merge-lift-direct-release'
     assert direct['transport_phase_sequence'] == ['carry_lower']
+    for task in TASKS:
+        candidate = execution_configuration(task, transport_recipe='direct-release-v2')
+        original = execution_configuration(task)
+        assert candidate['transport_phase_sequence'] == ['carry_lower']
+        assert {k:v for k,v in candidate.items() if k not in ('route','transport_recipe','transport_phase_sequence')} == {
+            k:v for k,v in original.items() if k not in ('route','transport_recipe','transport_phase_sequence')}
     recipe_fields = {'route','transport_recipe','transport_phase_sequence'}
     assert {k:v for k,v in direct.items() if k not in recipe_fields} == {
         k:v for k,v in standard.items() if k not in recipe_fields}
@@ -869,6 +903,16 @@ def self_test() -> dict[str,Any]:
     assert feasible['settle_max_steps'] == 9 and feasible['reserved_future_minimum_steps'] == 20
     edge = phase_budget(175,1,'retreat')
     assert edge['settle_max_steps'] == 3
+    direct_lift = phase_budget(155,10,'lift_and_hold',transport_recipe='direct-release-v2')
+    assert direct_lift['reserved_future_minimum_steps'] == 29
+    assert direct_lift['settle_max_steps'] == 5
+    assert phase_budget(175,1,'retreat',transport_recipe='direct-release-v2')['settle_max_steps'] == 3
+    try:
+        phase_budget(155,10,'lift_and_hold')
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError('Historical two-stop future budget changed')
     rejected = 0
     for values in ((179,1,'retreat'),(178,1,'retreat'),(177,1,'retreat'),
                    (176,1,'retreat'),(0,0,'retreat'),(True,1,'retreat'),(0,1,'unknown')):
@@ -893,6 +937,9 @@ def self_test() -> dict[str,Any]:
     compact = approach_pairs(original_pairs,'compact-4cm')
     assert np.allclose(compact[0][0].p,[0.,0.,.14])
     assert compact[0][1] is grasp and np.allclose(original_pairs[0][0].p,[0.,0.,.18])
+    compact5 = approach_pairs(original_pairs,'compact-5cm')
+    assert np.allclose(compact5[0][0].p,[0.,0.,.15]) and compact5[0][1] is grasp
+    assert execution_configuration(TASKS[1],approach_recipe='compact-5cm')['pregrasp_distance_m'] == .05
     assert approach_pairs(original_pairs,'standard-8cm')[0][0] is pre
     try:
         approach_pairs(((pre,sapien.Pose()),(pre,grasp)),'compact-4cm')
@@ -1046,6 +1093,7 @@ def main() -> int:
         'standard_recording_replay_evaluated':False,
         'source_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
         'official_tig':git_identity(ROOT/'The-Imitator-Game'),
+        'runtime_tig':git_identity(HERE.parents[3]),
         'official_curobo':git_identity(ROOT/'infrastructure/backends/curobo')}
     save_json(output/'report.json',report)
     started = time.monotonic()
