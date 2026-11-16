@@ -56,6 +56,7 @@ CRITICAL_SOURCES = ('dual_arm_execution.py', 'dual_payload_collision.py',
 OPEN_PHASES = {'preparation', 'pregrasp', 'descend', 'release', 'retreat', 'verify_placement',
                'observe_task_outcome'}
 SELECTED_COMPLETION_CONTRACT = 'selected-runtime-policy-v1'
+STRATEGY_KEYS = ('runtime_strategy', 'runtime_profile')
 REPLAY_MODES = ('strict', 'cross-version')
 STAGE2_HELPERS = ('runtime_io.py', 'physical_observation.py', 'replay_support.py',
                   'phase_kinematics.py', 'task_targets.py', 'transport_recipes.py')
@@ -112,6 +113,46 @@ def source_completion_contract(report: dict[str, Any]) -> str:
     _require(report.get('project_complete_physical_closure') is True,
              'Legacy source requires complete strict physical closure')
     return 'legacy-strict-closure'
+
+
+def source_runtime_strategy(report: dict[str, Any], policy: RuntimePolicy
+                            ) -> tuple[dict[str, Any] | None, str | None, tuple[str, ...]]:
+    """Read canonical/old selection metadata without resolving current defaults.
+
+    The serialized resolved policy remains authoritative. A present malformed
+    key never falls back to its alias; old legacy sources may omit both keys.
+    """
+    _require(isinstance(policy, RuntimePolicy), 'A validated source runtime policy is required')
+    present = tuple(key for key in STRATEGY_KEYS if key in report)
+    if not present:
+        _require(report.get('completion_contract') != SELECTED_COMPLETION_CONTRACT,
+                 'Selected source lacks runtime strategy metadata')
+        return None, None, present
+    _require(policy.max_episode_steps == 200 and policy.last_completion_step == 199,
+             'Strategy source must preserve the official200/last199 boundary')
+    encoded = []
+    for key in present:
+        metadata = report[key]
+        _require(isinstance(metadata, dict)
+                 and metadata.get('schema') == 'tig-task-runtime-profile-v1'
+                 and metadata.get('task_id') == report.get('task') in TASK_IDS
+                 and metadata.get('profile_id') == policy.policy_id
+                 and metadata.get('profile_id') in ('legacy-strict-v1','task-default-v1')
+                 and metadata.get('policy_sha256') == resolved_policy_record(policy)['sha256'],
+                 f'Source {key} metadata differs from serialized policy')
+        overrides = metadata.get('overrides')
+        _require(isinstance(overrides, dict) and all(name in policy.to_dict()
+            and name not in ('policy_id','schema_version','max_episode_steps','last_completion_step')
+            for name in overrides), f'Source {key} overrides are unknown or locked')
+        _require(RuntimePolicy.from_dict(dict(policy.to_dict(),**overrides)) == policy,
+                 f'Source {key} override values differ from serialized policy')
+        if policy.policy_id == 'legacy-strict-v1':
+            _require(policy == LEGACY_STRICT and not overrides,
+                     'The frozen legacy strategy cannot contain changed values or overrides')
+        encoded.append(json.dumps(metadata,sort_keys=True,separators=(',',':'),allow_nan=False))
+    _require(len(set(encoded)) == 1, 'Canonical runtime_strategy and runtime_profile alias conflict')
+    source_key = present[0]
+    return copy.deepcopy(report[source_key]), source_key, present
 
 
 def input_artifact_names(report: dict[str, Any]) -> tuple[str, ...]:
@@ -215,7 +256,7 @@ def source_identity(directory: Path, report: dict[str, Any], replay_mode: str = 
     stage2 = bool(set(recorded) & set(STAGE2_HELPERS))
     if stage2:
         critical += STAGE2_HELPERS + INFRASTRUCTURE_SOURCES
-    stage4 = ('runtime_profiles.py' in recorded or 'runtime_profile' in report or 'recording_policy' in report
+    stage4 = ('runtime_profiles.py' in recorded or any(key in report for key in STRATEGY_KEYS) or 'recording_policy' in report
               or report.get('completion_contract') == SELECTED_COMPLETION_CONTRACT)
     if stage4:
         critical += ('runtime_profiles.py', 'recording_policy.py', 'task_outcome.py', 'run_results.py')
@@ -323,29 +364,13 @@ def load_recording(directory: Path, task: str | None = None, *,
     _require(replay_mode in REPLAY_MODES, 'Unknown replay mode')
     policy = policy_from_report(report)
     contract = source_completion_contract(report)
-    if contract == SELECTED_COMPLETION_CONTRACT or 'runtime_profile' in report:
+    strategy, strategy_key, strategy_keys = source_runtime_strategy(report,policy)
+    if contract == SELECTED_COMPLETION_CONTRACT or strategy is not None:
         _require(policy.max_episode_steps == 200 and policy.last_completion_step == 199,
                  'Profile source must preserve the official200/last199 boundary')
     storage = recording_policy_from_report(report)
     artifacts = input_artifact_names(report)
     _require(all((directory/name).is_file() for name in artifacts), 'Source lacks declared required artifacts')
-    profile = report.get('runtime_profile')
-    if profile is not None:
-        _require(isinstance(profile, dict) and profile.get('schema') == 'tig-task-runtime-profile-v1'
-                 and profile.get('task_id') == report.get('task')
-                 and profile.get('profile_id') == policy.policy_id
-                 and profile.get('policy_sha256') == resolved_policy_record(policy)['sha256'],
-                 'Source profile metadata differs from serialized policy')
-        overrides = profile.get('overrides')
-        _require(isinstance(overrides, dict) and all(key in policy.to_dict()
-            and key not in ('policy_id','schema_version','max_episode_steps','last_completion_step')
-            for key in overrides),
-            'Source profile overrides disagree with serialized policy')
-        _require(RuntimePolicy.from_dict(dict(policy.to_dict(),**overrides)) == policy,
-                 'Source profile override values differ from serialized policy')
-        if policy.policy_id == 'legacy-strict-v1':
-            _require(policy == LEGACY_STRICT and not overrides,
-                     'The frozen legacy profile cannot contain changed values or overrides')
     metadata = json.loads((directory/'trajectory.json').read_text())
     json.dumps([report, metadata], allow_nan=False)
     ticks = _read_rows(directory/'ticks.jsonl')
@@ -472,12 +497,16 @@ def load_recording(directory: Path, task: str | None = None, *,
             'task': canonical, 'source_sha256': report['source_sha256'], 'target_bindings': target_bindings,
             'runtime_policy': policy, 'geometry': geometry, 'source_identity': identity,
             'recording_policy': storage, 'completion_contract': contract,
+            'runtime_strategy':strategy, 'runtime_strategy_source_key':strategy_key,
+            'runtime_strategy_source_keys':strategy_keys,
             'receipt': {'action_steps': count, 'state_frames': count+1, 'phase_counts': dict(counts),
                         'task': canonical, 'replay_mode': replay_mode,
                         'critical_execution_sources_match': identity['critical_execution_sources_match'],
                         'source_archive_integrity': 'passed', 'task_geometry_integrity': 'passed',
                         'runtime_policy_origin': 'source report' if 'runtime_policy' in report else 'legacy fallback',
                         'completion_contract':contract, 'recording_mode':storage.mode,
+                        'runtime_strategy_source_key':strategy_key,
+                        'runtime_strategy_source_keys':list(strategy_keys),
                         'required_input_artifacts':list(artifacts), 'compact_source':compact,
                         'target_state_bindings': binding_receipt}}
 
@@ -1196,6 +1225,42 @@ def stage4_self_test() -> dict[str, Any]:
     policy = RuntimePolicy.from_dict(dict(LEGACY_STRICT.to_dict(),policy_id='task-default-v1',
         release_stable_steps=4, final_stable_steps=5, minimum_settle_budget=0,
         require_retreat=False,require_final_stability=False))
+    strategy={'schema':'tig-task-runtime-profile-v1','task_id':TASK_IDS[1],
+        'profile_id':policy.policy_id,'overrides':{'release_stable_steps':4,'final_stable_steps':5,
+            'require_retreat':False,'require_final_stability':False},
+        'policy_sha256':resolved_policy_record(policy)['sha256']}
+    source=dict(selected,task=TASK_IDS[1],runtime_strategy=strategy)
+    canonical,key,keys=source_runtime_strategy(source,policy)
+    assert canonical==strategy and key=='runtime_strategy' and keys==('runtime_strategy',)
+    canonical['overrides']['release_stable_steps']=99
+    assert strategy['overrides']['release_stable_steps']==4
+    alias=dict(source);alias['runtime_profile']=alias.pop('runtime_strategy')
+    assert source_runtime_strategy(alias,policy)[1:]==('runtime_profile',('runtime_profile',))
+    both=dict(source,runtime_profile=copy.deepcopy(strategy))
+    assert source_runtime_strategy(both,policy)[1:]==('runtime_strategy',STRATEGY_KEYS)
+    assert source_runtime_strategy(legacy,LEGACY_STRICT)==(None,None,())
+    no_metadata=dict(source);no_metadata.pop('runtime_strategy')
+    reject('selected_missing_strategy',lambda:source_runtime_strategy(no_metadata,policy))
+    for target in STRATEGY_KEYS:
+        for value in (None,{},[],False):
+            damaged=dict(both,**{target:value})
+            reject('explicit_'+target+'_'+repr(value),lambda damaged=damaged:source_runtime_strategy(damaged,policy))
+    for field,value in (('schema','unknown'),('task_id',TASK_IDS[0]),('profile_id','unknown'),
+                         ('policy_sha256','0'*64),('overrides',None),
+                         ('overrides',{'max_episode_steps':200}),
+                         ('overrides',{'release_stable_steps':True}),
+                         ('overrides',{'release_stable_steps':5})):
+        damaged=copy.deepcopy(source);damaged['runtime_strategy'][field]=value
+        reject('invalid_strategy_'+field+'_'+repr(value),lambda damaged=damaged:source_runtime_strategy(damaged,policy))
+    conflicted=copy.deepcopy(both);conflicted['runtime_profile']['selection_note']='different'
+    reject('alias_metadata_conflict',lambda:source_runtime_strategy(conflicted,policy))
+    unknown_policy=RuntimePolicy.from_dict(dict(policy.to_dict(),policy_id='unknown'))
+    unknown=copy.deepcopy(source);unknown['runtime_strategy'].update(profile_id='unknown',
+        policy_sha256=resolved_policy_record(unknown_policy)['sha256'])
+    reject('unknown_strategy_id',lambda:source_runtime_strategy(unknown,unknown_policy))
+    shortened=RuntimePolicy.from_dict(dict(policy.to_dict(),last_completion_step=198))
+    shortened_source=copy.deepcopy(source);shortened_source['runtime_strategy']['policy_sha256']=resolved_policy_record(shortened)['sha256']
+    reject('strategy_last199_boundary',lambda:source_runtime_strategy(shortened_source,shortened))
     def samples(phases: list[str]) -> list[dict[str, Any]]:
         rows=[]
         for frame,phase in enumerate(['initial']+phases):
@@ -1292,6 +1357,8 @@ def stage4_self_test() -> dict[str, Any]:
             'optional_zero_and_positive_outcome_ticks':True,'nonlegacy_release4_final5':True,
             'unselected_legacy_gates_remain_unknown':True,'normal_video_not_opened':True,
             'normal_robot_target_gate_and_full_background_diagnostics':True,
+            'canonical_strategy_and_old_alias_with_provenance':True,
+            'explicit_invalid_metadata_never_falls_back':True,
             'physical_environment_steps':0}
 
 
@@ -1346,8 +1413,10 @@ def main() -> int:
     if recording['completion_contract'] == SELECTED_COMPLETION_CONTRACT:
         report.update(completion_contract=SELECTED_COMPLETION_CONTRACT,
             selected_policy_complete=None, project_complete_physical_closure=None)
-    if 'runtime_profile' in recording['report']:
-        report['runtime_profile'] = copy.deepcopy(recording['report']['runtime_profile'])
+    report['runtime_strategy_source_key'] = recording['runtime_strategy_source_key']
+    report['runtime_strategy_source_keys'] = list(recording['runtime_strategy_source_keys'])
+    if recording['runtime_strategy'] is not None:
+        report['runtime_strategy'] = copy.deepcopy(recording['runtime_strategy'])
     save_json(output/'report.json', archive_report(report, RecordingPolicy(args.recording_mode)))
     started = time.monotonic()
     try:
