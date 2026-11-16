@@ -1,0 +1,43 @@
+{
+  "schema": "tig-source-snapshot-validation-v1",
+  "date": "2026-11-17",
+  "scope": "Publishing snapshot checks only. Historical experiments were not rerun.",
+  "checks": {
+    "source_files_byte_identical_to_original": 85,
+    "python_modules_syntax_passed": 81,
+    "original_evidence_hashes_verified": 46,
+    "derived_copy_hashes_verified": 21,
+    "all_six_summary_protocol_hashes_indexed": true,
+    "credential_pattern_scan": "passed; limited to common key/token/auth URL patterns",
+    "evidence_machine_metadata_redaction": "passed",
+    "git_diff_check": "passed",
+    "reference_and_runtime_checkouts": "clean",
+    "staged_git_diff_check": "passed",
+    "independent_read_only_review": "passed"
+  },
+  "cpu_self_tests": [
+    {
+      "command": "python mani_skill/examples/motionplanning/dual/trajectory_schedule.py --self-test",
+      "exit_code": 0,
+      "status": "passed",
+      "scope": "CPU scheduling; no physics"
+    },
+    {
+      "command": "python mani_skill/examples/motionplanning/dual/conflict_coordination.py --self-test",
+      "exit_code": 0,
+      "status": "passed",
+      "scope": "Analytical coordination checks; no physics"
+    },
+    {
+      "command": "CUDA_VISIBLE_DEVICES='' python -m mani_skill.examples.motionplanning.dual.multitask_adapters --self-test",
+      "exit_code": 0,
+      "status": "passed",
+      "checks": 16,
+      "scope": "No native environments; zero physics steps"
+    }
+  ],
+  "initial_invocation_correction": "multitask_adapters direct-file invocation failed due to a relative import; the documented package invocation then passed. Source unchanged.",
+  "native_gpu_regression": "NOT_RUN",
+  "fresh_machine_reproduction": "NOT_RUN",
+  "upstream_sync": "NOT_DONE"
+}

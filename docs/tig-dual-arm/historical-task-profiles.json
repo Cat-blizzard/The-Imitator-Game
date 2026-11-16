@@ -1,0 +1,35 @@
+{
+  "scope": "Recorded development profiles; use their own source archives and protocols. This snapshot has not been rerun on a fresh clone.",
+  "apple_banana_dev03": {
+    "seed": 401,
+    "planner_seed": 0,
+    "approach_recipe": "compact-4cm",
+    "payload_refinement": "baseline (legacy field absent)",
+    "transport_recipe": "standard (legacy field absent)",
+    "report_original_sha256": "27113eca604b655672070bc40ee97c531bfc0fba5f1f03decd2d2b34f89bec42"
+  },
+  "later_protocol_profiles": [
+    {
+      "schema": "tig-pill-direct-paired-development-v2",
+      "approach_recipe": "standard-8cm",
+      "payload_refinement": "fixed-task-v1",
+      "transport_recipe": "pill-direct-release-v1",
+      "physical_acceptance": "unchanged complete retreat>=8cm andfinal20 under200 plus fulloriginalcontact/slip/sourceguards",
+      "seed": 401,
+      "planner_seed": 0,
+      "protocol": "evidence/pill-direct-protocol-v2.json",
+      "original_protocol_sha256": "08bea21296506140adae3bc6c353e79d161759ddd5a15f89d8e3c42b766c9ea9"
+    },
+    {
+      "schema": "tig-fruit-link7-paired-development-v4",
+      "approach_recipe": "standard-8cm",
+      "payload_refinement": "fixed-task-v4",
+      "transport_recipe": "standard",
+      "physical_acceptance": "unchanged complete retreat>=8cm andfinal20 under200 plus fulloriginalcontact/slip/sourceguards",
+      "seed": 401,
+      "planner_seed": 0,
+      "protocol": "evidence/fruit-link7-protocol-v4.json",
+      "original_protocol_sha256": "af516fc52f0a0f23416d6d2469c06fb4135a29445c7de8c0802d6ec806f28d0e"
+    }
+  ]
+}

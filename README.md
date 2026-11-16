@@ -1,5 +1,8 @@
 # The Imitator Game
 
+Fork development snapshot: [dual-arm execution and cuRobo integration](docs/tig-dual-arm/README.md).
+This draft preserves the validated development sources and evidence index; portable installation and upstream synchronization remain pending.
+
 ## [[Website](https://imitator-game.github.io/index.html)]  |  [[Document](https://imitator-game.github.io/docs/guide.html)]  |  [[Paper](https://arxiv.org/abs/2608.22301)]  |  [[IG-10K Dataset](https://imitator-game.github.io/data.html)]  |  [[Community](https://imitator-game.github.io/community.html)]
 
 ![teaser](docs/media/cover.png)

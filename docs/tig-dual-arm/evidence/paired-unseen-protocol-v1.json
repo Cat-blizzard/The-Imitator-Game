@@ -1,0 +1,242 @@
+{
+  "schema": "tig-curobo-complete-paired-unseen-v1",
+  "frozen_at": "2026-11-16T12:35:56.788472+00:00",
+  "scope": "five previously unused apple-banana seeds, one fixed attempt per backend per seed; all failures retained",
+  "seed_provenance": "rg audit of previous dual-arm run JSON metadata found no seed1001..1005 before first use; development only seed401",
+  "frozen_expectations": {
+    "planner_seed": 0,
+    "require_initial_scene_manifest": true,
+    "source_sha256": {
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_timing_regression.py": "b350b531321914cd90ac83c8a750f23813d30b302b774db4cf20daacdc1b2e92",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_spatial_replanning.py": "3f23f20e911a049951f64eafceb9ac81ac4c3ca8c6e0303ed6bac16a7bf31e5f",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_sessions.py": "9cf46ac48acf0f0deef5dc77e386423d57c5205aedcc9e3eebda327ca752a5e4",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_compact_replay.py": "e73f99ba43f1003aca9b0fcb091300e46f4bebd03b4663280aa71151b952e543",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/fixed_root_restore.py": "45b5132c8f81a0685d096efb39bc20911acb8b330575146b56411222d71337ce",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/path_conflict_fixture.py": "d276ca7d74da749294aa5c5a55095e26f56b2b73d2b4505b6ca2afd6beda9544",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_held_conflict.py": "e80da00c75ae7e97dc84ed8e2bb3ff44237d276c863fa750b5909a64678a47c5",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/single_arm_execution.py": "972483ffdb035704b553eb6297af50d17fabe1c5f530220bac266098e1714e3d",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_near_support_regression.py": "60a8a269c241afde4c9479006baf521cfcc4b4116d81947ab088e5b09ce42d29",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/diagnose_sync_restore.py": "a38754d07745832bddff470c5e1fa5d6253bf906cd21ae2f4ccc6b130d7e2f49",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_scene.py": "209415a029a654e607cb1649bd6f4e8cd2051f388f5a05d494a396e1effc9930",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/table_support_collision.py": "4e67b24ca89ba1043e655200cddca12b4ab630204efb2a1030a3892802ee6add",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/transfer_execution.py": "848c382a89c45c52ca95200b1cfbc0e4a4e284ca1de6279f74012a07c2fd980d",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_path_conflict.py": "2e768cd3968f105272184a01bee5ba7169ff4bc37029de5419b183e34efe9981",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/utils.py": "b9e4b46f8fa05fd967b2fa9eb77eb5b448bc4b972fe0b8aaef505637e7de1195",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo.py": "b541772864be32d08c252e134aa6d36d71cf106455ed5752f69c6a59319ecdbe",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_sessions.py": "30f9e2a8b2b64a826c1658d88af3daf9715d99596fb34f5b6d4fe744ba8f8b29",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/transfer_collision.py": "f28e9b5b44e0994a3b112263314833ac4115354e7adb556d954138dd3e84674f",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/support_surface_collision.py": "64c38c5a02b2028f1dec467cd7bc619a39eb53d92e5a3fd4aab3c619dee57952",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_grasp.py": "aa683570cf0245351ad7f6f84e28517dd09845403be74fbada0fe6f1c60d0bf7",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_execution.py": "7b545736b6e5b8aa27a22e2077ffacd02f4a01ac3bddefdae8fe3d0bf7497e0f",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_task_payload.py": "015a7d396a2001b686620c2e880643eab72e7f47203dd247f2b2148ed8f7a010",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_banana.py": "69d78ccd71c3ca03e6964023a1b70db5fd8aa47d7d42eb6d0161b2741f49fb4d",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_sync_replay.py": "f1e056cbeee7cda7df406c9c8458e20275789d958c5229aad833a284a27efb74",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/spatial_replanning.py": "d70c5e86e8a4b0309336770bbffbccabecc95b2a99dcf6e4b1b8e83b31057a5b",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_complete.py": "d9505e3c0c595d46e62ec32d241bb071b6dc141521ed91f86bcb4666c8b2d5d7",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/lift_execution.py": "c8390e67c378b31b49024b02a39e1d26a54a8f991283bbc6b4a9d904df6a6605",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/grasp_execution.py": "fc5d6f29ba6dd7f62472458ac084c1a7dc2f2d5a32f6ede892e690e284f977ce",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/held_conflict_fixture.py": "af2375a25811ad5774f3f54e18705721566bb162e5fd872241a6fab50708760d",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/dual_arm_execution.py": "467dac2866c78bb6be39ad72883b34d24fe17ee637eb5e4520924124b872e09e",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/combined_collision.py": "d0c2d0e73fef233c06d780a2f885e9e9442568c7cbf3cfc1b5d4892fc793aa3c",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_sync.py": "42cac15bcac450062282f44dfbecd096c3859caa8047f997aca9a460d0855ea4",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_multitask_serial.py": "d9fc47f7ca41f23ed6a7a7ab6a86b510a9925e4c8217f0f1d44e6aeeb95adc89",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_payload.py": "3ef061e5fe073389e9a781cc8ad5a1d2b38717d9535faff93bead2decd99ad69",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_multitask.py": "3e5fa4e683303a0f65e748b8fa88462dafade2ee89e195449b9b6e99db2769bf",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_compact_seeds.py": "adcbcdcf5a5148b0965bd8595648cbcd0819a0212bfe8034528b64cd5d326fd7",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_replay.py": "991ade04a90d0da5950572b93b4caf3e57bd35fddfc1c511f641ab3edefc0348",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/replay_metrics.py": "992e9799bbafaf3df81a0421363bb1d447d23ce10b150096157f80aec7ee8685",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/multitask_adapters.py": "11f102b219dc24740a79adb0ad21c5b2154983c6078ba3832a2695c7ad44e8ff",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/initial_scene_manifest.py": "d85f20ecd52a54798425ec168bf92b44c0296372ee74b5d4fa6362690823c3c7",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/compact_loader_audit.py": "0950357306c3d8a5b193f15fa50865d26bf669de2046992dd8a1bf3c77320d81",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_backend.py": "9192a5b333327fafed65657672576f20f926fbacf3c04120abc08e1ee9de8898",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_recovery.py": "dfe54648d5687f5a7849e117caf9ce363cd1fa611079d6dcdb9c40dd2fbc0cf1",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_clearance_regression.py": "1e98f6484ec74c24bf333f7b7dfdd8e9b98bb561e1e1d25929ace77a96538aea",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_handoff.py": "25488a0d4c9691e4bb9a1362b2084148333a7285e547b251f4088dd12d53172b",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/grasp_collision.py": "f3a543c4243bc0606938821e5350216d7379fcfc9634234690accf0fb5f11ee5",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/scene_collision.py": "30852ab4e05e4c599d62605880bd2d490b9249b8b0ae6736b0fd6977bf4fe732",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/held_collision.py": "7caaf1bbe49f0831d96f04b8efb876eaba62d8045e73a9c67a8536f51948d504",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/dual_payload_collision.py": "c37b13e3277300ed9cf05825ba6ff17eff962fdc16dd50d333faf6b4f2fcf08b",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/diagnose_support_geometry.py": "7274fce440e6e1703496ff00420409904a21687c1a65e91408fe3ed45aa14fc9",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_comparison.py": "ba2efe2c3ba4a17b5ec79f4c62ef026c4a1fd88f4938cef5da80031737888d81",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_payload.py": "0cbe48ef54dbf4fd59d2c70efad242c99eedfb57b4cda1c6b5bde8e34d292bdf",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_held_path_conflict.py": "20444ff04460aae67643d9b272348a94170c0a66fb09ff516f36a5ce96a181ea",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/two_robot_run.py": "ae7f2f4bbcfd32e2a247ea624452ed2e97d47af17a98b27f53457d53bfa8ac14",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_lift.py": "5ca78f63450130ad4547cda8939b38e676a9e32b4db6e1f3f5df55dd5570d645",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_sync_compact.py": "ecc2088e12947921d829056d02cf11041f048a6da682497ed2a5871ee6758409",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_unseen_seeds.py": "5346b39541627576bf1cf79be4dc3ba9b15b0c7b7a27489b23e9161c1aecbb42",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/conflict_coordination.py": "79df9ef8af83c958fd9b3f48cfb0df5ebfac1a379367d258a693c31f25f96613",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/multitask_recording.py": "377787d7af4eaf1653f630f471c141bcbad7b787a65365451b64d04f6a97cc93",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/pill_support_collision.py": "015bdb0fa1ef60aa798d9743858da631bb3c187733d1f8c038b7585b6eda3114",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/sync_replay_metrics.py": "2aaa37ff4e847ce6010dc55ee7b65ce32ed74bc1ee0e537b85c77f14427d8182",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/trajectory_schedule.py": "031be254905ac34f156e65dd337a952b4c7fd31724109492d62cb6229189ba17",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/compact_replay_metrics.py": "46ce3aff5c2dba16463b8fd3030a3d2964e776ff10e43e797369be645ede4726",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_place.py": "0399d9765ecf1e1c071adc77c3e4020a986fa3b8268fe67338eadbb4328c6b37",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/recovery_execution.py": "492732b3499504e60919d2a0e4c0ba3030724c2e546cb2f50ec1c3ac368d6e69",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_complete_replay.py": "0e423b1d94ce4f6e287291cd82ff3a338079de4870b4e4875957cb843a221b0d",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_support_regression.py": "b0ba4e06b0183c1bf9a362de7bfb054e3eec044c443ac53891a9a9cd3117ca36",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/trajectory_execution.py": "24163a75a6add7df31bb5f48fb1916590c187096f52309018770edad953a3b8b",
+      "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/place_execution.py": "2df2633f403fa65834f8a24742e967719f8b6c49632681096fa471b4b095f2ab",
+      "${TIG_WORKSPACE}/infrastructure/curobo_tig_worker.py": "38a942371afe4cd10b4ba9820f560a6e00026c999baf509b854b1d925b38540a",
+      "${TIG_WORKSPACE}/infrastructure/curobo_tig_session_worker.py": "12f57ef803b5b0167afcec41aecadabef5950b4c9265aef52fe74db8b42457b0",
+      "${TIG_WORKSPACE}/infrastructure/curobo_tig_payload_worker.py": "80c1c0ef048166169ec76a35a5cfb96ff56ac175c5b6905ee85715c86d745ee5",
+      "${TIG_WORKSPACE}/infrastructure/curobo_tig_fast_payload_worker.py": "6ea9bf78d6a9e889ebfa0df541c6360d40ce6c354d75ecb550ff36709431b745",
+      "${TIG_WORKSPACE}/infrastructure/curobo_tig_task_payload_worker.py": "8b0a0e8e3de6e096216fb0ccfe74b02e307c9c46624fa3164bef91bfb69dbbb1"
+    },
+    "worker_sha256_by_backend": {
+      "curobo": "6b665abd399c53e6c8c57bf2cf599d75b526caf6c9aab46db6501b548a568b5e"
+    }
+  },
+  "execution_configuration": {
+    "joint_vel_limit_rad_s": 1.5,
+    "joint_acc_limit_rad_s2": 2.6,
+    "approach_joint_vel_limit_rad_s": 0.9,
+    "approach_joint_acc_limit_rad_s2": 0.9,
+    "solver_limit_fraction": 0.99,
+    "preparation_steps": 10,
+    "max_episode_steps": 200,
+    "airborne_hover_steps": 0,
+    "final_common_placement_steps": 20,
+    "retreat_command_m": 0.081,
+    "minimum_actual_retreat_m": 0.08,
+    "min_actual_height_gain_m": [
+      0.1,
+      0.1
+    ],
+    "route": "merge-lift",
+    "execution_profile": "execution",
+    "diagnostic_hover_removed": "two development five-tick windows; continuous100Hz held monitoring remains",
+    "approach_recipe": "compact-4cm",
+    "pregrasp_distance_m": 0.04,
+    "pregrasp_contact_permission": false,
+    "descend_contact_permission": "corresponding own two fingers only",
+    "approach_geometry_policy": "fixed recipe with measured whole-end-effector positive-Z clearance check; same goals for both backends",
+    "task_execution_parameters": {
+      "task_id": "TwoRobotPickAppleBananaToBaskets-v1",
+      "parameter_version": "development-v12",
+      "joint_vel_limit": 1.5,
+      "joint_acc_limit": 2.6,
+      "approach_vel_limit": 0.9,
+      "approach_acc_limit": 0.9,
+      "preparation_steps": 10,
+      "max_episode_steps": 200,
+      "approach_phases": [
+        "pregrasp",
+        "descend"
+      ],
+      "task_phase_overrides": {},
+      "units": {
+        "joint_velocity": "radians/second",
+        "joint_acceleration": "radians/second^2"
+      },
+      "physical_acceptance_thresholds_changed": false,
+      "evidence_status": "development configuration; native acceptance must be established separately"
+    },
+    "source_timestamps": "cuRobo unchanged; MPLib original analytic common-phase retiming",
+    "completion_boundary": "final elapsed_steps <200; official registration horizon=200"
+  },
+  "official_tig_head": "d6d16ec511bc389e0a207692730c137bc022ef14",
+  "official_curobo_head": "42498cf4e7d0d6fbd4ef9fbcec1243c00c888a83",
+  "cases": [
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1001,
+      "backend": "mplib",
+      "path": "paired-unseen-v1/mplib-s1001",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1001,
+      "backend": "curobo",
+      "path": "paired-unseen-v1/curobo-s1001",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1002,
+      "backend": "mplib",
+      "path": "paired-unseen-v1/mplib-s1002",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1002,
+      "backend": "curobo",
+      "path": "paired-unseen-v1/curobo-s1002",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1003,
+      "backend": "mplib",
+      "path": "paired-unseen-v1/mplib-s1003",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1003,
+      "backend": "curobo",
+      "path": "paired-unseen-v1/curobo-s1003",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1004,
+      "backend": "mplib",
+      "path": "paired-unseen-v1/mplib-s1004",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1004,
+      "backend": "curobo",
+      "path": "paired-unseen-v1/curobo-s1004",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1005,
+      "backend": "mplib",
+      "path": "paired-unseen-v1/mplib-s1005",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    },
+    {
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1005,
+      "backend": "curobo",
+      "path": "paired-unseen-v1/curobo-s1005",
+      "gpu_uuid": "<REDACTED_GPU_UUID>"
+    }
+  ],
+  "execution_order_by_gpu": {
+    "0": [
+      "mplib-s1001",
+      "curobo-s1001",
+      "curobo-s1003",
+      "mplib-s1003",
+      "mplib-s1005",
+      "curobo-s1005"
+    ],
+    "9": [
+      "curobo-s1002",
+      "mplib-s1002",
+      "mplib-s1004",
+      "curobo-s1004"
+    ]
+  },
+  "metrics": [
+    "qualified_success_rate",
+    "steps",
+    "simulation_s",
+    "all_attempt_wall_s",
+    "contact_audited_collision_rate",
+    "qualified_trajectories_per_wall_hour",
+    "initialization_s",
+    "warmup_s",
+    "state_update_s",
+    "native_solve_rpc_s",
+    "execution_stage_wall_s"
+  ],
+  "replay": "development198action native replay is an independent gate; replay does not add backend attempts",
+  "timing_scope": "same physical GPU within each pair; all native attempt startup/warmup/failures included; report first-use compilation/cache effects explicitly"
+}
