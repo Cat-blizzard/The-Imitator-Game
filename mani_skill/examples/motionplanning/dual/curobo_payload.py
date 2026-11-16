@@ -35,6 +35,8 @@ from .curobo_scene import (_cover_convex, _finite, _kind, _matrix, _pose,
 from .curobo_sessions import (PROFILE_LIMITS, CuroboSessions, SessionTransport,
                              _SessionProcess, _digest, profile_config)
 
+from .runtime_policy import RuntimePolicy, LEGACY_STRICT
+
 PAYLOAD_LINK = "tig_payload"
 FINGER_LINKS = ("panda_leftfinger", "panda_rightfinger")
 SOURCE_TABLE = "scene::table::shape_0"
@@ -245,7 +247,10 @@ def physical_inertial(body: Any) -> dict[str, Any]:
             "payload_inertia_applied_to_native_timeopt": False}
 
 
-def _confirmation(evidence: Any, arm_index: int, current_tcp_object: np.ndarray) -> dict[str, Any]:
+def _confirmation(evidence: Any, arm_index: int, current_tcp_object: np.ndarray, *,
+                  policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
+    if not isinstance(policy, RuntimePolicy):
+        raise ValueError("A validated RuntimePolicy is required")
     if not isinstance(evidence, dict) or not isinstance(evidence.get("evidence_id"), str) or not evidence["evidence_id"].strip():
         raise ValueError("Attachment requires the ID of an actual grasp confirmation event")
     report = evidence.get("confirmation")
@@ -253,10 +258,10 @@ def _confirmation(evidence: Any, arm_index: int, current_tcp_object: np.ndarray)
         raise ValueError("Attachment requires the passed shared-executor grasp report")
     required = report.get("stable_steps_required")
     observed = report.get("stable_steps_observed")
-    if (isinstance(required, bool) or not isinstance(required, int) or required < 5
+    if (isinstance(required, bool) or not isinstance(required, int) or required < policy.grasp_stable_steps
             or not isinstance(observed, (list, tuple)) or len(observed) != 2
             or any(isinstance(value, bool) or not isinstance(value, int) or value < required for value in observed)):
-        raise ValueError("Both real grasps must pass the existing five-tick stability barrier")
+        raise ValueError("Both real grasps must pass the selected stability barrier")
     anchor = evidence.get("tcp_to_object_wxyz")
     position_error, angle_error = 0., 0.
     if anchor is not None:
@@ -264,7 +269,7 @@ def _confirmation(evidence: Any, arm_index: int, current_tcp_object: np.ndarray)
         position_error = float(np.linalg.norm(fixed[:3, 3] - current_tcp_object[:3, 3]))
         relative = fixed[:3, :3].T @ current_tcp_object[:3, :3]
         angle_error = math.acos(float(np.clip((np.trace(relative) - 1.) / 2., -1., 1.)))
-        if position_error > .005 or angle_error > .15:
+        if position_error > policy.position_slip_m or angle_error > policy.rotation_slip_rad:
             raise ValueError("Measured object slipped beyond the existing attachment tolerances")
     return {"evidence_id": evidence["evidence_id"], "physical_arm_index": arm_index,
             "stable_steps_required": required, "stable_steps_observed": list(observed),
@@ -377,7 +382,8 @@ def export_payload_snapshot(env: Any, arm_index: int, target_actor: Any, *,
                             sphere_pitch_m: float = .025,
                             finger_sphere_pitch_m: float = .005,
                             payload_sphere_pitch_m: float = .025,
-                            capacity: int | None = None) -> dict[str, Any]:
+                            capacity: int | None = None,
+                            policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
     """Read actual target geometry/state and extend the old complete snapshot.
 
     Attach only after ``close_dual_and_confirm`` passes and this physical arm's
@@ -387,6 +393,8 @@ def export_payload_snapshot(env: Any, arm_index: int, target_actor: Any, *,
     ``source_support_allowed`` is only valid for a confirmed held object during
     the separately checked initial table departure, never ordinary transport.
     """
+    if not isinstance(policy, RuntimePolicy):
+        raise ValueError("A validated RuntimePolicy is required")
     if type(contact_allowed) is not bool or type(source_support_allowed) is not bool:
         raise ValueError("Contact and source-support permissions require actual booleans")
     if source_support_allowed and grasp_evidence is None:
@@ -438,6 +446,10 @@ def export_payload_snapshot(env: Any, arm_index: int, target_actor: Any, *,
              "geometry_sha256": _digest({"spheres": spheres.tolist(), "coverage": shape_coverage}),
              "shape_coverage": shape_coverage, "sphere_pitch_m": float(payload_sphere_pitch_m),
              "physical_inertial": inertial}
+    # Keep the legacy wire representation byte-for-byte compatible. The worker
+    # needs only the init-frozen grasp window; the report owns the full policy.
+    if policy.grasp_stable_steps != LEGACY_STRICT.grasp_stable_steps:
+        model["grasp_stable_steps"] = policy.grasp_stable_steps
     state: dict[str, Any] = {"contact_allowed": contact_allowed, "attachment": None,
                               "source_support_allowed": source_support_allowed,
                               "source_support_obstacle_names": [SOURCE_TABLE] if source_support_allowed else []}
@@ -452,7 +464,7 @@ def export_payload_snapshot(env: Any, arm_index: int, target_actor: Any, *,
         world_base = np.linalg.inv(_matrix(snapshot["base_pose_wxyz"]))
         object_base = world_base @ _matrix(entity.pose)
         tcp_object = np.linalg.inv(_matrix(agent.tcp.pose)) @ _matrix(entity.pose)
-        confirmation = _confirmation(grasp_evidence, arm_index, tcp_object)
+        confirmation = _confirmation(grasp_evidence, arm_index, tcp_object, policy=policy)
         if source_support_allowed and SOURCE_TABLE not in snapshot["world"].get("cuboid", {}):
             raise ValueError("Source support must be the exact original table cuboid")
         state["attachment"] = {"spheres": spheres.tolist(),
@@ -503,6 +515,9 @@ class CuroboPayloadSessions(CuroboSessions):
                 raise ValueError("Each complete payload snapshot needs model and state")
             if model.get("link_name") != PAYLOAD_LINK or model.get("finger_links") != list(FINGER_LINKS):
                 raise ValueError("Only the actual TCP payload and two own fingers are supported")
+            grasp_steps = model.get("grasp_stable_steps", LEGACY_STRICT.grasp_stable_steps)
+            if type(grasp_steps) is not int or grasp_steps < 1:
+                raise ValueError("Payload grasp_stable_steps must be a positive integer")
             count = len(_spheres(model["spheres_actor_local"]))
             if (type(model.get("capacity")) is not int or model["capacity"] < count
                     or model.get("sphere_count") != count):

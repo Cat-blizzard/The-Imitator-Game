@@ -20,6 +20,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
+from .runtime_policy import RuntimePolicy, LEGACY_STRICT
 from .curobo_backend import ROOT
 from .curobo_payload import (CuroboPayloadSessions, FINGER_LINKS, PAYLOAD_LINK,
     SOURCE_TABLE, export_payload_snapshot, self_test as payload_self_test)
@@ -110,7 +111,8 @@ def export_task_payload_snapshot(env: Any, arm_index: int, target_actor: Any, *,
                                  source_actor: Any | None = None, contact_allowed: bool = False,
                                  grasp_evidence: dict[str, Any] | None = None,
                                  source_support_allowed: bool = False, sphere_pitch_m: float = .025,
-                                 capacity: int | None = None) -> dict[str, Any]:
+                                 capacity: int | None = None,
+                                 policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
     """Extend the established actual snapshot with its fixed actual static source.
 
     ``source_actor`` may be the existing adapter.initial_supports[arm] wrapper
@@ -161,7 +163,8 @@ def export_task_payload_snapshot(env: Any, arm_index: int, target_actor: Any, *,
         raise ValueError("Task source must be actual static or measured fixed kinematic rigid body")
     snapshot = export_payload_snapshot(env, arm_index, target_actor,
         contact_allowed=contact_allowed, grasp_evidence=grasp_evidence,
-        source_support_allowed=source_support_allowed, sphere_pitch_m=sphere_pitch_m, capacity=capacity)
+        source_support_allowed=source_support_allowed, sphere_pitch_m=sphere_pitch_m, capacity=capacity,
+        policy=policy)
     manifest = _source_manifest(snapshot, task, arm_index, keys[0], type(body).__name__,
         source_is_kinematic=kinematic,linear_velocity_m_s=linear,angular_velocity_rad_s=angular)
     if len(manifest["source_all_obstacle_names"]) != len(body.get_collision_shapes()):

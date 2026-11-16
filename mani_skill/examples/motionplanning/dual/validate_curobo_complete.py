@@ -32,6 +32,10 @@ from .initial_scene_manifest import save_initial_scene_manifest
 from .trajectory_execution import as_numpy, bind_arm
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
 from .runtime_policy import LEGACY_STRICT, RuntimePolicy, policy_from_report, resolved_policy_record
+from .runtime_profiles import (PROFILE_IDS, resolve_profile, stage_requirements,
+    phase_budget as selected_phase_budget)
+from .recording_policy import (RecordingPolicy, archive_report,
+    recording_policy_from_report, write_robot_contacts)
 from infrastructure.tig_runtime import resolve_runtime_paths
 from .runtime_io import git_identity, save_json, json_value, termination_handler, state_digest
 from .physical_observation import (check_fk, verify_finger_spheres, audit_payload_spheres,
@@ -58,6 +62,37 @@ TRANSPORT_RECIPES = ('standard', 'pill-direct-release-v1', 'direct-release-v2')
 # before the retreat schedule is allowed to run.
 FUTURE_MINIMUM_TICKS = {'pregrasp': 43, 'descend': 40, 'lift_and_hold': 32,
     'carry_orient_and_transport': 29, 'carry_lower': 26, 'retreat': 20}
+
+
+def save_runtime_report(output: Path, report: dict[str, Any]) -> None:
+    """Serialize the selected archive view while keeping live audit data intact."""
+    save_json(output/'report.json', archive_report(report, recording_policy_from_report(report)))
+
+
+def native_profile(task_id: str, report: dict[str, Any]) -> Any:
+    """Validate a generation selection; replay restores frozen values separately."""
+    policy = policy_from_report(report)
+    metadata = report.get('runtime_strategy')
+    if metadata is None:
+        if policy != LEGACY_STRICT:
+            raise ValueError('A nonlegacy generation policy requires its task/profile selection')
+        return resolve_profile(task_id)
+    if not isinstance(metadata, dict):
+        raise ValueError('Invalid task runtime strategy')
+    selected = resolve_profile(task_id, metadata.get('profile_id'), overrides=metadata.get('overrides'))
+    if selected.metadata() != metadata or selected.policy != policy:
+        raise ValueError('Generation task/profile selection differs from its frozen policy')
+    return selected
+
+
+def selected_tail_ticks(selection: Any, phase: str, transport_recipe: str) -> int:
+    """Reserve only required observations in the selected future phase list."""
+    requirements = stage_requirements(selection, transport_recipe=transport_recipe)
+    phases = requirements['selected_phases']
+    if phase not in phases:
+        raise ValueError('Current phase is not selected')
+    return sum(requirements['phase_minimum_control_ticks'][name]
+               for name in phases[phases.index(phase)+1:])
 
 
 def execution_configuration(task_id: str = TASKS[0], *,
@@ -389,6 +424,11 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
         raise ValueError('A transport callback requires an explicit fixed recipe')
     policy = policy_from_report(report)
     report['runtime_policy'] = resolved_policy_record(policy)
+    selection = native_profile(args.task, report)
+    modern = selection.profile_id != 'legacy-strict-v1'
+    recording_policy = recording_policy_from_report(report)
+    requirements = stage_requirements(selection, transport_recipe=transport_policy)
+    report['selected_phase_requirements'] = requirements
     report['transport_recipe'] = transport_policy
     payload_refinement = selected_payload_refinement(args)
     if report['execution_configuration'].get('payload_refinement','baseline') != payload_refinement:
@@ -427,7 +467,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
 
         def export_snapshot(index: int, **kwargs: Any) -> dict[str,Any]:
             snapshot = export_task_payload_snapshot(raw,index,targets[index],task_id=args.task,
-                source_actor=adapter.initial_supports[index],**kwargs)
+                source_actor=adapter.initial_supports[index],policy=policy,**kwargs)
             geometry_manifest = None
             if payload_refinement in ('fixed-task-v3','fixed-task-v4') and args.task == TASKS[2]:
                 from .curobo_fruit_link7_v3 import export_link7_geometry
@@ -454,7 +494,8 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             initial_scene_manifest=save_initial_scene_manifest(output,raw))
         capture = make_physics_capture(env, raw, adapter, args, report, frames, ticks, substeps, keys,
             checker_provider=lambda: checker,
-            support_release_provider=lambda:measured_source_departure(checker),hard_step_budget=200)
+            support_release_provider=lambda:measured_source_departure(checker),hard_step_budget=200,
+            recording_policy=recording_policy)
         original_hook = capture.original_hook
         install_full_robot_contact_capture(raw, capture, adapter, contacts)
         raw._after_simulation_step = capture.record_substep
@@ -464,6 +505,9 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             capture.step(hold)
         solvers = make_solvers(env, output, report, capture)
         checker = make_checker(raw, solvers, adapter)
+        if modern:
+            checker.set_measured_attachment_prediction(True)
+            report['attachment_geometry_strategy'] = 'measured-control-command-v1'
         report['external_scene_coverage'] = checker.coverage
         report['native_collision_representation'] = {
             'backend': args.backend,
@@ -496,11 +540,18 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
 
         def begin(name: str) -> None:
             report['stage'] = capture.phase = name
-            save_json(output/'report.json', report)
+            save_runtime_report(output, report)
 
         def finish(name: str, result: dict[str, Any]) -> None:
             report['stages'].append({'name':name, **result})
-            save_json(output/'report.json', report)
+            # Publish only a result returned by the real executor. An initial
+            # physical rejection can happen before the full candidate query.
+            for planned in reversed(report.get('planning', [])):
+                if planned.get('phase') == name and planned.get('collision_validation_owner') == 'executor':
+                    planned['collision_validation'] = result.get('validation', {
+                        'status':'not_run', 'reason':result.get('reason',result['status'])})
+                    break
+            save_runtime_report(output, report)
             print(json.dumps({'phase':name, 'status':result['status'],
                 'elapsed_steps':int(as_numpy(raw.elapsed_steps)[0])}), flush=True)
             if result['status'] != 'passed':
@@ -595,18 +646,34 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
                 right_times=trajectories[1].times_s,left_positions=trajectories[0].positions_rad,
                 right_positions=trajectories[1].positions_rad,target_times=schedule.target_times_s,
                 left_commands=schedule.left_commands,right_commands=schedule.right_commands)
-            row['budget'] = phase_budget(int(as_numpy(raw.elapsed_steps)[0]),schedule.num_steps,
-                name if budget_phase is None else budget_phase,transport_recipe=transport_policy,policy=policy)
+            budget_name = name if budget_phase is None else budget_phase
+            if modern:
+                row['budget'] = selected_phase_budget(selection, int(as_numpy(raw.elapsed_steps)[0]),
+                    schedule.num_steps, budget_name, transport_recipe=transport_policy)
+                if not row['budget']['fits_minimum_model']:
+                    report.setdefault('budget_events', []).append({
+                        'phase': name, 'reason': 'selected_phase_minimum_does_not_fit', **row['budget']})
+                    raise RuntimeError('Selected phase budget cannot fit the scheduled motion and selected future minima')
+            else:
+                row['budget'] = phase_budget(int(as_numpy(raw.elapsed_steps)[0]),schedule.num_steps,
+                    budget_name,transport_recipe=transport_policy,policy=policy)
             phase_budgets[name] = row['budget']
-            checker.refresh()
-            checker.set_target_contacts_allowed((contact or closed,)*2)
-            try:
-                row['collision_validation'] = validate_schedule(schedule,*(arm.arm_qpos() for arm in arms),checker)
-            finally:
-                checker.set_target_contacts_allowed((False,False))
             row['require_safe_pair'] = require_safe_pair
-            save_json(output/'report.json',report)
-            enforce_pair_validation(row['collision_validation'],require_safe_pair=require_safe_pair)
+            # Diagnostic hooks acquire candidate trajectories without executing
+            # them, so retain their original full query and safety policy.
+            if phase_hook is not None or not require_safe_pair:
+                checker.refresh()
+                checker.set_target_contacts_allowed((contact or closed,)*2)
+                try:
+                    row['collision_validation'] = validate_schedule(schedule,*(arm.arm_qpos() for arm in arms),checker)
+                finally:
+                    checker.set_target_contacts_allowed((False,False))
+                row['collision_validation_owner'] = 'planner_diagnostic'
+                enforce_pair_validation(row['collision_validation'],require_safe_pair=require_safe_pair)
+            else:
+                row['collision_validation_owner'] = 'executor'
+                row['collision_validation'] = {'status':'pending_executor_validation'}
+            save_runtime_report(output, report)
             return schedule
 
         original_pairs = adapter.grasp_poses()
@@ -621,10 +688,15 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             finish(name,execute_dual_reach(capture,schedule,checker,
                 allow_target_contacts=(allowed,allowed),settle_max_steps=phase_budgets[name]['settle_max_steps'],policy=policy))
         begin('close_and_confirm')
-        close_tail = policy.release_stable_steps + 4 * policy.reach_stable_steps + policy.final_stable_steps
-        close_budget = min(40,policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])-close_tail)
+        close_tail = (selected_tail_ticks(selection, 'close_and_confirm', transport_policy) if modern
+            else policy.release_stable_steps + 4 * policy.reach_stable_steps + policy.final_stable_steps)
+        close_available = policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])-close_tail
+        close_budget = close_available if modern else min(40,close_available)
         if close_budget < policy.grasp_stable_steps:
-            raise RuntimeError('Insufficient budget for five stable grasp ticks and mandatory tail')
+            report.setdefault('budget_events', []).append({'phase':'close_and_confirm',
+                'available_steps':close_budget, 'required_observations':policy.grasp_stable_steps,
+                'reserved_future_minimum_steps':close_tail})
+            raise RuntimeError('Insufficient budget for selected stable grasp observations and selected tail')
         closed = close_dual_and_confirm(capture,checker,targets,max_steps=close_budget,policy=policy)
         finish('close_and_confirm',closed)
         checker.attach()
@@ -646,7 +718,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
         lift_poses = tuple(sapien.Pose(xyz,q) for xyz,q in zip(route['lift'],original_q))
         schedule = plan('lift_and_hold',lift_poses,closed=True,profile='transport',source=True)
         finish('lift_and_hold',execute_dual_held_move(capture,schedule,checker,targets,
-            min_height_gain_m=(policy.min_lift_m,policy.min_lift_m),hold_steps=0,
+            min_height_gain_m=((policy.min_lift_m,)*2 if policy.min_lift_m > 0 else (None,None)),hold_steps=0,
             settle_max_steps=phase_budgets['lift_and_hold']['settle_max_steps'],policy=policy))
         report['source_departure_after_lift'] = source_departure_evidence(checker)
         if (not all(report['source_departure_after_lift']['effective_measured_departure'])
@@ -680,10 +752,15 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
         report['real_grasp_and_payload_status'] = 'passed'
         checker.detach()
         begin('release')
-        release_budget = min(30,policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])
-            - policy.reach_stable_steps - policy.final_stable_steps)
+        release_tail = (selected_tail_ticks(selection, 'release', transport_policy) if modern
+            else policy.reach_stable_steps + policy.final_stable_steps)
+        release_available = policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])-release_tail
+        release_budget = release_available if modern else min(30,release_available)
         if release_budget < policy.release_stable_steps:
-            raise RuntimeError('Insufficient budget for release and mandatory retreat/placement tail')
+            report.setdefault('budget_events', []).append({'phase':'release',
+                'available_steps':release_budget, 'required_observations':policy.release_stable_steps,
+                'reserved_future_minimum_steps':release_tail})
+            raise RuntimeError('Insufficient budget for release and selected retreat/placement tail')
         finish('release',release_dual_and_confirm(capture,checker,targets,max_steps=release_budget,policy=policy))
         grasp_evidence = [None,None]
         if worker is not None:
@@ -706,29 +783,51 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
         else:
             report['native_payload_detach_verified'] = None
             report['native_payload_detach_scope'] = 'MPLib uses shared external measured payload prediction; detached before physical release'
-        retreat_start = np.asarray([as_numpy(a.tcp.pose.p)[0].copy() for a in agents])
-        retreat = tuple(sapien.Pose(position+[0.,0.,policy.retreat_command_m],as_numpy(a.tcp.pose.q)[0])
-            for position,a in zip(retreat_start,agents))
-        schedule = plan('retreat',retreat,closed=False,profile='transport')
-        finish('retreat',execute_dual_reach(capture,schedule,checker,
-            settle_max_steps=phase_budgets['retreat']['settle_max_steps'],policy=policy))
-        gain = np.asarray([as_numpy(a.tcp.pose.p)[0] for a in agents])-retreat_start
-        report['actual_retreat_displacement_m'] = gain.tolist()
-        if np.any(gain[:,2] < policy.minimum_retreat_m):
-            raise RuntimeError('Actual retreat gain below8cm')
-        begin('verify_placement')
-        remaining = policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])
-        if remaining < policy.final_stable_steps:
-            raise RuntimeError('Final continuous20-tick placement window does not fit')
-        placed = verify_dual_placement(capture,checker,targets,
-            official_predicate_keys=adapter.official_predicate_keys,region_predicates=adapter.region_predicates(),
-            max_steps=min(60,remaining),stable_steps=policy.final_stable_steps,policy=policy)
-        finish('verify_placement',placed)
-        report['placement_stability_evaluated'] = True
+        if policy.require_retreat:
+            retreat_start = np.asarray([as_numpy(a.tcp.pose.p)[0].copy() for a in agents])
+            retreat = tuple(sapien.Pose(position+[0.,0.,policy.retreat_command_m],as_numpy(a.tcp.pose.q)[0])
+                for position,a in zip(retreat_start,agents))
+            schedule = plan('retreat',retreat,closed=False,profile='transport')
+            finish('retreat',execute_dual_reach(capture,schedule,checker,
+                settle_max_steps=phase_budgets['retreat']['settle_max_steps'],policy=policy))
+            gain = np.asarray([as_numpy(a.tcp.pose.p)[0] for a in agents])-retreat_start
+            report['actual_retreat_displacement_m'] = gain.tolist()
+            if np.any(gain[:,2] < policy.minimum_retreat_m):
+                raise RuntimeError(f'Actual retreat gain below selected {policy.minimum_retreat_m:g}m')
+        else:
+            report['retreat_quality_evaluated'] = False
+        if policy.require_final_stability:
+            begin('verify_placement')
+            remaining = policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])
+            if remaining < policy.final_stable_steps:
+                raise RuntimeError(f'Final selected {policy.final_stable_steps}-tick placement window does not fit')
+            placed = verify_dual_placement(capture,checker,targets,
+                official_predicate_keys=adapter.official_predicate_keys,region_predicates=adapter.region_predicates(),
+                max_steps=(remaining if modern else min(60,remaining)),
+                stable_steps=policy.final_stable_steps,policy=policy)
+            finish('verify_placement',placed)
+            report['placement_stability_evaluated'] = True
+        else:
+            from .task_outcome import observe_dual_task_outcome
+            begin('observe_task_outcome')
+            remaining = max(0, policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0]))
+            observed = observe_dual_task_outcome(capture, checker, targets,
+                official_predicate_keys=adapter.official_predicate_keys,
+                region_predicates=adapter.region_predicates(), max_steps=remaining, policy=policy)
+            report['task_outcome_observation'] = observed
+            report['placement_stability_evaluated'] = False
+            if observed['environment_steps']:
+                finish('observe_task_outcome', observed)
+            elif observed['status'] != 'passed':
+                raise RuntimeError('Official task outcome was not observed within the remaining budget')
         evaluation = raw.evaluate()
         report['official_200_step_complete'] = bool(np.asarray(as_numpy(evaluation['success'])).all()
             and int(as_numpy(raw.elapsed_steps)[0]) < policy.max_episode_steps)
-        report['project_complete_physical_closure'] = report['official_200_step_complete']
+        if modern:
+            report['selected_policy_complete'] = report['official_200_step_complete']
+            report['project_complete_physical_closure'] = None
+        else:
+            report['project_complete_physical_closure'] = report['official_200_step_complete']
         report['status'] = 'passed' if report['official_200_step_complete'] else 'failed'
     finally:
         if worker is not None:
@@ -743,10 +842,11 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             except BaseException as exc:
                 report.setdefault('artifact_errors',[]).append(f'worker close: {type(exc).__name__}: {exc}')
             report['worker_requests'] = worker.receipts
-        save_json(output/'all-robot-contacts.json',contacts)
+        write_robot_contacts(output, contacts, policy=recording_policy)
         if env is not None:
             finalize_physics_capture(env,raw,capture,output,report,frames,ticks,substeps,
-                keys,original_hook,attachment_count=attachment_count,robot_contacts=contacts)
+                keys,original_hook,attachment_count=attachment_count,robot_contacts=contacts,
+                recording_policy=recording_policy)
             recording = report.get('recording',{})
             report['recording_actions_and_Tplus1_verified'] = bool(
                 recording.get('submitted_actions_matched') is True
@@ -956,7 +1056,7 @@ def self_test() -> dict[str,Any]:
         'GPU_initialized':bool(torch.cuda.is_initialized())}
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--self-test',action='store_true')
     parser.add_argument('--backend',choices=('curobo','mplib'),default='curobo')
@@ -968,12 +1068,22 @@ def main() -> int:
     parser.add_argument('--transport-recipe',choices=TRANSPORT_RECIPES,default='standard')
     parser.add_argument('--worker-script',type=Path)
     parser.add_argument('--output-dir',type=Path)
-    args = parser.parse_args()
+    parser.add_argument('--quality-profile', choices=PROFILE_IDS, default='legacy-strict-v1')
+    parser.add_argument('--quality-overrides', type=Path,
+                        help='JSON object of explicit overrides for the selected task profile')
+    parser.add_argument('--recording-mode', choices=('normal','diagnostic'), default='diagnostic')
+    args = parser.parse_args(argv)
     if args.self_test:
         print(json.dumps(self_test(),allow_nan=False))
         return 0
     if args.transport_recipe == 'pill-direct-release-v1' and args.task != TASKS[1]:
         parser.error('--transport-recipe pill-direct-release-v1 requires the pill task')
+    try:
+        overrides = json.loads(args.quality_overrides.read_text()) if args.quality_overrides else None
+        selected = resolve_profile(args.task, args.quality_profile, overrides=overrides)
+        recording_policy = RecordingPolicy(args.recording_mode)
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
     faulthandler.enable()
     resource.setrlimit(resource.RLIMIT_CORE,(0,0))
     signal.signal(signal.SIGTERM,termination_handler)
@@ -1008,12 +1118,13 @@ def main() -> int:
         'payload_refinement':args.payload_refinement,
         'transport_recipe':args.transport_recipe,
         'started_at':datetime.now(timezone.utc).isoformat(),'gpu_uuid':gpu_uuid,
-        'max_episode_steps':LEGACY_STRICT.max_episode_steps,'official_200_step_complete':False,
-        'runtime_policy':resolved_policy_record(),
+        'max_episode_steps':selected.policy.max_episode_steps,'official_200_step_complete':False,
+        'runtime_policy':selected.policy_record(), 'runtime_strategy':selected.metadata(),
+        'recording_policy':recording_policy.record(),
         'project_complete_physical_closure':False,'real_grasp_and_payload_status':'not_completed',
         'placement_stability_evaluated':False,'execution_configuration':execution_configuration(
             args.task,approach_recipe=args.approach_recipe,payload_refinement=args.payload_refinement,
-            transport_recipe=args.transport_recipe),
+            transport_recipe=args.transport_recipe,policy=selected.policy),
         'scope':'complete measured grasp, held transport, release, actual retreat and continuous20tick placement',
         'physical_pose_assignment':False,'physical_attachment_created':False,
         'physical_collision_masks_modified':False,'native_timeopt_payload_inertia_applied':False,
@@ -1022,7 +1133,11 @@ def main() -> int:
         'official_tig':git_identity(ROOT/'The-Imitator-Game'),
         'runtime_tig':git_identity(CODE_ROOT),
         'official_curobo':git_identity(RUNTIME_PATHS.curobo_source)}
-    save_json(output/'report.json',report)
+    if selected.profile_id != 'legacy-strict-v1':
+        report.update(completion_contract='selected-runtime-policy-v1', selected_policy_complete=False,
+                      project_complete_physical_closure=None,
+                      scope='measured grasp, held transport, physical release and selected task quality phases')
+    save_runtime_report(output, report)
     started = time.monotonic()
     try:
         native_run(args,output,report)
@@ -1032,7 +1147,7 @@ def main() -> int:
     from .run_results import update_run_results_from_file
     report = json_value(report)
     update_run_results_from_file(report, output/'ticks.jsonl')
-    save_json(output/'report.json',report)
+    save_runtime_report(output, report)
     print(json.dumps({'status':report['status'],'report':str(output/'report.json')}),flush=True)
     return 0 if report['status']=='passed' else 1
 

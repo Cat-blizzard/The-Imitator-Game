@@ -78,7 +78,7 @@ def _pose(value: Any, name: str) -> list[float]:
     return result
 
 
-def _validate_robot(robot_cfg: Any) -> None:
+def _validate_robot(robot_cfg: Any, *, payload_link: str | None = None) -> None:
     if not isinstance(robot_cfg, dict) or not isinstance(robot_cfg.get("kinematics"), dict):
         raise ValueError("robot_cfg requires a kinematics object")
     if robot_cfg.get("load_dynamics", False) is not False:
@@ -98,13 +98,22 @@ def _validate_robot(robot_cfg: Any) -> None:
     for name in FINGER_JOINT_NAMES:
         if abs(default[names.index(name)] - kin["lock_joints"][name]) > 1e-10:
             raise ValueError("default finger positions and measured locks disagree")
-    # No attachment-capacity or payload model is permitted in this stage.
+    # The empty-hand schema retains its ban. The payload schema validates
+    # the exact reserved topology against its model without rewriting kin.
     for key in ("extra_links", "extra_collision_spheres"):
-        if kin.get(key):
+        if payload_link is None and kin.get(key):
             raise ValueError(f"{key} is unsupported in the empty-hand resident stage")
     if any("attach" in name.lower() or "payload" in name.lower()
-           for name in kin.get("collision_link_names", [])):
+           for name in kin.get("collision_link_names", []) if name != payload_link):
         raise ValueError("attachment/payload collision links are unsupported")
+
+
+def _validate_urdf_path(robot_cfg: dict[str, Any]) -> Path:
+    """Retain the init resource contract without parsing a second profile."""
+    model = Path(robot_cfg["kinematics"].get("urdf_path", ""))
+    if not model.is_absolute() or not model.is_file():
+        raise ValueError("resident sessions require an absolute existing URDF")
+    return model
 
 
 def _validate_profile(session_id: str, robot_cfg: dict[str, Any]) -> None:
@@ -123,9 +132,7 @@ def _validate_profile(session_id: str, robot_cfg: dict[str, Any]) -> None:
     scales = _vector(cspace.get("velocity_scale"), 9, "velocity_scale")
     if any(scale <= 0 for scale in scales):
         raise ValueError("velocity_scale must be positive")
-    model = Path(kin.get("urdf_path", ""))
-    if not model.is_absolute() or not model.is_file():
-        raise ValueError("resident sessions require an absolute existing URDF")
+    model = _validate_urdf_path(robot_cfg)
     joints = {node.attrib["name"]: node for node in ET.parse(model).getroot().findall("joint")}
     for index, name in enumerate(ARM_JOINT_NAMES):
         limit = joints[name].find("limit")
@@ -152,9 +159,16 @@ def _validate_world(world: Any) -> None:
                 raise ValueError("obstacle collision cannot be disabled")
 
 
-def validate_request(request: Any) -> dict[str, Any]:
-    """Validate JSON, protocol, shapes and updateable-field contracts on CPU."""
-    _finite_json(request)
+def _validate_request_fields(request: Any, *, payload_link: str | None = None,
+                             profile_validator: Callable[[str, dict[str, Any]], Any] | None = None,
+                             scan_finite: bool = True) -> dict[str, Any]:
+    """Non-mutating shared schema checks; options are fixed internal callers.
+
+    The finite scan may be shared only within this same trusted call chain.
+    No request field can disable a check, and no state is cached across calls.
+    """
+    if scan_finite:
+        _finite_json(request)
     if not isinstance(request, dict):
         raise ValueError("request must be an object")
     version = request.get("protocol_version", PROTOCOL_VERSION)
@@ -171,6 +185,9 @@ def validate_request(request: Any) -> dict[str, Any]:
         "plan_pose": {"session_id", "snapshot_id", "start", "goal_pose", "max_attempts", "timeout_s"},
         "inspect_sessions": set(), "shutdown": set(),
     }
+    if payload_link is not None:
+        allowed["init_session"].add("payload_model")
+        allowed["update_session"].add("payload_state")
     if operation not in allowed:
         raise ValueError("unknown resident operation")
     if set(request) - {"id", "op", "protocol_version"} - allowed[operation]:
@@ -180,7 +197,7 @@ def validate_request(request: Any) -> dict[str, Any]:
     if request.get("session_id") not in SESSION_IDS:
         raise ValueError(f"session_id must be one of {sorted(SESSION_IDS)}")
     if operation in {"init_session", "update_session"}:
-        _validate_robot(request.get("robot_cfg"))
+        _validate_robot(request.get("robot_cfg"), payload_link=payload_link)
         _validate_world(request.get("world"))
     if operation == "init_session":
         if request.get("warmup") is not True:
@@ -189,7 +206,8 @@ def validate_request(request: Any) -> dict[str, Any]:
         seed = request.get("seed", 0)
         if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2**31:
             raise ValueError("seed must be an integer in [0,2**31)")
-        _validate_profile(request["session_id"], request["robot_cfg"])
+        checker = _validate_profile if profile_validator is None else profile_validator
+        checker(request["session_id"], request["robot_cfg"])
     if operation in {"update_session", "plan_pose"} or "snapshot_id" in request:
         if not isinstance(request.get("snapshot_id"), str) or not request["snapshot_id"]:
             raise ValueError("snapshot_id must be a nonempty immutable caller identity")
@@ -203,6 +221,11 @@ def validate_request(request: Any) -> dict[str, Any]:
             raise ValueError("max_attempts must be an integer in [1,4]")
         _positive_float(request.get("timeout_s", 30.0), "timeout_s")
     return request
+
+
+def validate_request(request: Any) -> dict[str, Any]:
+    """Legacy empty-hand entry point with its original strict defaults."""
+    return _validate_request_fields(request)
 
 
 def _tensor_identity(tensor: Any) -> dict[str, Any]:

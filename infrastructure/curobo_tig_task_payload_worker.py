@@ -26,6 +26,8 @@ from typing import Any, Callable, TextIO
 import xml.etree.ElementTree as ET
 
 if __package__:
+    from .curobo_tig_payload_worker import _validate_payload_request
+    from .curobo_tig_session_worker import _validate_urdf_path
     from .curobo_tig_fast_payload_worker import FastPayloadBackend
     from .curobo_tig_payload_worker import (
         PAYLOAD_LINK, FINGER_LINKS, SOURCE_TABLE, PayloadSessionManager, SessionManager,
@@ -35,6 +37,8 @@ if __package__:
     )
     from .curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _vector, _tensor_json
 else:
+    from curobo_tig_payload_worker import _validate_payload_request
+    from curobo_tig_session_worker import _validate_urdf_path
     from curobo_tig_fast_payload_worker import FastPayloadBackend
     from curobo_tig_payload_worker import (
         PAYLOAD_LINK, FINGER_LINKS, SOURCE_TABLE, PayloadSessionManager, SessionManager,
@@ -106,11 +110,14 @@ def validate_source(model: dict[str, Any], world: dict[str, Any], task_id: str, 
         raise ValueError("static source geometry or pose changed after its frozen manifest")
 
 
-def validate_task_profile(session_id: str, robot_cfg: dict[str, Any], task_id: str) -> None:
+def validate_task_profile(session_id: str, robot_cfg: dict[str, Any], task_id: str, *,
+                          init_contract: bool = False) -> None:
     velocity, acceleration = APPROACH_LIMITS[canonical_task(task_id)] if session_id.endswith(":approach") else (1.5, 2.6)
     kin = robot_cfg["kinematics"]
     names, cfg = kin["cspace"]["joint_names"], kin["cspace"]
     scales = _vector(cfg["velocity_scale"], 9, "task velocity scales")
+    if init_contract and any(scale <= 0 for scale in scales):
+        raise ValueError("velocity_scale must be positive")
     values = cfg["max_acceleration"]
     accel = _vector(values, 9, "task acceleration") if isinstance(values, list) else [float(values)]*9
     if any(not math.isfinite(a) or a <= 0 for a in accel):
@@ -119,6 +126,8 @@ def validate_task_profile(session_id: str, robot_cfg: dict[str, Any], task_id: s
     for name in ARM_JOINT_NAMES:
         index = names.index(name)
         physical = float(joints[name].find("limit").attrib["velocity"])
+        if init_contract and not math.isfinite(physical):
+            raise ValueError("actual URDF arm velocity must be finite")
         if abs(scales[index]*physical-velocity) > 1e-9 or abs(accel[index]-acceleration) > 1e-10:
             raise ValueError("request does not match this task's immutable phase limit profile")
 
@@ -157,11 +166,20 @@ def validate_task_request(request: Any, task_id: str) -> dict[str, Any]:
         raise ValueError("request must be a mapping")
     operation = request.get("op")
     if operation in {"init_session", "update_session"}:
-        validate_task_profile(request["session_id"], request["robot_cfg"], task_id)
+        validate_task_profile(request["session_id"], request["robot_cfg"], task_id,
+                              init_contract=operation == "init_session")
     if operation == "init_session":
         arm = 0 if request["session_id"].startswith("left:") else 1
         validate_source(request["payload_model"], request["world"], task_id, arm)
-    legacy_validate_request(validation_view(request, task_id))
+    if operation == "update_session":
+        # Retain the old view's required-field/type boundary without copying or
+        # rewriting it; full dynamic-state validation stays in the manager.
+        request["payload_state"]["source_support_allowed"]
+    # The task profile above was checked on this exact original request. Keep
+    # init's absolute-resource rule without parsing a second XML/profile view.
+    _validate_payload_request(request, model_fields=frozenset(SOURCE_FIELDS),
+        profile_validator=lambda _session, robot: _validate_urdf_path(robot),
+        scan_finite=False)
     return request
 
 
@@ -171,25 +189,16 @@ class TaskPayloadBackend(FastPayloadBackend):
         super().__init__()
         self.task_id = canonical_task(task_id)
 
+    def _source_obstacle_names(self) -> set[str]:
+        return set(self.payload_model["source_obstacle_names"])
+
     def update(self, robot_cfg: dict[str, Any], world: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
         begin = time.perf_counter()
-        restricted = deepcopy(state)
-        restricted.update(source_support_allowed=False, source_support_obstacle_names=[])
-        result = super().update(robot_cfg, world, restricted)
+        result = super().update(robot_cfg, world, state)
         extra = time.perf_counter()
-        sources = set(self.payload_model["source_obstacle_names"])
-        targets = set(self.payload_model["target_obstacle_names"])
-        for group in world.values():
-            for name in group:
-                self.planner.scene_collision_checker.data.set_obstacle_layers(
-                    name, 2 if name in targets else (4 if name in sources else 1))
-        for model in self._models().values():
-            model.config.kinematics_config.set_link_collision_mask(
-                PAYLOAD_LINK, 3 if state["source_support_allowed"] else 7)
-        self.torch.cuda.synchronize()
-        self.payload_state = deepcopy(state)
-        result["native_readback"] = self._readback()
-        result["payload"] = self._payload_readback()
+        sources = self._source_obstacle_names()
+        # super() returns actual final native tensors for this update; no native
+        # state is mutated below, so both readbacks belong to this same call.
         link_masks: dict[str, Any] = {}
         for model_name, model in self._models().items():
             params = model.config.kinematics_config
@@ -243,8 +252,9 @@ class TaskSessionManager(PayloadSessionManager):
         robot, world, state = request["robot_cfg"], request["world"], request["payload_state"]
         try:
             validate_source(self.models[name], world, self.task_id, arm)
-            validate_model(legacy_model(self.models[name]), robot, world)
-            validate_state(legacy_state(state), legacy_model(self.models[name]), robot)
+            validate_model(self.models[name], robot, world, extra_fields=frozenset(SOURCE_FIELDS))
+            validate_state(state, self.models[name], robot,
+                source_names=tuple(self.models[name]["source_obstacle_names"]))
             expected = self.models[name]["source_obstacle_names"] if state["source_support_allowed"] else []
             if state["source_support_obstacle_names"] != expected:
                 raise ValueError("payload exception differs from the frozen exact own-source shapes")

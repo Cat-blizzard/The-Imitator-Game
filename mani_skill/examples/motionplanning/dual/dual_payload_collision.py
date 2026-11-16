@@ -19,7 +19,7 @@ import numpy as np
 from mplib.pymp import PlanningWorld
 from mplib.pymp.collision_detection import fcl
 
-from .combined_collision import NativeDualCollisionChecker, _vector
+from .combined_collision import NativeDualCollisionChecker, _array, _vector
 from .grasp_collision import FINGER_LINKS, LiveGraspCollisionChecker, _pose
 from .held_collision import _entity_transform, _object_at, _object_transform, _pair_result, _world_tcp
 from .scene_collision import check_plane_halfspaces
@@ -59,6 +59,10 @@ class DualPayloadCollisionChecker:
         self.refresh_count, self.last_allowed_contacts = 0, []
         self.coverage: dict[str, Any] = {}
         self._fresh = False
+        self.measured_attachment_prediction = False
+        self.attachment_geometry_epoch = 0
+        self._prediction_relations = None
+        self._prediction_control_step = None
         self.refresh()
         return self
 
@@ -75,6 +79,86 @@ class DualPayloadCollisionChecker:
         if not self.attached:
             raise ValueError("Both payload relations must be captured by attach first")
         return tuple(support.attachment_T_tcp_object for support in self._supports)
+
+    def set_measured_attachment_prediction(self, enabled: bool) -> None:
+        """Select geometry refresh before grasp; never reset a grasp reference."""
+        if type(enabled) is not bool or self.attached:
+            raise ValueError("Select the prediction strategy before attaching")
+        self.measured_attachment_prediction = enabled
+        self._prediction_relations = None
+        self._prediction_control_step = None
+        self.coverage.update(self._prediction_metadata())
+
+    def _control_step(self) -> int:
+        # The actual environment counter may be a CUDA tensor. Reuse the
+        # existing finite tensor-to-CPU conversion, without initializing CUDA.
+        value = _array(self.env.elapsed_steps).reshape(-1)
+        if value.size != 1 or value[0] < 0 or value[0] != int(value[0]):
+            raise RuntimeError("One physical environment step counter is required")
+        return int(value[0])
+
+    def _prediction_metadata(self) -> dict[str, Any]:
+        return {
+            "attachment_prediction_mode": ("measured_control_step_snapshot"
+                if self.measured_attachment_prediction else "fixed_attachment"),
+            "attachment_geometry_epoch": self.attachment_geometry_epoch,
+            "prediction_control_step": self._prediction_control_step,
+            "prediction_T_tcp_objects": ([relation.tolist() for relation in self._prediction_relations]
+                if self._prediction_relations is not None else None),
+            "prediction_snapshot_valid": bool(self._fresh and self.attached
+                and self.measured_attachment_prediction and self._prediction_relations is not None),
+            "quality_reference_reanchored": False,
+        }
+
+    def _assert_prediction_current(self) -> None:
+        if (not self._fresh or not self.attached or not self.measured_attachment_prediction
+                or self._prediction_relations is None):
+            raise RuntimeError("A current measured attached geometry snapshot is required")
+        if self._control_step() != self._prediction_control_step:
+            raise RuntimeError("Physical control step changed after attachment geometry refresh")
+        measured = self.lives[0]._measure_robots()
+        if any(not np.allclose(q, previous, rtol=0, atol=1e-6)
+               for q, previous in zip(measured, self._measured_qpos)):
+            raise RuntimeError("Robot state changed since dual-payload refresh")
+
+    def validate_measured_command(self, left7: np.ndarray, right7: np.ndarray, *,
+                                  grasping: tuple[bool, bool],
+                                  max_joint_step_rad: float) -> dict[str, Any]:
+        """Recheck this command under the latest measured attachment snapshot.
+
+        The executor already refreshes after each physical control tick. Reuse
+        only that snapshot, while every check retains the existing actual pose,
+        finger, base and shape guards. Never reuse a phase-path certificate as
+        proof for a changed relation. Sampling is not continuous collision proof.
+        """
+        self._assert_prediction_current()
+        if (not isinstance(grasping, (tuple, list)) or len(grasping) != 2
+                or any(type(value) is not bool for value in grasping)):
+            raise ValueError("Both actual grasp observations are required")
+        receipt = {"geometry_epoch": self.attachment_geometry_epoch,
+                   "control_step": self._prediction_control_step,
+                   "target_actor_names": list(self.target_actor_names),
+                   "actual_grasping": list(grasping), "sampled_configurations": 0,
+                   "prediction_mode": self.coverage["attachment_prediction_mode"],
+                   "prediction_T_tcp_objects": [relation.tolist() for relation in self._prediction_relations],
+                   "quality_reference_reanchored": False,
+                   "support_release_reopened": False}
+        if not all(grasping):
+            return {**receipt, "status": "rejected", "reason": "attachment_grasp_unconfirmed"}
+        if (type(max_joint_step_rad) not in (int, float)
+                or not np.isfinite(max_joint_step_rad) or max_joint_step_rad <= 0):
+            raise ValueError("Use the existing positive joint sampling step")
+        goals = (_vector(left7, 7), _vector(right7, 7))
+        starts = tuple(q[index] for q, index in zip(self._measured_qpos, self.native.arm_indices))
+        intervals = max(1, int(np.ceil(max(float(np.max(np.abs(b-a)))
+            for a, b in zip(starts, goals)) / max_joint_step_rad)))
+        for fraction in np.linspace(0., 1., intervals+1):
+            collisions = self.check(*(a + fraction*(b-a) for a, b in zip(starts, goals)))
+            receipt["sampled_configurations"] += 1
+            if collisions:
+                return {**receipt, "status": "rejected", "reason": "updated_candidate_collision",
+                        "fraction": float(fraction), "collisions": collisions}
+        return {**receipt, "status": "passed"}
 
     def set_target_contacts_allowed(self, allowed: tuple[bool, bool]) -> None:
         if (not isinstance(allowed, (tuple, list)) or len(allowed) != 2
@@ -105,6 +189,9 @@ class DualPayloadCollisionChecker:
 
     def refresh(self) -> dict[str, Any]:
         self._fresh = False
+        self._prediction_relations = None
+        self._prediction_control_step = None
+        self.coverage.update(self._prediction_metadata())
         for checker in self._supports if self.attached else self.lives:
             checker.refresh()  # Support release is updated ONLY from real measured poses.
         primary = self.lives[0]
@@ -129,6 +216,15 @@ class DualPayloadCollisionChecker:
         self.native.world = PlanningWorld(list(self.models), ["left", "right"],
                                           [objects[n] for n in self._normal_names], list(self._normal_names))
         self.refresh_count += 1
+        if self.attached and self.measured_attachment_prediction:
+            current_step = self._control_step()
+            self._prediction_relations = tuple(
+                np.linalg.inv(support._assert_tcp_matches_measurement(
+                    _world_tcp(model, full, support.tcp_link_name))) @ pose
+                for model, full, support, pose in zip(self.models, self._measured_qpos,
+                    self._supports, self._measured_payload_poses))
+            self._prediction_control_step = current_step
+            self.attachment_geometry_epoch += 1
         self.coverage = copy.deepcopy(primary.coverage)
         for key in ("active_robot", "target_actor", "target_contact_allowed", "attached_object"):
             self.coverage.pop(key, None)  # A single-target view is not the dual contract.
@@ -145,6 +241,7 @@ class DualPayloadCollisionChecker:
             last_check_mode=None,
         )
         self._fresh = True
+        self.coverage.update(self._prediction_metadata())
         return self.coverage
 
     def assert_scene_unchanged(self) -> None:
@@ -258,14 +355,21 @@ class DualPayloadCollisionChecker:
         return blocked
 
     def check(self, left7: np.ndarray, right7: np.ndarray) -> list[dict[str, Any]]:
+        if self.attached and self.measured_attachment_prediction:
+            self._assert_prediction_current()
         joints = (_vector(left7, 7), _vector(right7, 7))
         full_states = []
         for q, full, arm, limits in zip(joints, self._measured_qpos, self.native.arm_indices, self.native.joint_limits):
             if np.any(q < limits[:, 0] - 1e-6) or np.any(q > limits[:, 1] + 1e-6):
                 raise ValueError("Candidate arm exceeds joint limits")
             state = full.copy(); state[arm] = q; full_states.append(state)
-        poses = tuple(_world_tcp(model, state, support.tcp_link_name) @ support.attachment_T_tcp_object
-                      for model, state, support in zip(self.models, full_states, self._supports)) if self.attached else None
+        relations = self._prediction_relations if self.measured_attachment_prediction else (
+            self.attachments if self.attached else None)
+        if self.attached and relations is None:
+            raise RuntimeError("Attachment prediction snapshot is invalid")
+        poses = tuple(_world_tcp(model, state, support.tcp_link_name) @ relation
+                      for model, state, support, relation in zip(self.models, full_states,
+                          self._supports, relations)) if self.attached else None
         return self._evaluate(joints, poses, "candidate_two_rigid_predictions" if self.attached else "candidate_live_measured_objects")
 
     def measured_check(self) -> list[dict[str, Any]]:
@@ -290,7 +394,7 @@ def _self_test() -> dict[str, Any]:
     joints = [j.attrib["name"] for j in urdf.findall("joint") if j.attrib["type"] != "fixed"]
     links = [link.attrib["name"] for link in urdf.findall("link")]
     scene = sapien.Scene([physx.PhysxCpuSystem()]); actors: dict[str, Any] = {}
-    raw = NS(num_envs=1, scene=NS(actors=actors, articulations={}, sub_scenes=[scene],
+    raw = NS(num_envs=1, elapsed_steps=np.array([0]), scene=NS(actors=actors, articulations={}, sub_scenes=[scene],
                                 px=scene.physx_system, gpu_sim_enabled=False))
     solvers = []
     for x in (0., 1.3):
@@ -441,6 +545,100 @@ def _self_test() -> dict[str, Any]:
     for name, actor in actors.items(): assert np.array_equal(actor._objs[0].pose.to_transformation_matrix(), physical_before[name])
     for solver, before in zip(solvers, q_before): assert np.array_equal(solver.robot.q, before)
     tests.append("no_physical_pose_joint_setters_or_environment_steps")
+    # The bare CPU fixture now changes measured inputs explicitly; no scene or
+    # task is stepped. Quality references remain the original attach capture.
+    assert checker.measured_attachment_prediction is False
+    checker.attach(); checker.check(*candidate)
+    legacy_predictions = copy.deepcopy(checker.coverage["last_payload_T_world"])
+    checker.detach(); checker.set_measured_attachment_prediction(True); checker.attach()
+    checker.check(*candidate)
+    assert np.array_equal(checker.coverage["last_payload_T_world"], legacy_predictions)
+    references = tuple(value.copy() for value in checker.attachments)
+    initial_relations = tuple(value.copy() for value in checker._prediction_relations)
+    count, epoch = checker.refresh_count, checker.attachment_geometry_epoch
+    current = checker.validate_measured_command(*q, grasping=(True, True), max_joint_step_rad=.02)
+    assert current["status"] == "passed" and current["sampled_configurations"] == 2
+    assert checker.refresh_count == count and checker.attachment_geometry_epoch == epoch
+    assert checker.coverage["attachment_prediction_mode"] == "measured_control_step_snapshot"
+    assert checker.coverage["prediction_snapshot_valid"] and current["prediction_T_tcp_objects"]
+    tests.append("opt_in_unchanged_geometry_matches_legacy_and_command_reuses_one_refresh")
+    sampled, original_check = [], checker.check
+    def sample(left: np.ndarray, right: np.ndarray) -> list[dict[str, Any]]:
+        sampled.append((left.copy(), right.copy())); return original_check(left, right)
+    checker.check = sample
+    sampled_command = checker.validate_measured_command(*candidate, grasping=(True, True), max_joint_step_rad=.02)
+    del checker.check
+    assert sampled_command["status"] == "passed" and len(sampled) == sampled_command["sampled_configurations"] >= 6
+    assert all(np.array_equal(a, b) for a, b in zip(sampled[0], q))
+    assert all(np.array_equal(a, b) for a, b in zip(sampled[-1], candidate))
+    assert np.max(np.abs(np.diff(np.asarray(sampled), axis=0))) <= .02 + 1e-12
+    assert checker.refresh_count == count
+    class TensorCounter:
+        def detach(self) -> Any: return self
+        def cpu(self) -> Any: return self
+        def numpy(self) -> np.ndarray: return np.array([0])
+        def __array__(self, *args: Any, **kwargs: Any) -> Any: raise AssertionError("Direct tensor conversion is forbidden")
+    raw.elapsed_steps = TensorCounter()
+    assert checker.validate_measured_command(*q, grasping=(True, True), max_joint_step_rad=.02)["status"] == "passed"
+    raw.elapsed_steps = np.array([0])
+    tests.extend(["actual_FCL_every_measured_to_command_interval_at_existing_point02_joint_step",
+                  "tensor_counter_uses_detach_cpu_numpy_without_direct_array_conversion"])
+
+    def stale(call: Any) -> str:
+        try: call()
+        except (RuntimeError, ValueError) as exc: return str(exc)
+        raise AssertionError("Stale measured attachment geometry was accepted")
+    validate = lambda: checker.validate_measured_command(*q, grasping=(True, True), max_joint_step_rad=.02)
+    raw.elapsed_steps += 1
+    assert "control step" in stale(validate)
+    assert "control step" in stale(lambda: checker.check(*q))
+    raw.elapsed_steps -= 1
+    solvers[0].robot.q[0] += .001
+    assert "Robot state" in stale(validate)
+    solvers[0].robot.q[0] -= .001
+    solvers[1].robot.q[7] += .001
+    assert "Robot state" in stale(validate)
+    solvers[1].robot.q[7] -= .001
+    solvers[0].robot.pose.raw_pose[0, 0] += .001
+    assert "base" in stale(validate).lower()
+    solvers[0].robot.pose.raw_pose[0, 0] -= .001
+    tests.append("physical_counter_arm_finger_and_base_changes_reject_old_snapshot")
+
+    entity = targets[0]._objs[0]; saved_pose = entity.pose
+    entity.pose = sapien.Pose(np.asarray(saved_pose.p) + [.007, 0., .02], saved_pose.q)
+    stale(validate)  # Actual object-pose guard, before a fresh capture.
+    raw.elapsed_steps += 1; checker.refresh()
+    assert checker.attachment_geometry_epoch == epoch + 1
+    assert not np.allclose(checker._prediction_relations[0], initial_relations[0])
+    assert all(np.array_equal(before, after) for before, after in zip(references, checker.attachments))
+    assert np.array_equal(checker.coverage["attachment_T_tcp_objects"], references)
+    assert np.array_equal(checker.coverage["prediction_T_tcp_objects"], checker._prediction_relations)
+    assert validate()["status"] == "passed"
+    tests.append("measured_relation_moves_without_reanchoring_fixed_quality_reference")
+    obstacle = actors["third"]._objs[0]
+    body = next(value for value in obstacle.components
+                if isinstance(value, physx.PhysxRigidStaticComponent))
+    # SAPIEN freezes a shape's local pose once attached. Replace the actual
+    # body with the changed geometry, preserving the registered entity itself.
+    moved_body = physx.PhysxRigidStaticComponent(); moved_shape = physx.PhysxCollisionShapeSphere(.02, material)
+    moved_shape.set_local_pose(sapien.Pose([.001, 0., 0.])); moved_body.attach(moved_shape)
+    obstacle.remove_component(body); obstacle.add_component(moved_body)
+    stale(validate)
+    obstacle.remove_component(moved_body); obstacle.add_component(body)
+    changed_body = physx.PhysxRigidStaticComponent(); changed_body.attach(physx.PhysxCollisionShapeSphere(.021, material))
+    obstacle.remove_component(body); obstacle.add_component(changed_body)
+    stale(validate)
+    # An unsuccessful refresh must revoke the previous prediction receipt.
+    stale(checker.refresh)
+    assert not checker.coverage["prediction_snapshot_valid"] and checker._prediction_relations is None
+    stale(validate)
+    obstacle.remove_component(changed_body); obstacle.add_component(body); entity.pose = saved_pose
+    checker.refresh(); assert validate()["status"] == "passed"
+    unconfirmed = checker.validate_measured_command(*q, grasping=(True, False), max_joint_step_rad=.02)
+    assert unconfirmed["status"] == "rejected" and unconfirmed["reason"] == "attachment_grasp_unconfirmed"
+    assert unconfirmed["sampled_configurations"] == 0
+    tests.extend(["shape_local_pose_and_actual_shape_replacement_reject_old_snapshot",
+                  "failed_refresh_invalidates_prediction_receipt", "unconfirmed_grasp_rejects_without_FCL_or_refresh"])
     # Exact locally installed YCB convex cooking, with task scales. This is a
     # separate bare CPU geometry scene; it does not instantiate/step the task.
     asset_root = Path(__file__).resolve().parents[6] / "maniskill/data/assets/mani_skill2_ycb/models"
@@ -479,9 +677,48 @@ def _self_test() -> dict[str, Any]:
     for support, pose in zip(asset_checker._supports, asset_clear):
         for name in support._target_names: assert np.allclose(_object_transform(asset_world[name]), pose @ support._shape_local[name])
     tests.append("official_apple_banana_scaled_cooked_convex_FCL_clear_overlap_clear_without_ghosts")
+    # Actual cooked convex payloads initially touch one finite table. Measured
+    # separation releases support permanently, even if the object returns.
+    tabletop = .98
+    source_poses = []
+    for actor in asset_targets:
+        body = next(value for value in actor._objs[0].components if isinstance(value, physx.PhysxRigidStaticComponent))
+        vertices = []
+        for shape in body.get_collision_shapes():
+            local = shape.get_local_pose().to_transformation_matrix()
+            scaled = np.asarray(shape.vertices) * np.asarray(shape.scale)
+            vertices.append(scaled @ local[:3, :3].T + local[:3, 3])
+        pose = actor._objs[0].pose
+        position = np.asarray(pose.p).copy(); position[2] = tabletop - np.concatenate(vertices)[:, 2].min() - 5e-7
+        actor._objs[0].pose = sapien.Pose(position, pose.q)
+        source_poses.append(actor._objs[0].pose)
+    table = sapien.Entity(); table.name = "table"; table_body = physx.PhysxRigidStaticComponent()
+    table_body.attach(physx.PhysxCollisionShapeBox([1., .5, .03], material)); table.add_component(table_body)
+    table.pose = sapien.Pose([4.5, 0., tabletop - .03]); asset_scene.add_entity(table); asset_actors["table"] = NS(_objs=[table])
+    asset_raw.elapsed_steps = np.array([0])
+    support_checker = DualPayloadCollisionChecker.from_solvers(asset_raw, *asset_solvers, targets=tuple(asset_targets))
+    support_checker.set_measured_attachment_prediction(True); support_checker.attach()
+    assert all(support._initial_support_exists and not support.support_released for support in support_checker._supports)
+    support_references = tuple(relation.copy() for relation in support_checker.attachments)
+    assert support_checker.validate_measured_command(*q, grasping=(True, True), max_joint_step_rad=.02)["status"] == "passed"
+    for actor, pose in zip(asset_targets, source_poses):
+        actor._objs[0].pose = sapien.Pose(np.asarray(pose.p) + [0., 0., .02], pose.q)
+    asset_raw.elapsed_steps += 1; support_checker.refresh()
+    assert all(support.support_released for support in support_checker._supports)
+    assert support_checker.validate_measured_command(*q, grasping=(True, True), max_joint_step_rad=.02)["status"] == "passed"
+    for actor, pose in zip(asset_targets, source_poses): actor._objs[0].pose = pose
+    asset_raw.elapsed_steps += 1; support_checker.refresh()
+    assert all(support.support_released for support in support_checker._supports)
+    assert all(np.array_equal(a, b) for a, b in zip(support_references, support_checker.attachments))
+    rejected_support = support_checker.validate_measured_command(*q, grasping=(True, True), max_joint_step_rad=.02)
+    assert rejected_support["status"] == "rejected" and any(c["collision_type"] == "payload_environment"
+        and c["object_name2"] == "scene::table::shape_0" for c in rejected_support["collisions"])
+    tests.append("actual_convex_table_support_release_is_permanent_across_measured_relation_refresh")
     return {"status": "passed", "tests": tests, "physics_steps": 0, "gpu_used": False,
             "native_cpu_models": 2, "actual_FCL_payload_overlap_records": pairs,
-            "official_asset_fixtures": asset_info, "official_asset_payload_overlap_records": asset_pairs}
+            "official_asset_fixtures": asset_info, "official_asset_payload_overlap_records": asset_pairs,
+            "measured_prediction_receipt": current, "source_support_return_receipt": rejected_support,
+            "test_input_mutations": "Bare CPU geometry fixture only; no task or scene step was invoked"}
 
 
 if __name__ == "__main__":

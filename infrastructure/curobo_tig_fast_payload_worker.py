@@ -161,6 +161,10 @@ class FastPayloadBackend(PayloadBackend):
             seen.add(id(current))
         return len(seen)
 
+    def _source_obstacle_names(self) -> set[str]:
+        """Resolve source layers before the one complete native readback."""
+        return {SOURCE_TABLE}
+
     def update(self, robot_cfg: dict[str, Any], world: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
         self._require_configured()
         begin = previous = time.perf_counter()
@@ -198,9 +202,10 @@ class FastPayloadBackend(PayloadBackend):
         elapsed("payload_attachment")
         data = self.planner.scene_collision_checker.data
         targets = set(self.payload_model["target_obstacle_names"])
+        sources = self._source_obstacle_names()
         for shapes in world.values():
             for name in shapes:
-                data.set_obstacle_layers(name, 2 if name in targets else (4 if name == SOURCE_TABLE else 1))
+                data.set_obstacle_layers(name, 2 if name in targets else (4 if name in sources else 1))
                 self.planner.scene_collision_checker.enable_obstacle(name, enable=not (attachment is not None and name in targets))
         for model in self._models().values():
             params = model.config.kinematics_config
