@@ -1,0 +1,487 @@
+{
+  "schema": "tig-dual-arm-final-native-acceptance-v1",
+  "status": "passed",
+  "created_at": "2026-11-16T23:00:57.987880+00:00",
+  "frozen_runtime_commit": "f390fdfad6dfb237c5444f57b510be8af5fdd648",
+  "runtime_source_sha256": {
+    "infrastructure/curobo_tig_fast_payload_worker.py": "f47ffae778c88dbc291ac6b1761922ab8d8c7bdd3a999f4845758a7811ea696c",
+    "infrastructure/curobo_tig_payload_worker.py": "847ab1618e8265015c45c07f7559bfce72821f1d03bf5a23451be9be8afcd180",
+    "infrastructure/curobo_tig_seed_policy_worker.py": "eaddb0d6c940cb58e34c58596601e24a16fcf18989513e9303ec53c52a67b73c",
+    "infrastructure/curobo_tig_session_worker.py": "91921713dbba184d31cd5b45c9cc179a6bfa404d17901daba10a4bdffa966858",
+    "infrastructure/curobo_tig_task_payload_worker.py": "444ac85a88ba8d521efe627eb1fea3f78645e62ab0876d4f631a73989be41ea3",
+    "infrastructure/curobo_tig_worker.py": "8210b4c419c1028c151550928e866e342eed6933d6cc77867a7fe99a9523f535",
+    "infrastructure/tig_runtime.py": "24b87549cc5a696898dabbb65fa76c6167fdf1cce3f1d184b9eac61467e37df5",
+    "mani_skill/examples/motionplanning/dual/combined_collision.py": "d0c2d0e73fef233c06d780a2f885e9e9442568c7cbf3cfc1b5d4892fc793aa3c",
+    "mani_skill/examples/motionplanning/dual/compact_loader_audit.py": "22f852896ae2ad09904b6b9417840d05bdc84bbdb1ddd10657440dd7b881f6f7",
+    "mani_skill/examples/motionplanning/dual/compact_replay_metrics.py": "13442a09e3b7dbbe5a7e83f494b38a6ac65e4139550c2c0ec9af67a8953e8d31",
+    "mani_skill/examples/motionplanning/dual/conflict_coordination.py": "79df9ef8af83c958fd9b3f48cfb0df5ebfac1a379367d258a693c31f25f96613",
+    "mani_skill/examples/motionplanning/dual/curobo_backend.py": "c15cf35c2404a9f0fb17a8ec3549b271d8130685e9f10036e13115dcb73fc478",
+    "mani_skill/examples/motionplanning/dual/curobo_comparison.py": "ba2efe2c3ba4a17b5ec79f4c62ef026c4a1fd88f4938cef5da80031737888d81",
+    "mani_skill/examples/motionplanning/dual/curobo_fruit_link7_v3.py": "b81b1d32c63440995cd88c003661b14d4f1f5fa6dd60056b284f18c8798913ce",
+    "mani_skill/examples/motionplanning/dual/curobo_fruit_link7_v4.py": "6fe4e17e609fd57e9bfb1eb68865ee93d0f17a8dfb827066f3efdda31d0a520c",
+    "mani_skill/examples/motionplanning/dual/curobo_payload.py": "00bc2f6284895ccd6db5e093959572caca0cb1565795f7b90664da3878ac7f96",
+    "mani_skill/examples/motionplanning/dual/curobo_payload_refinement.py": "a4e603ddcf80ec8fe350ffac92cf035a1554f96db2268b3cdc076ee61e74f3e9",
+    "mani_skill/examples/motionplanning/dual/curobo_payload_refinement_v2.py": "753ab674a33581ed24940b775b921cc24a27df37c00dd4de3dffb809630b80e8",
+    "mani_skill/examples/motionplanning/dual/curobo_scene.py": "bce8f89e99a2f88d9d6a160913e9704b6d3110c6b5841f925adf4fecefdb622b",
+    "mani_skill/examples/motionplanning/dual/curobo_sessions.py": "8967da65f68b6a953c1d9549fd35f6293b6252b1f6238f3ccb2bc6f4a44e77cc",
+    "mani_skill/examples/motionplanning/dual/curobo_task_payload.py": "b3d41d457c472352bb9ec17feaf0faa2904fed2a69c0a986fe3842fd89568bc1",
+    "mani_skill/examples/motionplanning/dual/diagnose_support_geometry.py": "7274fce440e6e1703496ff00420409904a21687c1a65e91408fe3ed45aa14fc9",
+    "mani_skill/examples/motionplanning/dual/diagnose_sync_restore.py": "c42b66edd910ff62f719d39e9db44d9b7a9c2c0daa97f1587d9343ad30b8ef47",
+    "mani_skill/examples/motionplanning/dual/dual_arm_execution.py": "5480e62b64e167397a04f9418e0371a1ade9cc16c686c3aa27c7376eab35ed4c",
+    "mani_skill/examples/motionplanning/dual/dual_payload_collision.py": "38bb9b8ceae2995d54997e7f037ecef4824d00cdbdda027674644e096bc4eb4b",
+    "mani_skill/examples/motionplanning/dual/fixed_root_restore.py": "0dacaecd1c021c4de5d2d95df3b0995fc8e828454cbe4f8470a962950265b67e",
+    "mani_skill/examples/motionplanning/dual/generate.py": "1e7d733e5c52a27a3712f82adb25b4944e6e3fc11069274b3e158b0b07ba9458",
+    "mani_skill/examples/motionplanning/dual/grasp_collision.py": "f3a543c4243bc0606938821e5350216d7379fcfc9634234690accf0fb5f11ee5",
+    "mani_skill/examples/motionplanning/dual/grasp_execution.py": "fc5d6f29ba6dd7f62472458ac084c1a7dc2f2d5a32f6ede892e690e284f977ce",
+    "mani_skill/examples/motionplanning/dual/held_collision.py": "7caaf1bbe49f0831d96f04b8efb876eaba62d8045e73a9c67a8536f51948d504",
+    "mani_skill/examples/motionplanning/dual/held_conflict_fixture.py": "af2375a25811ad5774f3f54e18705721566bb162e5fd872241a6fab50708760d",
+    "mani_skill/examples/motionplanning/dual/initial_scene_manifest.py": "2d6a755a97c24898b72279abb6961b69ee683d5d3c6efb8910255917fd40c208",
+    "mani_skill/examples/motionplanning/dual/lift_execution.py": "c8390e67c378b31b49024b02a39e1d26a54a8f991283bbc6b4a9d904df6a6605",
+    "mani_skill/examples/motionplanning/dual/multitask_adapters.py": "c3bf7c027bc3a3398f10d238bcef299e0c05acaae59b5db6c74d17927cf6d7b3",
+    "mani_skill/examples/motionplanning/dual/multitask_recording.py": "c716802bc33ec4384227c7c395637d7abeff192799b853b1650fb8ec14b91746",
+    "mani_skill/examples/motionplanning/dual/path_conflict_fixture.py": "585e5ec758f991c2d6460a4360e696436c42562643eeb5eff722b3bbd420344e",
+    "mani_skill/examples/motionplanning/dual/phase_kinematics.py": "dac54c9e3b7cb195321de4823006a068fe128d176fee589ae3aeb114e0b23beb",
+    "mani_skill/examples/motionplanning/dual/physical_observation.py": "0f96d1c0fd322d87c9b46c1f7f256868913ce38c343480df872f2d35af2cfde3",
+    "mani_skill/examples/motionplanning/dual/pill_support_collision.py": "015bdb0fa1ef60aa798d9743858da631bb3c187733d1f8c038b7585b6eda3114",
+    "mani_skill/examples/motionplanning/dual/place_execution.py": "2df2633f403fa65834f8a24742e967719f8b6c49632681096fa471b4b095f2ab",
+    "mani_skill/examples/motionplanning/dual/planning_endpoint.py": "31c7622955c3ab2a859627b80f42f4156385b5f3cddb784b40a3edf075b64f4a",
+    "mani_skill/examples/motionplanning/dual/recording_policy.py": "6c9c2c8f731273682e616a12b0986f648f3160ff8be5e4d464edd35846d10502",
+    "mani_skill/examples/motionplanning/dual/recovery_execution.py": "492732b3499504e60919d2a0e4c0ba3030724c2e546cb2f50ec1c3ac368d6e69",
+    "mani_skill/examples/motionplanning/dual/replay.py": "28ebc24a971cef8ea22dd01efcf7d8f94b6cf5393d2f506d9746ed9eb2e05eca",
+    "mani_skill/examples/motionplanning/dual/replay_metrics.py": "992e9799bbafaf3df81a0421363bb1d447d23ce10b150096157f80aec7ee8685",
+    "mani_skill/examples/motionplanning/dual/replay_support.py": "2eca675b554539ef152e1f13c696d6f9c4007e261e800345aa632fd7d7c6a0c5",
+    "mani_skill/examples/motionplanning/dual/run_results.py": "76daa9b0b0ef0a1d1cf57c0ff930c41f9ec1b658257927c51a60caea7792bf41",
+    "mani_skill/examples/motionplanning/dual/runtime_io.py": "75f17100793d81193d80fb6d993506de6eb6b584eac880efbc8166a6d1880cbd",
+    "mani_skill/examples/motionplanning/dual/runtime_policy.py": "25a6bb8cce8e4bb41a0f79f4e15aebbf115847668f2a25d88ef171e7930f8ad1",
+    "mani_skill/examples/motionplanning/dual/runtime_profiles.py": "79dd61ff7adcad45b47ecf58d6a0f80e99c82359d94f7ade3c20e55368903c62",
+    "mani_skill/examples/motionplanning/dual/scene_collision.py": "30852ab4e05e4c599d62605880bd2d490b9249b8b0ae6736b0fd6977bf4fe732",
+    "mani_skill/examples/motionplanning/dual/single_arm_execution.py": "972483ffdb035704b553eb6297af50d17fabe1c5f530220bac266098e1714e3d",
+    "mani_skill/examples/motionplanning/dual/spatial_replanning.py": "2bec14d00d4a6d069da7dc87c39a77ef74035a125964050a4e9a3dfebb4467e5",
+    "mani_skill/examples/motionplanning/dual/support_surface_collision.py": "64c38c5a02b2028f1dec467cd7bc619a39eb53d92e5a3fd4aab3c619dee57952",
+    "mani_skill/examples/motionplanning/dual/sync_replay_metrics.py": "2450a45f5a61896792655a0838319b2c57220781426dc452771305e0677691b1",
+    "mani_skill/examples/motionplanning/dual/table_support_collision.py": "4e67b24ca89ba1043e655200cddca12b4ab630204efb2a1030a3892802ee6add",
+    "mani_skill/examples/motionplanning/dual/task_outcome.py": "51a2f4ca0042ceaad390bf41cbe516433c95acadbe537ea03cbeb843ba5ce04b",
+    "mani_skill/examples/motionplanning/dual/task_replay_alias.py": "b18954dfb62eb870e7af04e59f8b9ec2d8d43557f6c0ef1bceeb8114788277b0",
+    "mani_skill/examples/motionplanning/dual/task_targets.py": "1064234d06880e094f072d2174b290266885afd6a48167799d36e57a2e554190",
+    "mani_skill/examples/motionplanning/dual/trajectory_execution.py": "24163a75a6add7df31bb5f48fb1916590c187096f52309018770edad953a3b8b",
+    "mani_skill/examples/motionplanning/dual/trajectory_schedule.py": "1bca0acd8d2da0ec93a43931677b1c480d2fa06698070c6e522be9d38e4be5d1",
+    "mani_skill/examples/motionplanning/dual/transfer_collision.py": "554a9a531d8c5de62e97d1b0bcd60fc46a930988b7d10190fc0ca6d751535f2d",
+    "mani_skill/examples/motionplanning/dual/transfer_execution.py": "395523a0e0952e24e02bc020daa57e0e76a76fbd612ff94ba1540877efa2f000",
+    "mani_skill/examples/motionplanning/dual/transport_recipes.py": "e867fcd8e0c5988d1a1b2c4bcc6d660fa53df87a05aed2f22b8d9c763e1d67ba",
+    "mani_skill/examples/motionplanning/dual/transport_routes.py": "af5a875abd17718c634aeefd0fa1c128796d676bb199f3c0b404eb51f5ead246",
+    "mani_skill/examples/motionplanning/dual/two_robot_run.py": "ae7f2f4bbcfd32e2a247ea624452ed2e97d47af17a98b27f53457d53bfa8ac14",
+    "mani_skill/examples/motionplanning/dual/utils.py": "b9e4b46f8fa05fd967b2fa9eb77eb5b448bc4b972fe0b8aaef505637e7de1195",
+    "mani_skill/examples/motionplanning/dual/validate_banana.py": "7c3f8108c20a964bb6e691d002cbe754c821a9979c9f75c05d1f7517867c5c07",
+    "mani_skill/examples/motionplanning/dual/validate_clearance_regression.py": "1e98f6484ec74c24bf333f7b7dfdd8e9b98bb561e1e1d25929ace77a96538aea",
+    "mani_skill/examples/motionplanning/dual/validate_compact_replay.py": "7d4494401828c50aee472d70e8dc0691580fe44fc5996ddfb03fafbfdf154430",
+    "mani_skill/examples/motionplanning/dual/validate_compact_seeds.py": "adcbcdcf5a5148b0965bd8595648cbcd0819a0212bfe8034528b64cd5d326fd7",
+    "mani_skill/examples/motionplanning/dual/validate_curobo.py": "5c478e1673de62dec36788267b7e28307715ec24d2ef9aebe489a0aeb35b4b17",
+    "mani_skill/examples/motionplanning/dual/validate_curobo_complete.py": "c966e2365523e32833fcc10a4d525da59141196df4ec6767771ee4eef0702774",
+    "mani_skill/examples/motionplanning/dual/validate_curobo_complete_replay.py": "b650de97f086bd415dfbbed5b998e4a5b4fabbb8c39e71ad42705da75d5f4fff",
+    "mani_skill/examples/motionplanning/dual/validate_curobo_held_conflict.py": "e80da00c75ae7e97dc84ed8e2bb3ff44237d276c863fa750b5909a64678a47c5",
+    "mani_skill/examples/motionplanning/dual/validate_curobo_payload.py": "3cc72fc7be49a2a206d4421cd724f0f00c3c2b137223d259ef9835bea341b920",
+    "mani_skill/examples/motionplanning/dual/validate_curobo_pill_direct.py": "a606c48dccbf1f2dc89557bf61b8f1600dbc8a07d3cfe0897a22dc204724ac72",
+    "mani_skill/examples/motionplanning/dual/validate_curobo_sessions.py": "bc49e7e4010a9d5fbed97dbe2b9e24b8ce0fd799a5a93fbeacc62400541dc4fa",
+    "mani_skill/examples/motionplanning/dual/validate_execution.py": "7b545736b6e5b8aa27a22e2077ffacd02f4a01ac3bddefdae8fe3d0bf7497e0f",
+    "mani_skill/examples/motionplanning/dual/validate_grasp.py": "1e0327e20d2e50b0ec8dfc51c8b88cfafdf1fe9e2f1f758cef60cb989e932a85",
+    "mani_skill/examples/motionplanning/dual/validate_handoff.py": "25488a0d4c9691e4bb9a1362b2084148333a7285e547b251f4088dd12d53172b",
+    "mani_skill/examples/motionplanning/dual/validate_held_path_conflict.py": "44f7a750d321b5cc60ad546018e7badda87f06066e78edd4fe6f9043e9e429ef",
+    "mani_skill/examples/motionplanning/dual/validate_lift.py": "3f357087ee9acb3a52c831da3771e18163d8433e85379467252354ace58d2918",
+    "mani_skill/examples/motionplanning/dual/validate_multitask.py": "84b081bf59a951c012e4e4283279239196ed13f7d2f23ff0eb60966d4d8ce541",
+    "mani_skill/examples/motionplanning/dual/validate_multitask_serial.py": "0bf4ef9943309940502bdc4f5c9784112ab7d1884650bc6694b0b53cf4171dda",
+    "mani_skill/examples/motionplanning/dual/validate_near_support_regression.py": "60a8a269c241afde4c9479006baf521cfcc4b4116d81947ab088e5b09ce42d29",
+    "mani_skill/examples/motionplanning/dual/validate_path_conflict.py": "c2c0fdcaf26484b88f293764a1c2d6a70327bcd898895760538b7fd65923a292",
+    "mani_skill/examples/motionplanning/dual/validate_place.py": "0399d9765ecf1e1c071adc77c3e4020a986fa3b8268fe67338eadbb4328c6b37",
+    "mani_skill/examples/motionplanning/dual/validate_recovery.py": "dfe54648d5687f5a7849e117caf9ce363cd1fa611079d6dcdb9c40dd2fbc0cf1",
+    "mani_skill/examples/motionplanning/dual/validate_replay.py": "5d8e1304d0f6f824ffeef42b922e290aa7b3315e551b60f8ea0a153ddb6586a6",
+    "mani_skill/examples/motionplanning/dual/validate_spatial_replanning.py": "3f23f20e911a049951f64eafceb9ac81ac4c3ca8c6e0303ed6bac16a7bf31e5f",
+    "mani_skill/examples/motionplanning/dual/validate_support_regression.py": "b0ba4e06b0183c1bf9a362de7bfb054e3eec044c443ac53891a9a9cd3117ca36",
+    "mani_skill/examples/motionplanning/dual/validate_sync.py": "1733725b4e4d579006e9327af0efbcdf615038f2a4d453a8d4cfe8d80c868be7",
+    "mani_skill/examples/motionplanning/dual/validate_sync_compact.py": "833cbdb75a541ad8fa522c41a4b80313c0cee708b3c6049b9498afb6b6289d1b",
+    "mani_skill/examples/motionplanning/dual/validate_sync_replay.py": "f6582f7d20eb4c19e8e293c63edd5dbf88e4eb0e3ddbdd9a0d25b2bfdd47b125",
+    "mani_skill/examples/motionplanning/dual/validate_timing_regression.py": "b350b531321914cd90ac83c8a750f23813d30b302b774db4cf20daacdc1b2e92",
+    "mani_skill/examples/motionplanning/dual/validate_unseen_seeds.py": "5346b39541627576bf1cf79be4dc3ba9b15b0c7b7a27489b23e9161c1aecbb42"
+  },
+  "production_runtime_matches_frozen_clone": true,
+  "positive_native_and_strict_pairs": [
+    {
+      "case": "final-mplib-pill-s401-normal",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "backend": "mplib",
+      "seed": 401,
+      "gpu_index": 0,
+      "steps": 171,
+      "state_frames": 172,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 855,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "639ececf1e6c1e7c013e45e189b50686a0d9e060fe8fbb5c8f701f6c67b27297",
+      "profile": "task-default-v1",
+      "quality_overrides": {},
+      "recording_mode": "normal",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-mplib-pill-s401-normal/report.json",
+        "sha256": "ca1ee836067173f99a1f08b2f9b664fdab724144ef7acb41ff44d0ae85aa6396"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-mplib-pill-s401-normal/report.json",
+        "sha256": "c6c9020b89ced9caa4a949a3fc3d58c006e0212da2485b6c61e97cc35fd48cf3"
+      }
+    },
+    {
+      "case": "final-curobo-pill-s401-normal",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "backend": "curobo",
+      "seed": 401,
+      "gpu_index": 6,
+      "steps": 191,
+      "state_frames": 192,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 955,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "639ececf1e6c1e7c013e45e189b50686a0d9e060fe8fbb5c8f701f6c67b27297",
+      "profile": "task-default-v1",
+      "quality_overrides": {},
+      "recording_mode": "normal",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-curobo-pill-s401-normal/report.json",
+        "sha256": "7581450c79dd585af339d676e5ae154f1d05042975e060ed2434f6aa3bc734d6"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-curobo-pill-s401-normal/report.json",
+        "sha256": "72e7358f3c70bdc8d16579bed2331454b004ee5f1d170fbc8d6f475c22a09581"
+      }
+    },
+    {
+      "case": "final-curobo-apple-s1003-normal",
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "backend": "curobo",
+      "seed": 1003,
+      "gpu_index": 2,
+      "steps": 192,
+      "state_frames": 193,
+      "state_leaves": 7,
+      "observed_100Hz_substeps": 960,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "639ececf1e6c1e7c013e45e189b50686a0d9e060fe8fbb5c8f701f6c67b27297",
+      "profile": "task-default-v1",
+      "quality_overrides": {},
+      "recording_mode": "normal",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-curobo-apple-s1003-normal/report.json",
+        "sha256": "30b63c8ca88fb9ff16d9ce443931ce880af8ba95e946b543da3bb91225ad7660"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-curobo-apple-s1003-normal/report.json",
+        "sha256": "78311348819536fce52bd4b46c91a9a43f234578f4841c418e92069a096e72c2"
+      }
+    },
+    {
+      "case": "final-curobo-apple-s1004-normal",
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "backend": "curobo",
+      "seed": 1004,
+      "gpu_index": 4,
+      "steps": 187,
+      "state_frames": 188,
+      "state_leaves": 7,
+      "observed_100Hz_substeps": 935,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "639ececf1e6c1e7c013e45e189b50686a0d9e060fe8fbb5c8f701f6c67b27297",
+      "profile": "task-default-v1",
+      "quality_overrides": {},
+      "recording_mode": "normal",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-curobo-apple-s1004-normal/report.json",
+        "sha256": "0a2f3988fe3c32b930443857af85fc10d303e8094d0ba1edb691914b4db9f8bd"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-curobo-apple-s1004-normal/report.json",
+        "sha256": "58ae5ebaee61a5aa5be6926e7c66e436ac985354fcaa3318bda7b3f6de98db07"
+      }
+    },
+    {
+      "case": "final-curobo-fruit-s401-normal",
+      "task": "TwoRobotPickFruitsToPlate-v1",
+      "backend": "curobo",
+      "seed": 401,
+      "gpu_index": 8,
+      "steps": 196,
+      "state_frames": 197,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 980,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "639ececf1e6c1e7c013e45e189b50686a0d9e060fe8fbb5c8f701f6c67b27297",
+      "profile": "task-default-v1",
+      "quality_overrides": {},
+      "recording_mode": "normal",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-curobo-fruit-s401-normal/report.json",
+        "sha256": "7679de524ecf4a27f30d2e2c35aa62cca5e989031121b3d8c851ac0bebfd1fb9"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-curobo-fruit-s401-normal/report.json",
+        "sha256": "d3ec4cd1a66573d065628b6d0a89487054fec30ab54a9ed44ad51cafd11aa2d9"
+      }
+    },
+    {
+      "case": "final-mplib-pill-s401-diagnostic",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "backend": "mplib",
+      "seed": 401,
+      "gpu_index": 0,
+      "steps": 171,
+      "state_frames": 172,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 855,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "639ececf1e6c1e7c013e45e189b50686a0d9e060fe8fbb5c8f701f6c67b27297",
+      "profile": "task-default-v1",
+      "quality_overrides": {},
+      "recording_mode": "diagnostic",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-mplib-pill-s401-diagnostic/report.json",
+        "sha256": "69368ad5a1021023f392350113da2b1f8b7d13ccfcc76b624140d17a944b0fe4"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-mplib-pill-s401-diagnostic/report.json",
+        "sha256": "97b5f25b8c660190eba0196addd26e925baceb18aeb7e9ac264e92fb9ede1968"
+      }
+    },
+    {
+      "case": "final-mplib-pill-s401-no-tail",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "backend": "mplib",
+      "seed": 401,
+      "gpu_index": 9,
+      "steps": 135,
+      "state_frames": 136,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 675,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "c4c36fd6957bbc6f1e6fd18f564638c970a84c25f72fa928da37d4e3c8c00b08",
+      "profile": "task-default-v1",
+      "quality_overrides": {
+        "grasp_stable_steps": 3,
+        "position_slip_m": 0.007,
+        "release_stable_steps": 4,
+        "require_final_stability": false,
+        "require_retreat": false
+      },
+      "recording_mode": "normal",
+      "outcome_observation_steps": 0,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-mplib-pill-s401-no-tail/report.json",
+        "sha256": "c9a6457203c6eeeef8dc0d4f7a4b67b2b66cfcfb269836d4e8940b3ea45b92bb"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-mplib-pill-s401-no-tail/report.json",
+        "sha256": "cf3a50588d92e763a8e6388c343cec5cec04c0fc7c3c6a5da7e121f8884e0758"
+      }
+    },
+    {
+      "case": "final-mplib-pill-s401-short-final",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "backend": "mplib",
+      "seed": 401,
+      "gpu_index": 9,
+      "steps": 142,
+      "state_frames": 143,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 710,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "989d5ee82a4bf1eaf71ad8f7d9618265ecde2e7e4fe7012cbbae6cf85f727a9f",
+      "profile": "task-default-v1",
+      "quality_overrides": {
+        "final_stable_steps": 7,
+        "grasp_stable_steps": 3,
+        "release_stable_steps": 4,
+        "require_final_stability": true,
+        "require_retreat": false
+      },
+      "recording_mode": "normal",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-mplib-pill-s401-short-final/report.json",
+        "sha256": "8a8a3dec446403a46f36af75a9157c8622c77bb810f00d15f63cbde248e5f6a5"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-mplib-pill-s401-short-final/report.json",
+        "sha256": "1297ae2be6538a5493cba1482b260ee1c49be0bf80862c6ef1c79dde8a369bae"
+      }
+    },
+    {
+      "case": "final-mplib-pill-s401-retreat-outcome",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "backend": "mplib",
+      "seed": 401,
+      "gpu_index": 9,
+      "steps": 151,
+      "state_frames": 152,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 755,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "01358fc449bfd14b646e607503b0ec2c88a4002309450ac4ec2053d451e3c4bc",
+      "profile": "task-default-v1",
+      "quality_overrides": {
+        "require_final_stability": false,
+        "require_retreat": true
+      },
+      "recording_mode": "normal",
+      "outcome_observation_steps": 0,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-mplib-pill-s401-retreat-outcome/report.json",
+        "sha256": "e4b9fc5b323736052813d054add793969ca6c3a4e8ea4cdddf966a8a6833b8bd"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-mplib-pill-s401-retreat-outcome/report.json",
+        "sha256": "d1d38fba43d69053c263856c53acad49e0fd066c72168eb052c97ff28943315a"
+      }
+    },
+    {
+      "case": "final-mplib-pill-s401-legacy-diagnostic",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "backend": "mplib",
+      "seed": 401,
+      "gpu_index": 9,
+      "steps": 171,
+      "state_frames": 172,
+      "state_leaves": 5,
+      "observed_100Hz_substeps": 855,
+      "native_and_strict": "passed",
+      "source_and_input_unchanged": true,
+      "canonical_strategy_and_policy_match": true,
+      "policy_sha256": "b196d14685d546ee46a47139f600453559019855352ab5d85a7a7662527aa5d3",
+      "profile": "legacy-strict-v1",
+      "quality_overrides": {},
+      "recording_mode": "diagnostic",
+      "outcome_observation_steps": null,
+      "native_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/native/final-mplib-pill-s401-legacy-diagnostic/report.json",
+        "sha256": "785e26a8026c30cf0d5a2b213e4f23dfcbdec1836e0803fc3dadc334b810b2fe"
+      },
+      "replay_report": {
+        "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/replay/final-mplib-pill-s401-legacy-diagnostic/report.json",
+        "sha256": "66dcc9b6dffabd4be99d1e3cfd0f24305d8a2be8930acf5ffb1411aca0fd5a4b"
+      }
+    }
+  ],
+  "cross_version_old_legacy": {
+    "steps": 171,
+    "official_physics_quality_recording": "passed",
+    "source_archive_and_inputs_unchanged": true
+  },
+  "legacy_regression": {
+    "steps": 171,
+    "old_native_actions_and_all_five_state_leaves_exact": true,
+    "policy_hash": "b196d14685d546ee46a47139f600453559019855352ab5d85a7a7662527aa5d3"
+  },
+  "actual_negative": {
+    "steps": 176,
+    "underlying_exit_code": 1,
+    "official": "passed",
+    "physics": "failed",
+    "quality": "failed",
+    "recording": "passed",
+    "injected_release_commands": 46,
+    "old_negative_archives_preserved": true
+  },
+  "recording_comparison": {
+    "normal_logical_bytes": 4663805,
+    "diagnostic_logical_bytes": 55033139,
+    "normal_runner_wall_s": 18.350495379185304,
+    "diagnostic_runner_wall_s": 18.52793632610701,
+    "actions_and_five_state_leaves_exact": true,
+    "all_855_substeps_and_27_reduced_events_exact": true,
+    "timing_scope": "single descriptive pair with concurrent native jobs; no causal speedup claim"
+  },
+  "raw_evidence": [
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/protocol-final-main.json",
+      "sha256": "6071f75ce6dabb1941db157057769262de5af6234e2fa39297fae3aacb84f296"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/protocol-final-optional-and-legacy.json",
+      "sha256": "aad42cfbbca9ac735f9e35a2e44138cfb19a6f860ddf7fc26b5379d07b297308"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/final-main-regression.json",
+      "sha256": "33a8b6321c7275b9f3f22e84684e57066644cd78eff672ed162a0f1498fe1db6"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/final-optional-and-legacy-regression.json",
+      "sha256": "8f3b01571ffa8ac3c47576c5bf49b138fb770d47976cfb594db634dee432e4ef"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/logs/final-mplib-pill-s401-normal-vs-diagnostic.json",
+      "sha256": "5f37c26144e0a36e776dc040d7410806fd1be99ceb815e41bdca327b20c11dc0"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/logs/final-clone-public-cpu-receipt.json",
+      "sha256": "70d789c2901b204efc74342681058bc847ebbd70802e0cedd5900da25e9ebd63"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/logs/final-clone-geometry-selftest-receipt.json",
+      "sha256": "0e621cc8ba1ee2bfdcbbaeade57a076d18c247e2215503844b93ff5f65e14bf3"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/final-metadata-audit-f390fdf/receipt.json",
+      "sha256": "d5a544cc6dbfc96a36704dff38cdba84674540c94f50969d82902e2f1e36f22d"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/negative-controls-20261117/final-actual-native-independent-audit-receipt.json",
+      "sha256": "3420afa54da25fb584d4bb8b4ba562820ab456a4c3232d192fbe2a806159a8e5"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/negative-controls-20261117/receipt.json",
+      "sha256": "68b696ca00cf4f252e07ed3a2f13598c7b5ae2e9e1d4d528f10a643f0f029d5d"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/cpu/stage4-checkpoint-20261117/final-receipt.json",
+      "sha256": "4aa4735a409d82d66ef06be5cacfe7a6041a705d3695714cc08584ce4f5097fa"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/cpu/final-source-cpu-fix-validation/receipt.json",
+      "sha256": "a18a5d25f9236fb0bb88ce81ca39f5f7cac37c57def141a02cfb6105eb193903"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/infra-convergence-20261117/logs/replay-final-crossversion-old-mplib-pill-s401-receipt.json",
+      "sha256": "457583760fb619896ade6e77fe3cc29732a43dfb8b6b2e4da64a50d13249be29"
+    }
+  ],
+  "scope_limits": [
+    "Three tasks and fixed development cases; no full benchmark or general success-rate conclusion",
+    "100Hz monitoring and finite configuration sampling are not continuous collision proof",
+    "Normal recording retains full observation lists in memory; memory/audit costs are not eliminated",
+    "Actual optional outcome observations completed at zero added ticks; positive-tick observer covered by CPU tests",
+    "Existing grasp-loss/drop CPU controls retained; no new separate native loss/drop episode claim",
+    "Source checkpoint and light evidence index only; full raw archives remain external"
+  ],
+  "historical_scores_modified": false,
+  "new_robots_or_backends_added": false,
+  "automatic_push_or_merge": false
+}

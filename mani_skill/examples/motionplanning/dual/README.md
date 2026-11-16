@@ -1,9 +1,28 @@
 # Dual-Arm Motion Planning (Imitator Game tasks)
 
 Fork development follows the [checks and quality policy](../../../../docs/tig-dual-arm/CHECKS-AND-QUALITY.md).
-Execution and physical validity remain mandatory; task-specific quality settings,
-separate outcome reporting, and lighter generation auditing are migration work.
-Existing strict validation runs retain their original criteria and scores.
+The paired-execution extension uses `generate` for generation and `replay` for
+action replay. It supports the existing dual-Panda apple/banana, pill-region
+and fruit-plate tasks with MPLib or cuRobo through the same executor. See the
+[runtime guide](../../../../docs/tig-dual-arm/RUNTIME-STRATEGIES.md) for exact
+task IDs, environment setup, recipes, validation status and output contracts.
+
+```bash
+python -m mani_skill.examples.motionplanning.dual.generate --help
+python -m mani_skill.examples.motionplanning.dual.replay --help
+```
+
+`generate` defaults to `task-default-v1` and `normal` recording. Select the task,
+backend, seeds, recipes and unused output directory explicitly. `replay` restores
+the source trajectory's frozen policy; strict source checking is its default.
+Normal recording retains actions, initial state, T+1 states and necessary events;
+diagnostic recording additionally saves video and detailed substep/contact logs.
+Both retain actual physical monitoring and the official 200-step limit.
+
+Existing `validate_*` entries remain compatibility and diagnostic tools. Their
+historical strict results and scores retain their original meaning. The original
+`two_robot_run` and task solution interfaces below remain available separately
+from the three-task paired-execution extension.
 
 This folder contains the scripted **motion-planning solutions** that generate
 the dual-panda demonstration dataset for the Imitator Game benchmark.
