@@ -641,7 +641,8 @@ def _self_test() -> dict[str, Any]:
                   "failed_refresh_invalidates_prediction_receipt", "unconfirmed_grasp_rejects_without_FCL_or_refresh"])
     # Exact locally installed YCB convex cooking, with task scales. This is a
     # separate bare CPU geometry scene; it does not instantiate/step the task.
-    asset_root = Path(__file__).resolve().parents[6] / "maniskill/data/assets/mani_skill2_ycb/models"
+    from infrastructure.tig_runtime import resolve_runtime_paths
+    asset_root = resolve_runtime_paths().asset_dir / "data/assets/mani_skill2_ycb/models"
     asset_scene = sapien.Scene([physx.PhysxCpuSystem()]); asset_actors = {}
     asset_raw = NS(num_envs=1, scene=NS(actors=asset_actors, articulations={}, sub_scenes=[asset_scene],
                                       px=asset_scene.physx_system, gpu_sim_enabled=False),
