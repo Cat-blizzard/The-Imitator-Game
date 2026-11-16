@@ -32,6 +32,7 @@ from .curobo_sessions import _SessionProcess
 from .initial_scene_manifest import save_initial_scene_manifest
 from .trajectory_execution import as_numpy, bind_arm
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
+from .runtime_policy import LEGACY_STRICT, RuntimePolicy, policy_from_report, resolved_policy_record
 from .validate_curobo import check_fk, git_identity, save_json
 from .validate_curobo_sessions import verify_finger_spheres
 from .validate_curobo_payload import (audit_payload_spheres,
@@ -47,9 +48,9 @@ ROOT = Path(__file__).resolve().parents[7]
 HERE = Path(__file__).resolve().parent
 TASKS = ('TwoRobotPickAppleBananaToBaskets-v1', 'TwoRobotPickPillToRegions-v1',
          'TwoRobotPickFruitsToPlate-v1')
-LAST_COMPLETION_STEP = 199
-FINAL_STABLE_STEPS = 20
-MINIMUM_SETTLE_BUDGET = 3
+LAST_COMPLETION_STEP = LEGACY_STRICT.last_completion_step
+FINAL_STABLE_STEPS = LEGACY_STRICT.final_stable_steps
+MINIMUM_SETTLE_BUDGET = LEGACY_STRICT.minimum_settle_budget
 APPROACH_RECIPES = ('standard-8cm', 'compact-4cm', 'compact-5cm')
 PAYLOAD_REFINEMENTS = ('baseline', 'fixed-task-v1', 'fixed-task-v2', 'fixed-task-v3', 'fixed-task-v4')
 TRANSPORT_RECIPES = ('standard', 'pill-direct-release-v1', 'direct-release-v2')
@@ -64,7 +65,8 @@ FUTURE_MINIMUM_TICKS = {'pregrasp': 43, 'descend': 40, 'lift_and_hold': 32,
 def execution_configuration(task_id: str = TASKS[0], *,
                             approach_recipe: str = 'compact-4cm',
                             payload_refinement: str = 'baseline',
-                            transport_recipe: str = 'standard') -> dict[str, Any]:
+                            transport_recipe: str = 'standard',
+                            policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
     """The same fixed external phase limits and diagnostic policy for both backends."""
     from .multitask_adapters import task_execution_parameters
     parameters = task_execution_parameters(task_id)
@@ -81,10 +83,11 @@ def execution_configuration(task_id: str = TASKS[0], *,
         'approach_joint_vel_limit_rad_s': parameters['approach_vel_limit'],
         'approach_joint_acc_limit_rad_s2': parameters['approach_acc_limit'],
         'solver_limit_fraction': SOLVER_LIMIT_FRACTION,
-        'preparation_steps': 10, 'max_episode_steps': 200,
-        'airborne_hover_steps': 0, 'final_common_placement_steps': FINAL_STABLE_STEPS,
-        'retreat_command_m': .081, 'minimum_actual_retreat_m': .08,
-        'min_actual_height_gain_m': [.10, .10],
+        'preparation_steps': 10, 'max_episode_steps': policy.max_episode_steps,
+        'runtime_policy': resolved_policy_record(policy),
+        'airborne_hover_steps': 0, 'final_common_placement_steps': policy.final_stable_steps,
+        'retreat_command_m': policy.retreat_command_m, 'minimum_actual_retreat_m': policy.minimum_retreat_m,
+        'min_actual_height_gain_m': [policy.min_lift_m, policy.min_lift_m],
         'route': 'merge-lift-direct-release' if transport_recipe != 'standard' else 'merge-lift',
         'transport_recipe': transport_recipe,
         'transport_phase_sequence': ['carry_lower'] if transport_recipe != 'standard' else [
@@ -142,30 +145,42 @@ def configured_payload_snapshot(snapshot: dict[str,Any], policy: str, geometry_m
     raise ValueError('Unknown payload refinement policy')
 
 
+def future_minimum_ticks(policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, int]:
+    """Legacy remaining phase windows derived from the selected resolved policy."""
+    reach, grasp, release, final = (policy.reach_stable_steps, policy.grasp_stable_steps,
+        policy.release_stable_steps, policy.final_stable_steps)
+    return {'pregrasp': grasp + release + 5 * reach + final,
+        'descend': grasp + release + 4 * reach + final,
+        'lift_and_hold': release + 3 * reach + final,
+        'carry_orient_and_transport': release + 2 * reach + final,
+        'carry_lower': release + reach + final, 'retreat': final}
+
+
 def phase_budget(before: int, scheduled: int, phase: str, *,
-                 transport_recipe: str = 'standard') -> dict[str, Any]:
+                 transport_recipe: str = 'standard',
+                 policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
     """Reserve a measured phase's exact schedule plus future mandatory tick minima."""
     if (type(before) is not int or type(scheduled) is not int or before < 0
             or scheduled < 1 or phase not in FUTURE_MINIMUM_TICKS
             or transport_recipe not in TRANSPORT_RECIPES):
         raise ValueError('Known phase, nonnegative elapsed steps and positive schedule length required')
-    reserve = FUTURE_MINIMUM_TICKS[phase]
+    reserve = future_minimum_ticks(policy)[phase]
     # A direct route has no intermediate carry_orient_and_transport stop.
     # Reserve only the phases that will actually execute, while retaining the
     # original three stable endpoint ticks for every remaining movement.
-    removed = (MINIMUM_SETTLE_BUDGET if transport_recipe != 'standard'
+    removed = (policy.reach_stable_steps if transport_recipe != 'standard'
                and phase in ('pregrasp','descend','lift_and_hold') else 0)
     reserve -= removed
-    available = LAST_COMPLETION_STEP - before - scheduled - reserve
+    available = policy.last_completion_step - before - scheduled - reserve
     receipt = {'elapsed_before': before, 'scheduled_steps': scheduled,
         'transport_recipe': transport_recipe, 'removed_intermediate_minimum_ticks': removed,
         'reserved_future_minimum_steps': reserve,
-        'last_permitted_completion_step': LAST_COMPLETION_STEP,
+        'last_permitted_completion_step': policy.last_completion_step,
         'available_current_settle_steps': available,
-        'settle_max_steps': min(15, max(0, available))}
-    if available < MINIMUM_SETTLE_BUDGET:
+        'settle_max_steps': min(policy.max_settle_steps, max(0, available))}
+    if available < policy.minimum_settle_budget:
         raise RuntimeError('Remaining official200 budget cannot fit the preserved schedule and '
-                           f'at least{MINIMUM_SETTLE_BUDGET} endpoint-settle ticks plus mandatory tail: {receipt}')
+                           f'at least{policy.minimum_settle_budget} endpoint-settle ticks plus mandatory tail: {receipt}')
     return receipt
 
 
@@ -466,6 +481,8 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             raise ValueError('The direct-release-v2 recipe requires its declared route selector')
     elif transport_recipe is not None:
         raise ValueError('A transport callback requires an explicit fixed recipe')
+    policy = policy_from_report(report)
+    report['runtime_policy'] = resolved_policy_record(policy)
     report['transport_recipe'] = transport_policy
     payload_refinement = selected_payload_refinement(args)
     if report['execution_configuration'].get('payload_refinement','baseline') != payload_refinement:
@@ -493,7 +510,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
     attachment_count = 0
     try:
         base = gym.make(args.task, obs_mode='none', reward_mode='none', control_mode='pd_joint_pos',
-            sim_backend='cpu', render_backend='gpu', render_mode='rgb_array', max_episode_steps=200)
+            sim_backend='cpu', render_backend='gpu', render_mode='rgb_array', max_episode_steps=policy.max_episode_steps)
         env = RecordEpisode(base, output_dir=str(output), trajectory_name='trajectory', save_video=False,
             save_on_reset=False, clean_on_close=False, record_reward=False, record_env_state=True,
             source_type='motionplanning', source_desc=f'{args.backend}; complete shared dual executor; zero diagnostic hover')
@@ -673,7 +690,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
                 right_positions=trajectories[1].positions_rad,target_times=schedule.target_times_s,
                 left_commands=schedule.left_commands,right_commands=schedule.right_commands)
             row['budget'] = phase_budget(int(as_numpy(raw.elapsed_steps)[0]),schedule.num_steps,
-                name if budget_phase is None else budget_phase,transport_recipe=transport_policy)
+                name if budget_phase is None else budget_phase,transport_recipe=transport_policy,policy=policy)
             phase_budgets[name] = row['budget']
             checker.refresh()
             checker.set_target_contacts_allowed((contact or closed,)*2)
@@ -696,12 +713,13 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             schedule = plan(name,(pairs[0][index],pairs[1][index]),closed=False,
                 profile='approach',contact=allowed)
             finish(name,execute_dual_reach(capture,schedule,checker,
-                allow_target_contacts=(allowed,allowed),settle_max_steps=phase_budgets[name]['settle_max_steps']))
+                allow_target_contacts=(allowed,allowed),settle_max_steps=phase_budgets[name]['settle_max_steps'],policy=policy))
         begin('close_and_confirm')
-        close_budget = min(40,LAST_COMPLETION_STEP-int(as_numpy(raw.elapsed_steps)[0])-35)
-        if close_budget < 5:
+        close_tail = policy.release_stable_steps + 4 * policy.reach_stable_steps + policy.final_stable_steps
+        close_budget = min(40,policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])-close_tail)
+        if close_budget < policy.grasp_stable_steps:
             raise RuntimeError('Insufficient budget for five stable grasp ticks and mandatory tail')
-        closed = close_dual_and_confirm(capture,checker,targets,max_steps=close_budget)
+        closed = close_dual_and_confirm(capture,checker,targets,max_steps=close_budget,policy=policy)
         finish('close_and_confirm',closed)
         checker.attach()
         attachment_count += 1
@@ -722,8 +740,8 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
         lift_poses = tuple(sapien.Pose(xyz,q) for xyz,q in zip(route['lift'],original_q))
         schedule = plan('lift_and_hold',lift_poses,closed=True,profile='transport',source=True)
         finish('lift_and_hold',execute_dual_held_move(capture,schedule,checker,targets,
-            min_height_gain_m=(.10,.10),hold_steps=0,
-            settle_max_steps=phase_budgets['lift_and_hold']['settle_max_steps']))
+            min_height_gain_m=(policy.min_lift_m,policy.min_lift_m),hold_steps=0,
+            settle_max_steps=phase_budgets['lift_and_hold']['settle_max_steps'],policy=policy))
         report['source_departure_after_lift'] = source_departure_evidence(checker)
         if (not all(report['source_departure_after_lift']['effective_measured_departure'])
                 or not substeps or not all(substeps[-1]['physical_support_released_snapshot'])):
@@ -749,17 +767,18 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             poses = tuple(sapien.Pose(xyz,q) for xyz,q in zip(positions,carry_q))
             schedule = plan(name,poses,closed=True,profile='transport')
             finish(name,execute_dual_held_move(capture,schedule,checker,targets,hold_steps=0,
-                settle_max_steps=phase_budgets[name]['settle_max_steps']))
-        report['held_physics_audit'] = held_substep_audit(substeps,references)
+                settle_max_steps=phase_budgets[name]['settle_max_steps'],policy=policy))
+        report['held_physics_audit'] = held_substep_audit(substeps,references,policy=policy,target_names=adapter.target_names)
         if report['held_physics_audit']['status'] != 'passed':
             raise RuntimeError('Continuous sampled100Hz held-payload slip audit failed')
         report['real_grasp_and_payload_status'] = 'passed'
         checker.detach()
         begin('release')
-        release_budget = min(30,LAST_COMPLETION_STEP-int(as_numpy(raw.elapsed_steps)[0])-23)
-        if release_budget < 3:
+        release_budget = min(30,policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])
+            - policy.reach_stable_steps - policy.final_stable_steps)
+        if release_budget < policy.release_stable_steps:
             raise RuntimeError('Insufficient budget for release and mandatory retreat/placement tail')
-        finish('release',release_dual_and_confirm(capture,checker,targets,max_steps=release_budget))
+        finish('release',release_dual_and_confirm(capture,checker,targets,max_steps=release_budget,policy=policy))
         grasp_evidence = [None,None]
         if worker is not None:
             frozen = state_digest(raw)
@@ -782,27 +801,27 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             report['native_payload_detach_verified'] = None
             report['native_payload_detach_scope'] = 'MPLib uses shared external measured payload prediction; detached before physical release'
         retreat_start = np.asarray([as_numpy(a.tcp.pose.p)[0].copy() for a in agents])
-        retreat = tuple(sapien.Pose(position+[0.,0.,.081],as_numpy(a.tcp.pose.q)[0])
+        retreat = tuple(sapien.Pose(position+[0.,0.,policy.retreat_command_m],as_numpy(a.tcp.pose.q)[0])
             for position,a in zip(retreat_start,agents))
         schedule = plan('retreat',retreat,closed=False,profile='transport')
         finish('retreat',execute_dual_reach(capture,schedule,checker,
-            settle_max_steps=phase_budgets['retreat']['settle_max_steps']))
+            settle_max_steps=phase_budgets['retreat']['settle_max_steps'],policy=policy))
         gain = np.asarray([as_numpy(a.tcp.pose.p)[0] for a in agents])-retreat_start
         report['actual_retreat_displacement_m'] = gain.tolist()
-        if np.any(gain[:,2] < .08):
+        if np.any(gain[:,2] < policy.minimum_retreat_m):
             raise RuntimeError('Actual retreat gain below8cm')
         begin('verify_placement')
-        remaining = LAST_COMPLETION_STEP-int(as_numpy(raw.elapsed_steps)[0])
-        if remaining < FINAL_STABLE_STEPS:
+        remaining = policy.last_completion_step-int(as_numpy(raw.elapsed_steps)[0])
+        if remaining < policy.final_stable_steps:
             raise RuntimeError('Final continuous20-tick placement window does not fit')
         placed = verify_dual_placement(capture,checker,targets,
             official_predicate_keys=adapter.official_predicate_keys,region_predicates=adapter.region_predicates(),
-            max_steps=min(60,remaining),stable_steps=FINAL_STABLE_STEPS)
+            max_steps=min(60,remaining),stable_steps=policy.final_stable_steps,policy=policy)
         finish('verify_placement',placed)
         report['placement_stability_evaluated'] = True
         evaluation = raw.evaluate()
         report['official_200_step_complete'] = bool(np.asarray(as_numpy(evaluation['success'])).all()
-            and int(as_numpy(raw.elapsed_steps)[0]) < 200)
+            and int(as_numpy(raw.elapsed_steps)[0]) < policy.max_episode_steps)
         report['project_complete_physical_closure'] = report['official_200_step_complete']
         report['status'] = 'passed' if report['official_200_step_complete'] else 'failed'
     finally:
@@ -843,6 +862,7 @@ def self_test() -> dict[str,Any]:
     initial_scene_result = initial_scene_self_test()
     assert initial_scene_result['status'] == 'passed' and initial_scene_result['environment_steps'] == 0
     config = execution_configuration()
+    assert future_minimum_ticks() == FUTURE_MINIMUM_TICKS
     assert config['airborne_hover_steps'] == 0 and config['final_common_placement_steps'] == 20
     assert config['payload_refinement'] == 'baseline'
     assert selected_transport_recipe(argparse.Namespace()) == 'standard'
@@ -1082,7 +1102,8 @@ def main() -> int:
         'payload_refinement':args.payload_refinement,
         'transport_recipe':args.transport_recipe,
         'started_at':datetime.now(timezone.utc).isoformat(),'gpu_uuid':gpu_uuid,
-        'max_episode_steps':200,'official_200_step_complete':False,
+        'max_episode_steps':LEGACY_STRICT.max_episode_steps,'official_200_step_complete':False,
+        'runtime_policy':resolved_policy_record(),
         'project_complete_physical_closure':False,'real_grasp_and_payload_status':'not_completed',
         'placement_stability_evaluated':False,'execution_configuration':execution_configuration(
             args.task,approach_recipe=args.approach_recipe,payload_refinement=args.payload_refinement,
