@@ -840,7 +840,7 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
         save_json(output/'all-robot-contacts.json',contacts)
         if env is not None:
             finalize_physics_capture(env,raw,capture,output,report,frames,ticks,substeps,
-                keys,original_hook,attachment_count=attachment_count)
+                keys,original_hook,attachment_count=attachment_count,robot_contacts=contacts)
             recording = report.get('recording',{})
             report['recording_actions_and_Tplus1_verified'] = bool(
                 recording.get('submitted_actions_matched') is True
@@ -848,10 +848,9 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
                 and recording.get('state_lengths')
                 and all(n == len(ticks)+1 for n in recording['state_lengths'].values()))
             if report.get('status') == 'passed' and not report['recording_actions_and_Tplus1_verified']:
-                report.update(status='failed',official_200_step_complete=False,
-                    project_complete_physical_closure=False)
-            if report.get('status') != 'passed':
-                report['project_complete_physical_closure'] = False
+                report['status'] = 'failed'
+                report.setdefault('artifact_errors', []).append(
+                    'record check: submitted actions or T+1 states mismatch')
 
 
 def self_test() -> dict[str,Any]:
@@ -1123,6 +1122,9 @@ def main() -> int:
     except BaseException as exc:
         report.update(status='failed',error_type=type(exc).__name__,error=str(exc),traceback=traceback.format_exc())
     report.update(wall_s=time.monotonic()-started,completed_at=datetime.now(timezone.utc).isoformat())
+    from .run_results import update_run_results_from_file
+    report = json_value(report)
+    update_run_results_from_file(report, output/'ticks.jsonl')
     save_json(output/'report.json',report)
     print(json.dumps({'status':report['status'],'report':str(output/'report.json')}),flush=True)
     return 0 if report['status']=='passed' else 1
