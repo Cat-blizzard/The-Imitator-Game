@@ -154,9 +154,12 @@ def install_full_robot_contact_capture(raw: Any, capture: Any, adapter: Any,
     original_record, original_step = capture.record_substep, capture.step
 
     def record() -> None:
-        original_record()
+        contacts = original_record()
+        if contacts is None:
+            # Disabled/older base observers did not provide this substep.
+            contacts = raw.scene.px.get_contacts()
         rows = []
-        for contact in raw.scene.px.get_contacts():
+        for contact in contacts:
             sides = [identities.get(body.entity, {'kind': 'unknown', 'actor': body.entity.name})
                      for body in contact.bodies]
             if not any(side.get('kind') == 'robot' for side in sides):

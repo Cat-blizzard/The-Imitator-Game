@@ -254,7 +254,7 @@ def make_physics_capture(env: Any, raw: Any, adapter: Any, args: Any, report: di
                 raise RuntimeError('Forbidden physical contact at100Hz; stop both arms')
             return obs, reward, done, truncated, info
 
-        def record_substep(self) -> None:
+        def record_substep(self) -> list[Any] | None:
             original_hook()
             if self.observe_substeps:
                 contacts = raw.scene.px.get_contacts()
@@ -306,6 +306,8 @@ def make_physics_capture(env: Any, raw: Any, adapter: Any, args: Any, report: di
                     'object_contact_rows': object_rows}
                 if self.target_phases is not None: row['target_phases'] = list(self.target_phases)
                 substeps.append(row)
+                # Borrow only within the enclosing synchronous observer call.
+                return contacts
 
     captured = Capture()
     captured.original_hook = original_hook

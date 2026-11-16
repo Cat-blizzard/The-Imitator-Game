@@ -500,6 +500,13 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
 
         def finish(name: str, result: dict[str, Any]) -> None:
             report['stages'].append({'name':name, **result})
+            # Publish only a result returned by the real executor. An initial
+            # physical rejection can happen before the full candidate query.
+            for planned in reversed(report.get('planning', [])):
+                if planned.get('phase') == name and planned.get('collision_validation_owner') == 'executor':
+                    planned['collision_validation'] = result.get('validation', {
+                        'status':'not_run', 'reason':result.get('reason',result['status'])})
+                    break
             save_json(output/'report.json', report)
             print(json.dumps({'phase':name, 'status':result['status'],
                 'elapsed_steps':int(as_numpy(raw.elapsed_steps)[0])}), flush=True)
@@ -598,15 +605,22 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             row['budget'] = phase_budget(int(as_numpy(raw.elapsed_steps)[0]),schedule.num_steps,
                 name if budget_phase is None else budget_phase,transport_recipe=transport_policy,policy=policy)
             phase_budgets[name] = row['budget']
-            checker.refresh()
-            checker.set_target_contacts_allowed((contact or closed,)*2)
-            try:
-                row['collision_validation'] = validate_schedule(schedule,*(arm.arm_qpos() for arm in arms),checker)
-            finally:
-                checker.set_target_contacts_allowed((False,False))
             row['require_safe_pair'] = require_safe_pair
+            # Diagnostic hooks acquire candidate trajectories without executing
+            # them, so retain their original full query and safety policy.
+            if phase_hook is not None or not require_safe_pair:
+                checker.refresh()
+                checker.set_target_contacts_allowed((contact or closed,)*2)
+                try:
+                    row['collision_validation'] = validate_schedule(schedule,*(arm.arm_qpos() for arm in arms),checker)
+                finally:
+                    checker.set_target_contacts_allowed((False,False))
+                row['collision_validation_owner'] = 'planner_diagnostic'
+                enforce_pair_validation(row['collision_validation'],require_safe_pair=require_safe_pair)
+            else:
+                row['collision_validation_owner'] = 'executor'
+                row['collision_validation'] = {'status':'pending_executor_validation'}
             save_json(output/'report.json',report)
-            enforce_pair_validation(row['collision_validation'],require_safe_pair=require_safe_pair)
             return schedule
 
         original_pairs = adapter.grasp_poses()
