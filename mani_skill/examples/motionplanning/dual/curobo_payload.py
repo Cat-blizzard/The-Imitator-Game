@@ -563,6 +563,7 @@ class CuroboPayloadSessions(CuroboSessions):
         configs = {(arm, profile): profile_config(snapshot["robot_cfg"], profile)
                    for profile in PROFILE_LIMITS for arm, snapshot in enumerate(pair)}
         self._initialization_attempted = True
+        self._initial_seed, self._interpolation_dt = seed, float(interpolation_dt)
         self._models = tuple(copy.deepcopy(snapshot["payload_model"]) for snapshot in pair)
         results = []
         for profile in PROFILE_LIMITS:
@@ -574,12 +575,14 @@ class CuroboPayloadSessions(CuroboSessions):
                     interpolation_dt=float(interpolation_dt), warmup=warmup,
                     payload_model=snapshot["payload_model"]))
         self._initialized = True
+        self._episode_reset_failed = False
         return results
 
     def update_pair(self, snapshots: tuple[dict[str, Any], dict[str, Any]], *,
                     profile: str, snapshot_id: str) -> list[dict[str, Any]]:
         if not self._initialized:
             raise RuntimeError("Initialize all fixed payload sessions before updating")
+        self._require_episode_ready()
         sessions = [self.session_id(arm, profile) for arm in (0, 1)]
         self._current_snapshot_id = None
         for session in sessions:
@@ -597,7 +600,7 @@ class CuroboPayloadSessions(CuroboSessions):
         results = []
         for arm, snapshot in enumerate(pair):
             results.append(self._rpc.request("update_session", session_id=sessions[arm],
-                robot_cfg=configs[arm], world=snapshot["world"], snapshot_id=snapshot_id,
+                robot_cfg=configs[arm], world=snapshot["world"], snapshot_id=self._wire_snapshot_id(snapshot_id),
                 payload_state=snapshot["payload_state"]))
         self._snapshot_digests[snapshot_id] = digest
         for session in sessions:

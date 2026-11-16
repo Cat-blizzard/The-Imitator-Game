@@ -404,7 +404,7 @@ def make_solvers(env: Any, output: Path, report: dict[str, Any], capture: Any) -
 
 
 def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *,
-               phase_hook: Any = None, transport_recipe: Any = None) -> None:
+               phase_hook: Any = None, transport_recipe: Any = None, session_pool: Any = None) -> None:
     transport_policy = selected_transport_recipe(args)
     if report['execution_configuration'].get('transport_recipe','standard') != transport_policy:
         raise ValueError('Transport selection differs from the common execution configuration')
@@ -526,12 +526,19 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
             for i, data in enumerate(initial):
                 save_json(output/f'initial-arm-{i}-snapshot.json', data)
             capacities = [data['payload_model']['capacity'] for data in initial]
-            transport = (SelectedWorkerProcess(os.environ['CUDA_VISIBLE_DEVICES'],
-                output/'worker.stderr.log', args.worker_script,task_id=args.task) if args.worker_script else None)
-            worker = CuroboTaskPayloadSessions(os.environ['CUDA_VISIBLE_DEVICES'],
-                output/'worker.stderr.log',task_id=args.task,transport=transport)
-            report['initialization'] = worker.initialize_pair(initial, seed=args.planner_seed,
-                interpolation_dt=.02, warmup=True)
+            if session_pool is None:
+                transport = (SelectedWorkerProcess(os.environ['CUDA_VISIBLE_DEVICES'],
+                    output/'worker.stderr.log', args.worker_script,task_id=args.task) if args.worker_script else None)
+                worker = CuroboTaskPayloadSessions(os.environ['CUDA_VISIBLE_DEVICES'],
+                    output/'worker.stderr.log',task_id=args.task,transport=transport)
+                report['initialization'] = worker.initialize_pair(initial, seed=args.planner_seed,
+                    interpolation_dt=.02, warmup=True)
+            else:
+                worker = session_pool.acquire(initial,
+                    episode_id=getattr(args,'episode_id',output.name), task_id=args.task,
+                    seed=args.planner_seed, gpu_uuid=os.environ['CUDA_VISIBLE_DEVICES'],
+                    log_path=output/'worker.stderr.log', worker_script=args.worker_script,
+                    context=report['execution_configuration'], report=report)
             report['initial_sessions'] = worker.inspect_sessions()
             if state_digest(raw) != frozen:
                 raise RuntimeError('Planner initialization changed actual physics')
@@ -838,10 +845,14 @@ def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any], *
                         report['persistent_session_audit'] = audit_session_identity(
                             report['initial_sessions'],report['final_sessions'])
                 finally:
-                    worker.close()
+                    if session_pool is None:
+                        worker.close()
             except BaseException as exc:
                 report.setdefault('artifact_errors',[]).append(f'worker close: {type(exc).__name__}: {exc}')
-            report['worker_requests'] = worker.receipts
+            if session_pool is None:
+                report['worker_requests'] = worker.receipts
+        if session_pool is not None:
+            session_pool.finish(report)
         write_robot_contacts(output, contacts, policy=recording_policy)
         if env is not None:
             finalize_physics_capture(env,raw,capture,output,report,frames,ticks,substeps,
@@ -1056,7 +1067,7 @@ def self_test() -> dict[str,Any]:
         'GPU_initialized':bool(torch.cuda.is_initialized())}
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--self-test',action='store_true')
     parser.add_argument('--backend',choices=('curobo','mplib'),default='curobo')
@@ -1072,10 +1083,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--quality-overrides', type=Path,
                         help='JSON object of explicit overrides for the selected task profile')
     parser.add_argument('--recording-mode', choices=('normal','diagnostic'), default='diagnostic')
-    args = parser.parse_args(argv)
-    if args.self_test:
-        print(json.dumps(self_test(),allow_nan=False))
-        return 0
+    return parser
+
+
+def validate_episode_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> tuple[Any, Any]:
+    """Validate one requested run without constructing an environment or worker."""
     if args.transport_recipe == 'pill-direct-release-v1' and args.task != TASKS[1]:
         parser.error('--transport-recipe pill-direct-release-v1 requires the pill task')
     try:
@@ -1084,22 +1096,33 @@ def main(argv: list[str] | None = None) -> int:
         recording_policy = RecordingPolicy(args.recording_mode)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
-    faulthandler.enable()
-    resource.setrlimit(resource.RLIMIT_CORE,(0,0))
-    signal.signal(signal.SIGTERM,termination_handler)
     gpu_uuid = os.environ.get('CUDA_VISIBLE_DEVICES','')
     if not gpu_uuid.startswith('GPU-') or ',' in gpu_uuid:
         parser.error('One explicit GPU UUID required')
     if any(os.environ.get(f'MANI_SKILL_L{i}') for i in (1,2,3)):
         parser.error('This protocol requires L0')
-    if args.output_dir is None or args.seed < 0 or args.planner_seed < 0:
-        parser.error('Unused output directory and nonnegative seeds required')
+    if args.output_dir is None or args.seed < 0 or not 0 <= args.planner_seed < 2**31:
+        parser.error('Unused output directory, nonnegative environment seed and planner seed in [0,2**31) required')
     if args.worker_script and (args.backend != 'curobo' or not args.worker_script.is_file()):
         parser.error('--worker-script requires cuRobo and an existing file')
+    if args.output_dir.exists():
+        parser.error('Output directory already exists: '+str(args.output_dir))
+    return selected, recording_policy
+
+
+def run_episode(args: argparse.Namespace, *, session_pool: Any = None) -> int:
+    selected, recording_policy = validate_episode_args(args, build_parser())
+    if session_pool is not None and args.backend != 'curobo':
+        raise ValueError('Only cuRobo uses the episode worker pool')
+    faulthandler.enable()
+    resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+    signal.signal(signal.SIGTERM,termination_handler)
+    gpu_uuid = os.environ['CUDA_VISIBLE_DEVICES']
     args.mode = 'positive'
     output = args.output_dir
     output.mkdir(parents=True,exist_ok=False)
-    sources = list(HERE.glob('*.py')) + [CODE_ROOT/'infrastructure/tig_runtime.py']
+    sources = list(HERE.glob('*.py')) + [CODE_ROOT/'infrastructure/tig_runtime.py',
+        CODE_ROOT/'infrastructure/curobo_config_profile.py']
     sources.extend((CODE_ROOT/'infrastructure').glob('curobo_tig*_worker.py'))
     if args.worker_script:
         sources.append(args.worker_script.resolve())
@@ -1125,6 +1148,8 @@ def main(argv: list[str] | None = None) -> int:
         'placement_stability_evaluated':False,'execution_configuration':execution_configuration(
             args.task,approach_recipe=args.approach_recipe,payload_refinement=args.payload_refinement,
             transport_recipe=args.transport_recipe,policy=selected.policy),
+        'config_profile_schema':'tig-curobo-config-profile-v1',
+        'config_profile_enabled':os.environ.get('TIG_CUROBO_PROFILE_CONFIG') == '1',
         'scope':'complete measured grasp, held transport, release, actual retreat and continuous20tick placement',
         'physical_pose_assignment':False,'physical_attachment_created':False,
         'physical_collision_masks_modified':False,'native_timeopt_payload_inertia_applied':False,
@@ -1140,7 +1165,10 @@ def main(argv: list[str] | None = None) -> int:
     save_runtime_report(output, report)
     started = time.monotonic()
     try:
-        native_run(args,output,report)
+        if session_pool is None:
+            native_run(args,output,report)
+        else:
+            native_run(args,output,report,session_pool=session_pool)
     except BaseException as exc:
         report.update(status='failed',error_type=type(exc).__name__,error=str(exc),traceback=traceback.format_exc())
     report.update(wall_s=time.monotonic()-started,completed_at=datetime.now(timezone.utc).isoformat())
@@ -1150,6 +1178,14 @@ def main(argv: list[str] | None = None) -> int:
     save_runtime_report(output, report)
     print(json.dumps({'status':report['status'],'report':str(output/'report.json')}),flush=True)
     return 0 if report['status']=='passed' else 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    if args.self_test:
+        print(json.dumps(self_test(),allow_nan=False))
+        return 0
+    return run_episode(args)
 
 
 if __name__ == '__main__':

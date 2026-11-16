@@ -23,6 +23,7 @@ import io
 import json
 import math
 import os
+import random
 from pathlib import Path
 import sys
 import tempfile
@@ -183,6 +184,7 @@ def _validate_request_fields(request: Any, *, payload_link: str | None = None,
         "update_session": {"session_id", "robot_cfg", "world", "snapshot_id"},
         "fk": {"session_id", "positions", "snapshot_id"},
         "plan_pose": {"session_id", "snapshot_id", "start", "goal_pose", "max_attempts", "timeout_s"},
+        "begin_episode": {"episode_id", "seed", "interpolation_dt", "sessions"},
         "inspect_sessions": set(), "shutdown": set(),
     }
     if payload_link is not None:
@@ -193,6 +195,31 @@ def _validate_request_fields(request: Any, *, payload_link: str | None = None,
     if set(request) - {"id", "op", "protocol_version"} - allowed[operation]:
         raise ValueError("request contains unsupported fields (payload/attachment is not implemented)")
     if operation in {"inspect_sessions", "shutdown"}:
+        return request
+    if operation == "begin_episode":
+        if not isinstance(request.get("episode_id"), str) or not request["episode_id"]:
+            raise ValueError("episode_id must be a nonempty string")
+        seed = request.get("seed")
+        if type(seed) is not int or not 0 <= seed < 2**31:
+            raise ValueError("seed must be an integer in [0,2**31)")
+        _positive_float(request.get("interpolation_dt"), "interpolation_dt")
+        rows = request.get("sessions")
+        if not isinstance(rows, list) or len(rows) != 4:
+            raise ValueError("begin_episode requires all four session states")
+        names = []
+        fields = {"session_id", "robot_cfg", "world"}
+        if payload_link is not None:
+            fields |= {"payload_model", "payload_state"}
+        for row in rows:
+            if not isinstance(row, dict) or set(row) != fields:
+                raise ValueError("begin_episode session has missing or unexpected fields")
+            names.append(row.get("session_id"))
+            _validate_request_fields({"id": request["id"], "op": "update_session",
+                **{key: value for key, value in row.items() if key != "payload_model"},
+                "snapshot_id": "episode-reset-validation"}, payload_link=payload_link,
+                profile_validator=profile_validator, scan_finite=False)
+        if any(not isinstance(name, str) for name in names) or set(names) != SESSION_IDS:
+            raise ValueError("begin_episode requires each fixed session exactly once")
         return request
     if request.get("session_id") not in SESSION_IDS:
         raise ValueError(f"session_id must be one of {sorted(SESSION_IDS)}")
@@ -297,10 +324,36 @@ class ResidentBackend(CuroboBackend):
         if self.planner is not None:
             raise RuntimeError("resident planner may be initialized only once")
         receipt = super().configure(request)
+        self.construction_seed = request.get("seed", 0)
         self.initial_storage_identity = self._storage_identity()
         receipt["storage_identity"] = deepcopy(self.initial_storage_identity)
         receipt["native_readback"] = self._readback()
         return receipt
+
+    def _reset_episode_seed(self, seed: int) -> dict[str, Any]:
+        """Reset v0.9 fixed construction streams; this does not reseed them."""
+        if seed != self.construction_seed:
+            raise ValueError("native sampler seed changes require planner reconstruction")
+        random.seed(seed)
+        self.torch.manual_seed(seed)
+        self.torch.cuda.manual_seed_all(seed)
+        # v0.9 resets IK/TrajOpt seed managers, rollout and optimizer sampling
+        # streams plus RRT nodes/sampling to their constructor-owned state.
+        self.planner.reset_seed()
+        self.torch.cuda.synchronize()
+        return {"protocol": "constructor-stream-reset-v1", "constructor_seed": seed,
+                "python_torch_global_seed": seed, "native_sampler_seed_changed": False,
+                "native_api": "MotionPlanner.reset_seed", "graph_nodes_cleared": True,
+                "optimizer_sampling_reset": True,
+                "optimizer_history_policy": "IK and first TrajOpt stage reinitialize from the next solve request",
+                "cuda_graph_captures_preserved": True, "new_planners": 0, "warmups": 0,
+                "trajectory_bitwise_equivalence_guaranteed": False}
+
+    def begin_episode(self, robot_cfg: dict[str, Any], world: dict[str, Any],
+                      seed: int) -> dict[str, Any]:
+        result = self.update(robot_cfg, world)
+        result["seed_protocol"] = self._reset_episode_seed(seed)
+        return result
 
     def fk(self, request: dict[str, Any]) -> dict[str, Any]:
         """Return TCP and actual post-lock collision spheres in robot-base frame.
@@ -404,6 +457,8 @@ class Session:
     plan_count: int = 0
     invalid_reason: str | None = "initialization requires a versioned update"
     used_snapshots: dict[str, str] = field(default_factory=dict)
+    seed: int = 0
+    interpolation_dt: float = 0.02
 
 
 class SessionManager:
@@ -413,6 +468,14 @@ class SessionManager:
         self.sessions: dict[str, Session] = {}
         self.backend_factory = backend_factory
         self.closed = False
+        self.episode_id: str | None = None
+        self.episode_generation = 0
+        self.episode_reset_pending = False
+
+    def invalidate_all(self, reason: str) -> None:
+        self.episode_reset_pending = True
+        for name in self.sessions:
+            self.invalidate(name, reason)
 
     def invalidate(self, session_id: Any, reason: str) -> None:
         if isinstance(session_id, str) and session_id in self.sessions:
@@ -423,6 +486,8 @@ class SessionManager:
     def _session(self, request: dict[str, Any], require_valid: bool = True) -> Session:
         if self.closed:
             raise RuntimeError("resident worker has shut down")
+        if self.episode_reset_pending:
+            raise RuntimeError("complete begin_episode reset is required before any session use")
         session_id = request["session_id"]
         if session_id not in self.sessions:
             raise RuntimeError(f"session {session_id} has not been initialized")
@@ -439,6 +504,8 @@ class SessionManager:
         return {"protocol_version": PROTOCOL_VERSION, "session_id": session_id,
                 "side": session_id.split(":")[0], "profile": session_id.split(":")[1],
                 "valid": session.valid, "snapshot_id": session.snapshot_id, "version": session.version,
+                "episode_id": self.episode_id, "episode_generation": self.episode_generation,
+                "constructor_seed": session.seed, "interpolation_dt": session.interpolation_dt,
                 "init_count": 1, "rebuild_count": 0, "warmup_count": 1,
                 "update_count": session.update_count, "plan_count": session.plan_count,
                 "planner_id": id(backend.planner), "backend_id": id(backend),
@@ -460,8 +527,62 @@ class SessionManager:
             backend.shutdown()
             raise
         self.sessions[session_id] = Session(backend, deepcopy(request["robot_cfg"]),
-                                           deepcopy(request["world"]), initialization)
+                                           deepcopy(request["world"]), initialization,
+                                           seed=request.get("seed", 0),
+                                           interpolation_dt=float(request.get("interpolation_dt", .02)))
         return {**self._receipt(session_id), "initialization": initialization}
+
+    def _validate_episode_session(self, row: dict[str, Any]) -> None:
+        name = row["session_id"]
+        session = self.sessions[name]
+        if robot_topology(row["robot_cfg"]) != robot_topology(session.robot_cfg):
+            raise ValueError("episode robot topology, limits, geometry or collision policy changed")
+        if world_topology(row["world"]) != world_topology(session.world):
+            raise ValueError("episode world topology, geometry or capacities changed")
+
+    def _reset_native_episode(self, row: dict[str, Any], seed: int) -> dict[str, Any]:
+        return self.sessions[row["session_id"]].backend.begin_episode(
+            deepcopy(row["robot_cfg"]), deepcopy(row["world"]), seed)
+
+    def _commit_episode_session(self, row: dict[str, Any]) -> None:
+        session = self.sessions[row["session_id"]]
+        session.robot_cfg, session.world = deepcopy(row["robot_cfg"]), deepcopy(row["world"])
+        session.snapshot_id, session.version = None, 0
+        session.update_count, session.plan_count = 0, 0
+        session.used_snapshots.clear()
+        session.valid, session.invalid_reason = False, "new episode requires a versioned measured update"
+
+    def begin_episode(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Transactionally reset all four sessions; any failure leaves all unusable."""
+        self.invalidate_all("episode reset in progress")
+        begin = time.perf_counter()
+        try:
+            if self.closed or set(self.sessions) != SESSION_IDS:
+                raise RuntimeError("begin_episode requires four live initialized sessions")
+            rows = {row["session_id"]: row for row in request["sessions"]}
+            for name, row in rows.items():
+                session = self.sessions[name]
+                if request["seed"] != session.seed:
+                    raise ValueError("changing native planner seed requires reconstruction")
+                if float(request["interpolation_dt"]) != session.interpolation_dt:
+                    raise ValueError("changing interpolation_dt requires reconstruction")
+                self._validate_episode_session(row)
+            native = {name: self._reset_native_episode(rows[name], request["seed"])
+                      for name in sorted(rows)}
+            for row in rows.values():
+                self._commit_episode_session(row)
+            self.episode_id = request["episode_id"]
+            self.episode_generation += 1
+            self.episode_reset_pending = False
+            return {"episode_id": self.episode_id, "seed": request["seed"],
+                    "episode_generation": self.episode_generation,
+                    "reset_wall_s": time.perf_counter()-begin,
+                    "seed_protocol": "constructor-stream-reset-v1",
+                    "sessions": {name: {**self._receipt(name), "native_episode_reset": native[name]}
+                                 for name in sorted(rows)}}
+        except Exception as error:
+            self.invalidate_all(f"episode reset failed: {type(error).__name__}: {error}")
+            raise
 
     def update_session(self, request: dict[str, Any]) -> dict[str, Any]:
         session = self._session(request, require_valid=False)
@@ -501,6 +622,8 @@ class SessionManager:
     def inspect_sessions(self, request: dict[str, Any]) -> dict[str, Any]:
         return {"protocol_version": PROTOCOL_VERSION, "closed": self.closed,
                 "session_count": len(self.sessions), "max_sessions": 4,
+                "episode_reset_pending": self.episode_reset_pending,
+                "episode_id": self.episode_id, "episode_generation": self.episode_generation,
                 "sessions": {name: self._receipt(name) for name in sorted(self.sessions)}}
 
     def shutdown(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -527,7 +650,9 @@ def dispatch(request: Any, manager: SessionManager) -> dict[str, Any]:
         _finite_json(response, "response")
         return response
     except Exception as exc:
-        if isinstance(request, dict) and request.get("op") == "update_session":
+        if isinstance(request, dict) and request.get("op") == "begin_episode":
+            manager.invalidate_all(f"{type(exc).__name__}: {exc}")
+        elif isinstance(request, dict) and request.get("op") == "update_session":
             manager.invalidate(request.get("session_id"), f"{type(exc).__name__}: {exc}")
         raise
 
@@ -580,6 +705,13 @@ def self_test() -> None:
             self.lock_joints = deepcopy(robot_cfg["kinematics"]["lock_joints"])
             self.update_count += 1
             return {"graph_nodes_cleared": True}
+
+        def begin_episode(self, robot_cfg: dict[str, Any], world: dict[str, Any], seed: int) -> dict[str, Any]:
+            self.current_world = deepcopy(world)
+            self.current_robot = deepcopy(robot_cfg)
+            result = self.update(robot_cfg, world)
+            result["seed_protocol"] = {"constructor_seed": seed}
+            return result
 
         def fk(self, request: dict[str, Any]) -> dict[str, Any]:
             return {"positions": [[0., 0., 0.] for _ in request["positions"]]}
@@ -666,6 +798,45 @@ def self_test() -> None:
         assert inspected["session_count"] == 4
         assert len({row["planner_id"] for row in inspected["sessions"].values()}) == 4
         assert all(s.backend.configure_count == 1 for s in manager.sessions.values())
+        rows = [{"session_id": name, "robot_cfg": deepcopy(session.robot_cfg),
+                 "world": deepcopy(session.world)} for name, session in sorted(manager.sessions.items())]
+        reset = {"id": 20, "op": "begin_episode", "episode_id": "A", "seed": 0,
+                 "interpolation_dt": .02, "sessions": rows}
+        identities = {name: id(session.backend.planner) for name, session in manager.sessions.items()}
+        for episode, x in (("A", .2), ("B", .4), ("A-again", .2)):
+            request = deepcopy(reset)
+            request["episode_id"] = episode
+            for row in request["sessions"]:
+                row["world"]["cuboid"]["table"]["pose"][0] = x
+            result = dispatch(request, manager)["result"]
+            assert result["episode_id"] == episode
+            for name, session in manager.sessions.items():
+                assert not session.valid and session.snapshot_id is None
+                assert not session.used_snapshots and session.version == session.plan_count == session.update_count == 0
+                assert id(session.backend.planner) == identities[name]
+                assert session.backend.current_world["cuboid"]["table"]["pose"][0] == x
+                rejected(plan, manager)
+            update_a = {**update, "robot_cfg": deepcopy(request["sessions"][0]["robot_cfg"]),
+                        "world": deepcopy(request["sessions"][0]["world"]), "snapshot_id": "A"}
+            dispatch(update_a, manager)
+        # A failure after earlier native resets cannot leave any session usable.
+        failed = deepcopy(reset)
+        failed["sessions"][2]["world"]["cuboid"]["table"]["pose"][0] = 999
+        rejected(failed, manager)
+        assert manager.episode_reset_pending and all(not session.valid for session in manager.sessions.values())
+        rejected(update, manager)
+        dispatch(reset, manager)
+        assert not manager.episode_reset_pending
+        for key, value in (("seed", 1), ("interpolation_dt", .01)):
+            rejected({**reset, key: value}, manager)
+            assert manager.episode_reset_pending and all(not session.valid for session in manager.sessions.values())
+            dispatch(reset, manager)
+        malformed = deepcopy(reset)
+        malformed["sessions"].pop()
+        rejected(malformed, manager)
+        assert manager.episode_reset_pending
+        dispatch(reset, manager)
+        assert all(session.backend.configure_count == 1 for session in manager.sessions.values())
         stream = io.StringIO('{"id":9,"op":"unknown"}\n{"id":10,"op":"inspect_sessions"}\n'
                              '{"id":11,"op":"shutdown"}\n')
         sink = io.StringIO()
@@ -682,6 +853,8 @@ def self_test() -> None:
                                  "one_init_and_warmup", "versioned_finger_world_update",
                                  "topology_rejection", "failed_update_invalidates",
                                  "immutable_snapshot_ids", "strict_finite_json_lines",
+                                 "episode_A_B_A", "partial_reset_failure_invalidates_all",
+                                 "constructor_seed_dt_fixed", "new_snapshot_required_after_reset",
                                  "no_cuda_import_or_environment_step"]}))
 
 
