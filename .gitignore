@@ -101,6 +101,7 @@ pi_ckpt/*
 feats/*
 eval_recordings/*
 .eggs/*
+.omo/*
 
 # Local dual-arm/cuRobo runtime state (source and small evidence live in Git).
 /infrastructure/envs/

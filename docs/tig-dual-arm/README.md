@@ -1,6 +1,6 @@
 # TIG 双臂执行与 cuRobo：成果保存快照
 
-2026-11-17。此分支用于先把已完成的开发成果保存到 Cat-blizzard 的 TIG fork，作为 Draft PR 继续整理。当前源码来自已验证工作区；新 checkout 的原生运行尚未验证，路径与安装适配仍待完成。
+2026-11-17。此分支已保存开发成果，并合入官方 main 至 `3193957`，作为 Cat-blizzard fork 的 Draft PR 继续整理。当前扩展源码来自已验证工作区；同步后的 CPU 回归已通过，原生 GPU 运行和新机器复现尚未验证，路径与安装适配仍待完成。
 
 ## 保存内容
 
@@ -20,9 +20,10 @@
 | fork `main` 与本地参考源码 | `d6d16ec511bc389e0a207692730c137bc022ef14` |
 | 当前开发 checkout 的已提交 HEAD | `1428b682417b5eac70df5ccbec2ac0e219ca11e9`，另有本次保存的未提交开发文件 |
 | 官方 `main`（2026-11-17 核对） | `3193957e3b0187d086e44d79e0e4af9845fbd4fd` |
+| 当前 PR 分支 | 已合入官方 `3193957`；保留原始快照 `2a712a4` 及扩展源码 |
 | cuRobo 已验证源码 | `42498cf4e7d0d6fbd4ef9fbcec1243c00c888a83`，版本 0.9.0 |
 
-fork 与参考版本落后官方 6 个提交。该次官方差异集中在 baseline、README 和 `.gitignore`；本分支先保存旧基线上的成果，没有同步官方，也没有验证与最新官方的运行兼容性。官方比较：[d6d16ec → 3193957](https://github.com/imitator-game/The-Imitator-Game/compare/d6d16ec511bc389e0a207692730c137bc022ef14...3193957e3b0187d086e44d79e0e4af9845fbd4fd)。
+fork 的 `main` 与本地参考仍停在旧版；**当前 PR 分支已合入官方新增的全部 6 个提交**。差异集中在 baseline、README 和 `.gitignore`，官方 `mani_skill`、根 `pyproject.toml` 和视频读取文件与旧基线相同。同步保留扩展源码及视频寻帧修正，未改现有环境、原始开发/运行目录或旧实验结果；尚未在同步分支重跑原生 GPU 实验。官方比较：[d6d16ec → 3193957](https://github.com/imitator-game/The-Imitator-Game/compare/d6d16ec511bc389e0a207692730c137bc022ef14...3193957e3b0187d086e44d79e0e4af9845fbd4fd)。同步说明与验收见 [UPSTREAM-SYNC.md](UPSTREAM-SYNC.md)。
 
 ## 已有实际证据
 
@@ -60,11 +61,11 @@ fork 与参考版本落后官方 6 个提交。该次官方差异集中在 basel
 
 ## 草稿后续工作
 
-- [ ] 单独同步官方 6 个提交，检查 baseline 及文档变化；保留此次快照版本。
+- [x] 同步官方 6 个提交，保留双方 README/忽略规则及原始快照；源码身份与 CPU 回归通过。
 - [ ] 将固定的 `parents[]`、旧嵌套 DEV 路径、本机解释器、GPU 选择和证据路径改为显式配置。不要复制一套重复的 TIG 来伪造旧目录结构。
 - [ ] 提供 cuRobo 独立环境安装、干净固定源码、worker 启动和派生 URDF 生成流程，核对对象与纹理资产。
 - [ ] 从历史证据抽取最小自测 fixture，建立可定位的外置证据包；为原始 H5/视频另做备份。
 - [ ] 在新 checkout 实际执行 CPU 和原生回归，再将 PR 转为可合并状态。
 - [ ] 继续解决未见种子的保守包含拒绝、收尾预算和 MPLib 末端残差问题；三个任务的新版本回归后另冻结正式配对。空间重规划、交接、失败恢复的 cuRobo 能力分别验收。
 
-本次发布检查的结果记录在 [snapshot-validation.json](snapshot-validation.json)。原生 GPU 回归和新机器复现明确为未运行。
+原始快照的发布检查保留在 [snapshot-validation.json](snapshot-validation.json)，其中 `upstream_sync=NOT_DONE` 描述保存快照时的事实；后续同步验收另存 [upstream-sync-validation.json](upstream-sync-validation.json)。原生 GPU 回归和新机器复现仍为未运行。
