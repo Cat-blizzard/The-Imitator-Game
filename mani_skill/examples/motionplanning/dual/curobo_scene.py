@@ -324,7 +324,13 @@ def _independent_finger_urdf(original: Path, *, output_root: Path | None = None)
     payload = ET.tostring(tree, encoding="utf-8", xml_declaration=True) + b"\n"
     digest = hashlib.sha256(payload).hexdigest()
     if output_root is None:
-        output_root = Path(__file__).resolve().parents[7] / "infrastructure/backends/tig-derived-models/panda-v3-independent-fingers"
+        from infrastructure.tig_runtime import resolve_runtime_paths
+        paths = resolve_runtime_paths()
+        # Preserve the established workspace location for the default cache;
+        # an explicitly selected cache also owns its generated planner models.
+        output_root = (paths.workspace_root / "infrastructure/backends"
+                       if paths.cache_root == paths.workspace_root / "infrastructure/tmp"
+                       else paths.cache_root) / "tig-derived-models/panda-v3-independent-fingers"
     destination = output_root.resolve() / digest / "panda_v3.urdf"
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -600,9 +606,40 @@ def self_test() -> dict[str, Any]:
         assert again == derived and again_proof["derived_sha256"] == proof["derived_sha256"]
         independent = _robot_cfg(derived, {"camera_link": exact}, {}, [0.] * 7 + [.021, .022], velocities)
         assert independent["kinematics"]["lock_joints"][FINGER_NAMES[0]] != independent["kinematics"]["lock_joints"][FINGER_NAMES[1]]
+        # Exercise the default-path branch from a module too shallow for the
+        # former parents[7] lookup, rather than bypassing it with output_root.
+        import os
+        from unittest.mock import patch
+        from infrastructure import tig_runtime
+        expected_payload = derived.read_bytes()
+        shallow = Path(temporary) / "checkout"
+        shallow_module = shallow / "curobo_scene.py"
+        assert len(shallow_module.resolve().parents) < 8
+        workspace, cache = Path(temporary) / "dependencies", Path(temporary) / "cache"
+        suffix = Path("tig-derived-models/panda-v3-independent-fingers")
+        cases = [
+            ({}, None, shallow / "infrastructure/backends" / suffix),
+            ({"TIG_WORKSPACE": str(workspace)}, None, workspace / "infrastructure/backends" / suffix),
+            ({"TIG_WORKSPACE": str(workspace), "TIG_CACHE_DIR": str(workspace / "infrastructure/tmp")},
+             None, workspace / "infrastructure/backends" / suffix),
+            ({"TIG_WORKSPACE": str(workspace), "TIG_CACHE_DIR": str(cache)}, None, cache / suffix),
+            ({"TIG_WORKSPACE": str(workspace), "TIG_CACHE_DIR": str(cache)},
+             Path(temporary) / "explicit", Path(temporary) / "explicit"),
+        ]
+        for environment, override, root in cases:
+            with patch.dict(os.environ, environment, clear=True), \
+                    patch.dict(globals(), {"__file__": str(shallow_module)}), \
+                    patch.object(tig_runtime, "__file__", str(shallow / "infrastructure/tig_runtime.py")):
+                shallow_derived, shallow_proof = _independent_finger_urdf(asset, output_root=override)
+            assert shallow_derived == root / proof["derived_sha256"] / "panda_v3.urdf"
+            assert shallow_derived.read_bytes() == expected_payload
+            assert shallow_proof["derived_sha256"] == proof["derived_sha256"]
+            assert shallow_proof["other_parsed_urdf_semantics_unchanged"]
+        assert hashlib.sha256(asset.read_bytes()).hexdigest() == original_sha
         derived.write_bytes(b"tampered")
         reject(lambda: _independent_finger_urdf(asset, output_root=Path(temporary)))
     checks.append("independent-finger derived URDF semantic equivalence absolute assets immutable identity")
+    checks.append("shallow checkout workspace/cache/default/explicit derived paths preserve exact URDF bytes")
     reject(lambda: _matrix([0, 0, 0, 0, 0, 0, 0]))
     reject(lambda: _matrix([0, 0, float("nan"), 1, 0, 0, 0]))
     reject(lambda: _pose(np.zeros((4, 4))))
