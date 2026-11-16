@@ -380,6 +380,52 @@ def outcome(rows: list[dict[str, Any]], expected_steps: int, *,
             'check_names': 'legacy names retained; resolved runtime_policy supplies counts and limits'}
 
 
+def measure_replay_lift(rows: list[dict[str, Any]], target_names: Any) -> dict[str, Any]:
+    """Observe height gains from the phase-entry state, independently of source results."""
+    names = list(target_names)
+    _require(len(names) == 2 and all(isinstance(name, str) and name for name in names)
+             and len(set(names)) == 2, 'Two ordered semantic lift targets are required')
+    result: dict[str, Any] = {'status': 'unknown', 'target_names': names,
+        'reference_frame': None, 'first_lift_frame': None, 'end_frame': None,
+        'gains_m': None, 'reference_object_z_m': None, 'end_object_z_m': None,
+        'source': 'current replay observed rows',
+        'scope': 'frame immediately before first lift_and_hold action to last observed lift_and_hold frame; not episode frame0'}
+    indices = [index for index, row in enumerate(rows) if row.get('phase') == 'lift_and_hold']
+    if not indices:
+        result['reason'] = 'lift_phase_not_observed'
+        return result
+    first, last = indices[0], indices[-1]
+    if first == 0:
+        result['reason'] = 'pre_lift_reference_not_observed'
+        return result
+    reference, initial, end = rows[first-1], rows[first], rows[last]
+    frames = [row.get('frame') for row in rows[first-1:last+1]]
+    if (indices != list(range(first, last+1))
+            or any(type(frame) is not int for frame in frames)
+            or frames != list(range(frames[0], frames[0]+len(frames)))):
+        result['reason'] = 'lift_frames_not_contiguous'
+        return result
+    try:
+        heights = []
+        for row in (reference, end):
+            objects = row['objects']
+            if len(objects) != 2 or [obj.get('actor') for obj in objects] != names:
+                raise ValueError('Target pairing differs')
+            poses = np.asarray([obj['pose'] for obj in objects], dtype=float)
+            if poses.shape != (2, 7) or not np.isfinite(poses).all():
+                raise ValueError('Target poses unavailable')
+            heights.append(poses[:, 2])
+    except (KeyError, TypeError, ValueError):
+        result['reason'] = 'paired_measured_target_poses_unavailable'
+        return result
+    result.update(status='observed', reference_frame=reference['frame'],
+        first_lift_frame=initial['frame'], end_frame=end['frame'],
+        gains_m=(heights[1]-heights[0]).tolist(),
+        reference_object_z_m=heights[0].tolist(), end_object_z_m=heights[1].tolist(),
+        lift_phase_exited=last < len(rows)-1)
+    return result
+
+
 def video_timing(directory: Path, actions: int, report: dict[str, Any]) -> dict[str, Any]:
     """Count actual video frames against T+1 states plus declared presentation padding."""
     import imageio.v2 as imageio
@@ -449,6 +495,8 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
             env.reset(**metadata['episodes'][0]['reset_kwargs'])
             raw = env.unwrapped
             report['state_restore_frames'].append(0)
+            report.update(control_timestep_s=float(raw.control_timestep),
+                          physics_timestep_s=float(raw.sim_timestep))
             _require(not raw.gpu_sim_enabled and raw.num_envs == 1
                      and np.isclose(raw.control_timestep, .05, atol=1e-10, rtol=0)
                      and np.isclose(raw.sim_timestep, .01, atol=1e-10, rtol=0), 'Live control/physics differs')
@@ -624,6 +672,7 @@ def native_run(args: argparse.Namespace, recording: dict[str, Any], output: Path
         report['checks'] = checks
         report['status'] = 'passed' if all(checks.values()) else 'failed'
     finally:
+        report['replay_lift_measurement'] = measure_replay_lift(rows, recording['target_names'])
         save_json(output/'all-robot-contacts.json', contacts)
         with (output/'frames.jsonl').open('w') as handle:
             for row in rows:
@@ -795,6 +844,22 @@ def self_test() -> dict[str, Any]:
     assert outcome(rows, 25, policy=farther)['status'] == 'failed'
     longer_release = RuntimePolicy.from_dict(dict(LEGACY_STRICT.to_dict(), release_stable_steps=4))
     assert outcome(rows, 25, policy=longer_release)['status'] == 'failed'
+    lift_rows = []
+    for frame, (phase, heights) in enumerate((('initial', (0., 0.)),
+            ('close_and_confirm', (.2, .3)), ('lift_and_hold', (.21, .31)),
+            ('lift_and_hold', (.32, .42)), ('carry_lower', (.5, .7)))):
+        lift_rows.append({'frame': frame, 'phase': phase, 'objects': [
+            {'actor': name, 'pose': [0., 0., height, 1., 0., 0., 0.]}
+            for name, height in zip(('a', 'b'), heights)]})
+    lift = measure_replay_lift(lift_rows, ('a', 'b'))
+    assert lift['status'] == 'observed' and lift['reference_frame'] == 1 and lift['end_frame'] == 3
+    assert np.allclose(lift['gains_m'], [.12, .12], atol=1e-12, rtol=0)
+    assert measure_replay_lift(lift_rows[:2], ('a', 'b'))['gains_m'] is None
+    assert measure_replay_lift(lift_rows[2:], ('a', 'b'))['status'] == 'unknown'
+    changed = copy.deepcopy(lift_rows); changed[3]['objects'][1]['actor'] = 'wrong'
+    assert measure_replay_lift(changed, ('a', 'b'))['status'] == 'unknown'
+    changed = copy.deepcopy(lift_rows); changed[1]['frame'] = 0
+    assert measure_replay_lift(changed, ('a', 'b'))['status'] == 'unknown'
     return {'status': 'passed', 'action_shape': [2, 16], 'state_frames': 3,
         'single_initial_restore_verified': True, 'retreat_limit_m': .08,
         'final_stable_steps': 20, 'existing_action_limits': ACTION_LIMITS,
@@ -802,6 +867,8 @@ def self_test() -> dict[str, Any]:
         'strict_and_cross_version_archive_integrity_verified': True,
         'strict_runtime_policy_source_gate_verified': True,
         'source_resolved_release_retreat_final_limits_verified': True,
+        'lift_measurement_uses_observed_phase_entry': True,
+        'missing_lift_measurement_is_unknown': True,
         'measured_source_departure_provider_reused': True,
         'physical3mm_and_no_contact_gate_preserved': True, 'gpu_initialized': False}
 

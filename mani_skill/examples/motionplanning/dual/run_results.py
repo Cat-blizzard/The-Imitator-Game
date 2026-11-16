@@ -299,7 +299,10 @@ def _quality(report: Mapping[str, Any]) -> dict[str, Any]:
         release = _flag(outcome_checks.get("both_physically_released_last_three")) \
             if limits["release_stable_steps"] == 3 else None
         add("release_stability", release, "report.outcome.checks.both_physically_released_last_three (3-tick receipt)")
-        add("minimum_lift", None, "no replay lift-height receipt available in legacy report")
+        lift = _mapping(report.get("replay_lift_measurement"))
+        lift_gains = lift.get("gains_m") if lift.get("status") == "observed" else None
+        add("minimum_lift", measured_pair(lift_gains, limits["min_lift_m"], minimum=True),
+            "report.replay_lift_measurement.gains_m (observed phase-start to phase-end)")
         rise = measured_pair(outcome.get("actual_retreat_tcp_rise_m"), limits["minimum_retreat_m"], minimum=True)
         add("minimum_retreat", rise, "report.outcome.actual_retreat_tcp_rise_m", required=limits["require_retreat"])
         window = _flag(outcome_checks.get("common_final20_window")) if limits["final_stable_steps"] == 20 else None
@@ -629,6 +632,12 @@ def self_test() -> dict[str, Any]:
     replay_result = summarize_run(replay, ticks)
     assert replay_result["official"]["final_success"] is True
     assert replay_result["physics"]["status"] == replay_result["quality"]["status"] == "unknown"
+    replay["replay_lift_measurement"] = {"status": "observed", "gains_m": [.11, .12]}
+    assert summarize_run(replay, ticks)["quality"]["checks"]["minimum_lift"]["value"] is True
+    replay["replay_lift_measurement"]["gains_m"][1] = .09
+    assert summarize_run(replay, ticks)["quality"]["checks"]["minimum_lift"]["value"] is False
+    replay["replay_lift_measurement"]["status"] = "unknown"
+    assert summarize_run(replay, ticks)["quality"]["checks"]["minimum_lift"]["value"] is None
     checks.append("legacy replay metadata and old contact claims cannot replace missing monitoring or measurements")
     updated = copy.deepcopy(report); updated["results"] = {"old": True}
     original = copy.deepcopy(updated); value = update_run_results(updated, ticks)
