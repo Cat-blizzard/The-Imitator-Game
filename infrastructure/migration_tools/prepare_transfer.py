@@ -219,13 +219,39 @@ def make_archive(root: Path, output: Path, summary: dict[str, Any],
         key: summary[key] for key in ("file_count", "logical_bytes", "metadata")}}
 
 
+def require_complete_repository(repository: Path) -> None:
+    """A shallow boundary can hide missing parents from source-side verification."""
+    require(git(["rev-parse", "--is-shallow-repository"], cwd=repository) == "false",
+            f"Cannot transfer a shallow Git repository; fetch its complete history first: {repository}")
+
+
+def verify_standalone_bundle(bundle: Path, repository: Path) -> None:
+    """Prove that a fresh clone can traverse every advertised commit/tree/blob."""
+    advertised = git(["bundle", "list-heads", str(bundle)], cwd=repository)
+    commits = sorted({line.split()[0] for line in advertised.splitlines() if line.strip()})
+    require(bool(commits) and all(re.fullmatch(r"[0-9a-f]{40}", oid) for oid in commits),
+            "Bundle must advertise full Git object IDs")
+    with tempfile.TemporaryDirectory(prefix="tig-bundle-independent-check-") as temporary:
+        clone = Path(temporary) / "fresh.git"
+        git(["clone", "--bare", "--no-local", str(bundle), str(clone)], cwd=Path(temporary))
+        require_complete_repository(clone)
+        # The source repository cannot supply objects to this independent clone.
+        require(not (clone / "objects/info/alternates").exists(),
+                "Standalone bundle check unexpectedly uses an alternate object store")
+        git(["fsck", "--connectivity-only", "--no-reflogs"], cwd=clone)
+        git(["rev-list", "--objects", "--missing=error", *commits], cwd=clone)
+
+
 def create_bundle(repository: Path, destination: Path, references: list[str]) -> None:
+    require_complete_repository(repository)
     partial = destination.with_name(destination.name + ".partial")
     require(not destination.exists() and not partial.exists(), f"Bundle already exists: {destination}")
     git(["bundle", "create", str(partial), *references], cwd=repository)
     git(["bundle", "verify", str(partial)], cwd=repository)
+    verify_standalone_bundle(partial, repository)
     os.replace(partial, destination)
-    progress("bundle-complete", path=destination.name, bytes=destination.stat().st_size)
+    progress("bundle-complete", path=destination.name, bytes=destination.stat().st_size,
+             standalone_bare_clone_and_object_graph="PASS")
 
 
 def portable_freeze(raw: str) -> tuple[str, list[str]]:
@@ -340,6 +366,9 @@ def prepare(source_root: Path, repository: Path, output: Path, threads: int = 2)
         require(stat.S_ISDIR(info.st_mode), f"Required source directory is missing: {name}")
     reference = root / "The-Imitator-Game"
     curobo = root / "infrastructure/backends/curobo"
+    # Reject before creating output or reading large evidence/assets archives.
+    for checkout in (reference, repo, curobo):
+        require_complete_repository(checkout)
     commits = {"reference": REFERENCE, "development": git(["rev-parse", "HEAD"], cwd=repo),
                "runtime": RUNTIME, "curobo": git(["rev-parse", "HEAD"], cwd=curobo)}
     for name, commit in commits.items():
@@ -492,7 +521,26 @@ def self_test() -> dict[str, Any]:
         git(["config", "user.email", "transfer-self-test@example.invalid"], cwd=repo)
         (repo / "README.md").write_text("tiny source identity\n", encoding="utf-8")
         git(["add", "README.md"], cwd=repo)
-        git(["commit", "-m", "synthetic source"], cwd=repo)
+        git(["commit", "-m", "synthetic parent"], cwd=repo)
+        parent_commit = git(["rev-parse", "HEAD"], cwd=repo)
+        (repo / "README.md").write_text("tiny child source identity\n", encoding="utf-8")
+        git(["add", "README.md"], cwd=repo)
+        git(["commit", "-m", "synthetic child"], cwd=repo)
+        shallow = base / "shallow-source"
+        git(["clone", "--depth", "1", "--branch", "main", repo.as_uri(), str(shallow)], cwd=base)
+        assert git(["rev-parse", "--is-shallow-repository"], cwd=shallow) == "true"
+        missing_parent = subprocess.run(["git", "cat-file", "-e", parent_commit], cwd=shallow,
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        assert missing_parent.returncode != 0
+        shallow_bundle = output / "rejected-shallow.bundle"
+        rejected(lambda: create_bundle(shallow, shallow_bundle, ["HEAD"]), "shallow_source_repository")
+        assert not shallow_bundle.exists() and not shallow_bundle.with_name(shallow_bundle.name + ".partial").exists()
+        # Reproduce the original false positive, independently of the new guard.
+        incomplete_bundle = base / "source-verification-false-positive.bundle"
+        git(["bundle", "create", str(incomplete_bundle), "HEAD"], cwd=shallow)
+        git(["bundle", "verify", str(incomplete_bundle)], cwd=shallow)
+        rejected(lambda: verify_standalone_bundle(incomplete_bundle, shallow),
+                 "incomplete_bundle_despite_source_verify")
         git(["tag", "v0.9.0"], cwd=repo)
         create_bundle(repo, output / "tiny.bundle", ["refs/heads/main", "refs/tags/v0.9.0"])
         bundle_refs = git(["bundle", "list-heads", str(output / "tiny.bundle")], cwd=repo)

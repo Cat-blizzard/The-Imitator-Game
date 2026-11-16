@@ -20,7 +20,9 @@
       "nonempty_output",
       "source_changed",
       "unknown_local_requirement",
-      "url_credentials"
+      "url_credentials",
+      "shallow_source_repository",
+      "incomplete_bundle_despite_source_verify"
     ],
     "source_file_hashes_generated": 0,
     "dependency_installation": "NOT_RUN",
@@ -43,5 +45,6 @@
   },
   "full_migration_package": "PREPARING_SEPARATELY",
   "target_server_validation": "NOT_RUN",
-  "original_sources_and_historical_evidence_modified": false
+  "original_sources_and_historical_evidence_modified": false,
+  "bundle_validation": "Fresh independent bare clone, fsck connectivity, full object traversal; shallow sources rejected before packaging."
 }
