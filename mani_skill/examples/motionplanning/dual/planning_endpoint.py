@@ -1,9 +1,10 @@
 """Check MPLib screw-plan TCP endpoints and refine them without physics.
 
 The TIG screw planner stops on a linearized twist residual. A ``Success`` is
-therefore checked against actual Pinocchio FK. Short native screw corrections
-are appended to the original geometric path and parameterized together by the
-same native TOPP implementation. Scene/payload checks remain the caller's duty.
+therefore checked against actual Pinocchio FK. Native corrections obtain a
+verified goal configuration; native joint planning then generates a fresh path
+from the measured start. The old approximate path is diagnostic only, and the
+fresh path uses the same native TOPP. Scene/payload checks remain the caller's duty.
 Poses are XYZ/WXYZ, distances metres, angles radians, and joint order is explicit.
 """
 from __future__ import annotations
@@ -120,7 +121,7 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         return (error["position_m"] <= position_tolerance_m
                 and error["rotation_rad"] <= rotation_tolerance_rad)
 
-    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v2",
+    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v3",
         "position_tolerance_m": position_tolerance_m,
         "rotation_tolerance_rad": rotation_tolerance_rad,
         "max_corrections": max_corrections,
@@ -200,6 +201,31 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         if not within(error):
             raise ValueError(f"Actual FK endpoint exceeds contract after {corrections} corrections: {error}")
         if corrections:
+            # The old approximate endpoint is diagnostic only. Replan the whole
+            # path from the measured start to the FK-verified goal with native
+            # joint planning, rather than executing the old path plus a tail.
+            goal_qpos = start.copy()
+            goal_qpos[indices] = combined_path[-1]
+            count = len(captured_paths)
+            capture_geometry_only = True
+            try:
+                planner.plan_qpos_to_qpos([goal_qpos], start.copy(),
+                    time_step=timestep, fix_joint_limits=False,
+                    use_point_cloud=bool(solver.use_point_cloud),
+                    use_attach=bool(getattr(planner.planning_world, "use_attach", False)))
+            except _CorrectionGeometryCaptured:
+                pass
+            else:
+                raise ValueError("Native full replan failed before producing a geometric path")
+            finally:
+                capture_geometry_only = False
+            if len(captured_paths) != count + 1:
+                raise ValueError("Native full replan did not produce exactly one geometric path")
+            combined_path = captured_paths[-1].copy()
+            if not np.allclose(combined_path[0], start[indices], atol=1e-9, rtol=0):
+                raise ValueError("Native full replan changed the measured start")
+            if not np.allclose(combined_path[-1], goal_qpos[indices], atol=1e-9, rtol=0):
+                raise ValueError("Native full replan changed the FK-verified goal")
             raw = planner.TOPP(combined_path, timestep)
             if len(raw) != 5 or any(value is None for value in raw):
                 raise ValueError("Native TOPP failed for the corrected geometric path")
@@ -221,7 +247,9 @@ def checked_screw_plan(solver: Any, pose: Any, *,
             geometric_path_samples=len(combined_path),
             geometric_path_captures=len(captured_paths),
             correction_geometry_only=True, native_topp_calls=native_topp_calls,
-            parameterization="native TOPP over complete corrected geometric path" if corrections
+            original_bad_endpoint_executed=False,
+            fresh_native_joint_replan=bool(corrections),
+            parameterization="native TOPP over fresh measured-start-to-verified-goal joint path" if corrections
                 else "original native TOPP unchanged")
         result["endpoint_audit"] = audit
         if hasattr(solver, "last_native_result"):
@@ -252,7 +280,7 @@ def self_test() -> dict[str, Any]:
                 move_group_joint_indices=self.indices.tolist(), move_group="tcp",
                 link_name_2_idx={"tcp": 0}, planning_world=SimpleNamespace(use_attach=True),
                 transform_goal_to_wrt_base=lambda pose: np.r_[pose[:3] - [1., 2., 3.], pose[3:]],
-                TOPP=self.topp, plan_screw=self.screw)
+                TOPP=self.topp, plan_screw=self.screw, plan_qpos_to_qpos=self.joint_path)
             self.planner.pinocchio_model = SimpleNamespace(
                 compute_forward_kinematics=self.fk, get_link_pose=lambda _: self.actual)
 
@@ -282,6 +310,10 @@ def self_test() -> dict[str, Any]:
             assert dry_run
             return self.screw(_pose(pose), self.state.copy())
 
+        def joint_path(self, goals: Any, full: Any, **kwargs: Any) -> Any:
+            assert np.array_equal(full, self.state)
+            return self.planner.TOPP(np.vstack((full[self.indices], goals[0][self.indices])), .05)
+
     goal = np.array([1.1, 2.2, 3.3, 1., 0., 0., 0.])
     solver = Fixture(.014)
     state = solver.state.copy()
@@ -290,7 +322,9 @@ def self_test() -> dict[str, Any]:
     assert solver.planner.TOPP == original_topp and solver.calls == 2
     assert solver.last_native_result is result
     assert np.array_equal(solver.last_native_parameterization, solver.topp_calls[-1])
-    assert len(solver.topp_calls) == 2 and len(solver.topp_calls[-1]) == 3
+    assert len(solver.topp_calls) == 2 and len(solver.topp_calls[-1]) == 2
+    assert not np.any(np.all(np.isclose(solver.topp_calls[-1],
+        solver.topp_calls[0][-1], atol=1e-12, rtol=0), axis=1))
     assert np.array_equal(solver.state, state)
     assert result["endpoint_audit"]["final_error"]["position_m"] < 1e-12
     assert result["endpoint_audit"]["attempts"][0]["position_m"] > .013
@@ -309,6 +343,7 @@ def self_test() -> dict[str, Any]:
     assert pose_error(goal, np.r_[goal[:3], -goal[3:]])["rotation_rad"] == 0.
     return {"status": "passed", "environment_steps": 0, "gpu_used": False,
         "checks": ["actual FK rejects 14mm native Success", "same-backend correction",
+            "fresh measured-start native joint path discards the old bad endpoint",
             "full corrected native TOPP and audit cache", "nonsequential arm joint order",
             "nonzero base translation", "finger positions preserved", "original start preserved",
             "already accurate native result unchanged", "bounded failure and wrapper restoration",

@@ -577,18 +577,65 @@ def self_test() -> dict[str, Any]:
             return [{"fixture": "live"}] if self.mode == "measured" and self.env.actions else []
 
     class Solver:
+        """Analytical native-style planner; the real endpoint adapter still runs."""
         def __init__(self, env: Env, index: int):
             self.base_env = env; self.env_agent = env.agent.agents[index]; self.gripper_state = 1; self.index = index; self.calls = 0
-            self.planner = NS(user_joint_names=(*names, "f1", "f2"), move_group_joint_indices=list(range(7)))
+            self.robot = self.env_agent.robot
+            self.use_point_cloud = False
+            self.last_native_result = None
+            self.topp_calls = 0
+            self.base_xyz = np.array([-.3 if index == 0 else .3, 0., 0.])
+            self.planner = NS(user_joint_names=(*names, "f1", "f2"), move_group_joint_indices=list(range(7)),
+                move_group="tcp", link_name_2_idx={"tcp": 0}, planning_world=NS(use_attach=False),
+                transform_goal_to_wrt_base=self.goal_in_base, TOPP=self.topp, plan_screw=self.screw,
+                pinocchio_model=NS(compute_forward_kinematics=self.fk, get_link_pose=lambda _: self.fk_pose.copy()))
+
+        def goal_in_base(self, value: Any) -> np.ndarray:
+            goal = np.array(value, dtype=float, copy=True)
+            assert goal.shape == (7,)
+            goal[:3] -= self.base_xyz
+            return goal
+
+        def fk(self, full_qpos: Any) -> None:
+            full = np.asarray(full_qpos)
+            assert full.shape == (9,) and np.array_equal(full[7:], self.robot.q[0, 7:])
+            self.fk_pose = np.r_[full[:3], 1., 0., 0., 0.]
+
+        def topp(self, path: Any, step: float, verbose: bool = False) -> Any:
+            points = np.array(path, dtype=float, copy=True)
+            assert points.shape == (2, 7) and step == self.base_env.control_timestep
+            self.topp_calls += 1
+            duration = .1 if self.index == 0 else .2
+            velocity = np.repeat(((points[1] - points[0]) / duration)[None], 2, axis=0)
+            return np.array([0., duration]), points, velocity, np.zeros_like(points), duration
+
+        def screw(self, value: Any, full_qpos: Any, **kwargs: Any) -> dict[str, Any]:
+            full = np.array(full_qpos, dtype=float, copy=True)
+            assert full.shape == (9,) and np.array_equal(full[7:], self.robot.q[0, 7:])
+            goal = self.goal_in_base(value)
+            assert np.array_equal(goal[3:], [1., 0., 0., 0.])
+            start = full[:7].copy(); end = start.copy(); end[:3] = goal[:3]
+            raw = self.planner.TOPP(np.vstack((start, end)), self.base_env.control_timestep)
+            return {"status": "Success", **dict(zip(("time", "position", "velocity", "acceleration", "duration"), raw))}
+
         def move_to_pose_with_screw(self, value: Any, *, dry_run: bool) -> dict[str, Any]:
             assert dry_run and not self.base_env.actions
             self.calls += 1
-            start = self.env_agent.robot.q[0, :7].copy(); end = start.copy(); end[:len(value)] += value
-            times = [0., .1 if self.index == 0 else .2]
-            return {"status": "Success", "time": times, "position": [start, end], "duration": times[-1]}
+            result = self.screw(value, self.robot.get_qpos()[0], time_step=self.base_env.control_timestep)
+            self.last_native_result = result
+            return result
+
+    def target_pose(env: Env, index: int, delta: Any) -> np.ndarray:
+        # Preserve the old fixture's joint-translation increments as XYZ/WXYZ.
+        xyz = env.agent.agents[index].robot.q[0, :3].copy()
+        delta = np.asarray(delta)
+        xyz[:len(delta)] += delta
+        xyz[0] += -.3 if index == 0 else .3
+        return np.r_[xyz, 1., 0., 0., 0.]
 
     def schedule(env: Env, *, held: bool = True, lift: bool = False) -> DualArmSchedule:
-        poses = ([0., 0., .12], [0., 0., .12]) if lift else ([.04], [.08])
+        deltas = ([0., 0., .12], [0., 0., .12]) if lift else ([.04], [.08])
+        poses = tuple(target_pose(env, index, delta) for index, delta in enumerate(deltas))
         return plan_dual_pose(Solver(env, 0), Solver(env, 1), poses, gripper_commands=(-1, -1) if held else (1, 1))
 
     def reject(call: Callable[[], Any]) -> None:
@@ -597,11 +644,13 @@ def self_test() -> dict[str, Any]:
         raise AssertionError("Invalid input was accepted")
 
     checks = []
-    env = Env(False); solvers = (Solver(env, 0), Solver(env, 1)); planned = plan_dual_pose(*solvers, ([.04], [.08]))
+    env = Env(False); solvers = (Solver(env, 0), Solver(env, 1)); planned = plan_dual_pose(*solvers, (target_pose(env, 0, [.04]), target_pose(env, 1, [.08])))
     assert not env.actions and all(solver.calls == 1 for solver in solvers)
+    assert all(solver.topp_calls == 1 and solver.last_endpoint_audit["status"] == "passed"
+               and solver.last_endpoint_audit["corrections"] == 0 for solver in solvers)
     assert np.allclose(planned.left_commands[2:, 0], .04) and planned.num_steps == 4
     reject(lambda: plan_dual_pose(solvers[1], solvers[0], (None, None)))
-    held = plan_dual_pose(*solvers, (None, [.08])); assert solvers[0].calls == 1 and np.all(held.left_commands[:, :7] == 0)
+    held = plan_dual_pose(*solvers, (None, target_pose(env, 1, [.08]))); assert solvers[0].calls == 1 and np.all(held.left_commands[:, :7] == 0)
     checks.append("dry-run both planners, canonical identity, unequal endpoint hold and None hold")
     reached = execute_dual_reach(env, planned, Checker(env, held=False), stable_steps=2)
     assert reached["status"] == "passed" and len(env.actions) == reached["environment_steps"]
@@ -628,7 +677,7 @@ def self_test() -> dict[str, Any]:
     env = Env(mode="joint_fd"); result = execute_dual_held_move(env, schedule(env), Checker(env), env.targets, settle_max_steps=3)
     assert result["status"] == "held_move_timeout" and result["trace"][-1]["max_arm_velocity_rad_s"] == 0
     assert result["trace"][-1]["max_control_frame_joint_speed_rad_s"] > ARM_SPEED
-    env = Env(); asymmetric = plan_dual_pose(Solver(env, 0), Solver(env, 1), ([0., 0., .12], [0., 0., .08]), gripper_commands=(-1, -1))
+    env = Env(); asymmetric = plan_dual_pose(Solver(env, 0), Solver(env, 1), (target_pose(env, 0, [0., 0., .12]), target_pose(env, 1, [0., 0., .08])), gripper_commands=(-1, -1))
     result = execute_dual_held_move(env, asymmetric, Checker(env), env.targets, min_height_gain_m=(.10, .10), settle_max_steps=3)
     assert result["status"] == "held_move_timeout" and result["trace"][-1]["objects"][0]["object_height_gain_m"] >= .10
     assert result["trace"][-1]["objects"][1]["object_height_gain_m"] < .10
