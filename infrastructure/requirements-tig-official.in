@@ -1,0 +1,45 @@
+# Runtime profile for the unmodified official TIG d6d16ec source.
+# Covers simulation, the local LeRobot v3 reader and ACT+DINOv2.
+# Other policy stacks (OpenPI/JAX, GR00T, RDT, etc.) use separate profiles.
+# Resolve with the official override file; keep upstream metadata conflicts visible.
+torch==2.7.1+cu128
+torchvision==0.22.1+cu128
+numpy==1.26.4
+gymnasium==0.29.1
+gym==0.26.2
+sapien==3.0.3
+mplib==0.1.1
+fast_kinematics==0.2.2
+pytorch_kinematics==0.7.5
+scipy==1.15.3
+pandas==2.2.3
+datasets==4.0.0
+pyarrow==20.0.0
+lerobot==0.5.0
+# CPU decoder wheel for this Linux x86_64 / CPython 3.12 profile.
+torchcodec @ https://files.pythonhosted.org/packages/65/38/dfe8aa3a71c4eb0fd930d0c6db661cc65d1f220b2225433207ceb15733c4/torchcodec-0.5-cp312-cp312-manylinux_2_28_x86_64.whl#sha256=310dfbfd7c56e283e0a9bd7cb4b5815cf1251a7bdeb93991b14311a1d144137d
+av==15.1.0
+diffusers==0.36.0
+draccus==0.11.6
+huggingface-hub==0.33.1
+transformers==4.52.4
+opencv-python==4.11.0.86
+opencv-python-headless==4.11.0.86
+matplotlib==3.10.3
+contourpy==1.3.2
+accelerate==1.10.1
+albumentations==2.0.8
+timm==0.9.10
+tensorboard==2.20.0
+einops==0.8.1
+h5py
+trimesh
+transforms3d==0.4.2
+dacite
+GitPython
+pyyaml
+imageio[ffmpeg]
+tyro>=0.9.5
+rich>=14.0.0
+psutil>=5.9.2
+IPython

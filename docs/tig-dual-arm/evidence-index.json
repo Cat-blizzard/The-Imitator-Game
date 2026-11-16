@@ -1,0 +1,351 @@
+{
+  "schema": "tig-evidence-preservation-index-v1",
+  "captured_on": "2026-11-17",
+  "sanitized_copies_are_not_original_artifacts": true,
+  "original_artifact_root": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-complete-20261116",
+  "files": [
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-protocol-v1.json",
+      "original_sha256": "95e62e51aea8962904895c6031716908e62f90ad307323c262b3220be120f84e",
+      "original_bytes": 20921,
+      "included_copy": "docs/tig-dual-arm/evidence/paired-unseen-protocol-v1.json",
+      "included_sha256": "e0a7eb3da4fcab7d6c78fe838942d0d462c77a3cf82e435c10e877dc60dd431d",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-summary-v1.json",
+      "original_sha256": "af494d0ed795c648be87b186eb16e1ce646e6bee8bffcc355931c4c2c14222a9",
+      "original_bytes": 90317,
+      "included_copy": "docs/tig-dual-arm/evidence/paired-unseen-summary-v1.json",
+      "included_sha256": "0445eb05517b6b838c7ea1cff25ae289d132f038d618f57fe478aef208e0cab4",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/task-extension-protocol-v1.json",
+      "original_sha256": "8512e57660741e4e3f78aa3c20fe2aaff46bb8eade3daaf9d4acd66136a76246",
+      "original_bytes": 17419,
+      "included_copy": "docs/tig-dual-arm/evidence/task-extension-protocol-v1.json",
+      "included_sha256": "b0dfd316d6083de8c225359b7eefacc900988e68b3961b9cde0ca982d2d39778",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/task-extension-summary-v1.json",
+      "original_sha256": "5a63bc902d6e77bede54dd866cc0d2deb52e89c241abe0ce46afdaaf6ebe8169",
+      "original_bytes": 50489,
+      "included_copy": "docs/tig-dual-arm/evidence/task-extension-summary-v1.json",
+      "included_sha256": "5e127b68d77b425e110066e6ed67d066459ba1064ad7d5c033c9fc0a0a9bd9da",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/pill-direct-protocol-v2.json",
+      "original_sha256": "08bea21296506140adae3bc6c353e79d161759ddd5a15f89d8e3c42b766c9ea9",
+      "original_bytes": 17229,
+      "included_copy": "docs/tig-dual-arm/evidence/pill-direct-protocol-v2.json",
+      "included_sha256": "898bb547a2f2c0570bb9bae88f62447386017b56fe2bea69025780a842276491",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/pill-direct-summary-v2.json",
+      "original_sha256": "ecac0ca8fe5e1940dad8b8586d669c585c27f529eaf962ce599613060f986780",
+      "original_bytes": 34234,
+      "included_copy": "docs/tig-dual-arm/evidence/pill-direct-summary-v2.json",
+      "included_sha256": "df09ffc55faebf2df9a4008c8a94ef17180478a678afa2a5470ea806fe6f2a94",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/fruit-refinement-protocol-v2.json",
+      "original_sha256": "92c2cf7ad5c53268fe20e0454e19ecc1aeeaa56d7a73ee6edd4c2440c8dc6544",
+      "original_bytes": 17623,
+      "included_copy": "docs/tig-dual-arm/evidence/fruit-refinement-protocol-v2.json",
+      "included_sha256": "ec60c0694330ebcbff5741a19e403b9c264cee1f36fd9170e064fee6fa3939d3",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/fruit-refinement-summary-v2.json",
+      "original_sha256": "6ebd97a207d54f7eff431d239377b167ffb8f8763de8382042c92e709dfe5718",
+      "original_bytes": 34617,
+      "included_copy": "docs/tig-dual-arm/evidence/fruit-refinement-summary-v2.json",
+      "included_sha256": "15fd05673a24c512961eb839917b3bac6723ad525c4a7e780aabfec1432499b2",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/fruit-link7-protocol-v3.json",
+      "original_sha256": "1d1b086601cab9131627b3fcbd2a572cf461cb1e4db6c54b5a829ff39520a342",
+      "original_bytes": 18462,
+      "included_copy": "docs/tig-dual-arm/evidence/fruit-link7-protocol-v3.json",
+      "included_sha256": "6a2c6f5d4070fed8cafd50a0aab7146aa9d20fb239f7089ee86664e27a6758f6",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/fruit-link7-summary-v3.json",
+      "original_sha256": "ffd774875073a7a3100549f7414f40f7426a6a720aca759b8630391cb0fdfc36",
+      "original_bytes": 35443,
+      "included_copy": "docs/tig-dual-arm/evidence/fruit-link7-summary-v3.json",
+      "included_sha256": "d841e64309a986bdf5d481ca7ce8678cd0748570ab5cf925309228ac8a7f3a13",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/fruit-link7-protocol-v4.json",
+      "original_sha256": "af516fc52f0a0f23416d6d2469c06fb4135a29445c7de8c0802d6ec806f28d0e",
+      "original_bytes": 18951,
+      "included_copy": "docs/tig-dual-arm/evidence/fruit-link7-protocol-v4.json",
+      "included_sha256": "7571bd031137ca5aa7e7e0381c4f10146d132790f458cb392bfd2d3593ecf77d",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/fruit-link7-summary-v4.json",
+      "original_sha256": "2eacf0a9e837ec94f15f810045a92b829cc3a06bce47c094ed096d22c0894afe",
+      "original_bytes": 35713,
+      "included_copy": "docs/tig-dual-arm/evidence/fruit-link7-summary-v4.json",
+      "included_sha256": "50383fec22fba4e04125ca97ebc1bb2efacc8303459db2b21aad9e3b0011b037",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/fruit-link7-v4-run-receipt.json",
+      "original_sha256": "2b760db6498fd740e8020a80a560b7f415ce1baa92dc4a926c3a90dc08763e04",
+      "original_bytes": 23687,
+      "included_copy": "docs/tig-dual-arm/evidence/fruit-link7-v4-run-receipt.json",
+      "included_sha256": "4c1036426f311f09f658e8083d1959bc9d266290e4d9688b477af4af5a21ca7e",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/task-extension-process-timing-v4.json",
+      "original_sha256": "cfbe3b6ba827a44d3d11be22241bd4c252986fb3875bfddb6bd164a7414ade78",
+      "original_bytes": 1453,
+      "included_copy": "docs/tig-dual-arm/evidence/task-extension-process-timing-v4.json",
+      "included_sha256": "732b47c62dcfd371106d46e48c443d4b5af42083c108967d91b0911708a54f0c",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/completion-audit-item5-v2.json",
+      "original_sha256": "636c6fdac30f9525fc898cfb0d7b5a31375ef485aafb48a2d8c11ca8be8155b5",
+      "original_bytes": 2096928,
+      "included_copy": "docs/tig-dual-arm/evidence/completion-audit-item5-v2.json",
+      "included_sha256": "5f2d21c446ef99405de1900bf0ce9aaf13b48a9550764b548005e9bfb23e031f",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/replay/curobo-s401-dev03/report.json",
+      "original_sha256": "7369754a9f8427b9e964a664a26c93f1d9b904433c8f94f1dc4b3175392ee6c5",
+      "original_bytes": 33470,
+      "included_copy": "docs/tig-dual-arm/evidence/replay/curobo-s401-dev03/report.json",
+      "included_sha256": "bc0c8f3e5cfc4dd1545ce9aa66941cde3b5b39ab7bdad595042bf74997ede7fd",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/replay/curobo-fruit-s401-tight25-v4-dev01/report.json",
+      "original_sha256": "301f7d10199149bd849c3738c000ef8286b600eb4d5f5e244830e927f51ed543",
+      "original_bytes": 35267,
+      "included_copy": "docs/tig-dual-arm/evidence/replay/curobo-fruit-s401-tight25-v4-dev01/report.json",
+      "included_sha256": "0f1388a3ed5be49985cd04e664eec56feee05d5907b26652ca4e9069f4b62339",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/TIG-IMPLEMENTATION-PLAN.md",
+      "original_sha256": "7ae0c4fc95590ab8ace2a36db22e681fa74bd4a0c09f38f1e5e790f5a952c351",
+      "original_bytes": 75491,
+      "included_copy": "docs/tig-dual-arm/IMPLEMENTATION-PLAN.md",
+      "included_sha256": "50a501db9fe66e2d2b848541f623f33f1cbf40bd740a6b141fae749b50e5cb43",
+      "transformation": "Historical wrapper and source path prefix/GPU UUID replacement; original remains local."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/CUROBO-COMPLETE.md",
+      "original_sha256": "7002e2ab926d4e1f94eba31b24e93a948a5451d3e76a221dac74ee52d71fad1f",
+      "original_bytes": 19062,
+      "included_copy": "docs/tig-dual-arm/CUROBO-COMPLETE.md",
+      "included_sha256": "45e8156b7a4d2206566510e969b24689032305b46d4ac4df9643cc6a6ea5a825",
+      "transformation": "Historical wrapper and source path prefix/GPU UUID replacement; original remains local."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/development/curobo-s401-dev03/report.json",
+      "original_sha256": "27113eca604b655672070bc40ee97c531bfc0fba5f1f03decd2d2b34f89bec42",
+      "original_bytes": 4393082,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v1/curobo-fruit-s401-dev01/report.json",
+      "original_sha256": "1111e602f30407ef6f8d5ae81d077ae179f121480da07a7df39e31ec3017ebc3",
+      "original_bytes": 21017165,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v1/curobo-pill-s401-dev01/report.json",
+      "original_sha256": "bbae9e2ef3ca6b253a1d45bbefcd1f5efdb049cc7f0816deb2790a6181d8d825",
+      "original_bytes": 5118288,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v1/mplib-fruit-s401-dev01/report.json",
+      "original_sha256": "0c2ae53e99f5d8f881125967507e5259fcbb37da208448d5d326e13a9b31a98b",
+      "original_bytes": 2258194,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v1/mplib-pill-s401-dev01/report.json",
+      "original_sha256": "85f524e66e605dd7fca6c769d1126a140576a1258d141e2df9a11a3f97599aa8",
+      "original_bytes": 2321705,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v2/curobo-fruit-s401-refined-dev01/report.json",
+      "original_sha256": "8fb8fb80ec5b03bd5ef177120cb245c9456d3ae4e44b15369c561f8629ab367a",
+      "original_bytes": 28512106,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v2/curobo-pill-s401-direct-dev01/report.json",
+      "original_sha256": "a67807125044f9553263ed1e68b05a19ade59a9c0b82c354e8440114c3677f5d",
+      "original_bytes": 5505708,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v2/mplib-fruit-s401-refined-dev01/report.json",
+      "original_sha256": "f8b6c29555cb0e695e880d430bc308b8bd2654442a936f10ed3ce178cc93d28b",
+      "original_bytes": 2259838,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v2/mplib-pill-s401-direct-dev01/report.json",
+      "original_sha256": "c65d3c00740dc7f24857385db1702558aad93896b3597d4e4e1a5e9be19424a7",
+      "original_bytes": 1490097,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v3/curobo-fruit-s401-link7-dev01/report.json",
+      "original_sha256": "dd097a2ddf7bf42a7ae6715febc8d194a1235c00c1575400f36301a5cc62df2e",
+      "original_bytes": 2732736,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v3/mplib-fruit-s401-link7-dev01/report.json",
+      "original_sha256": "3a95837dde8d8c7831f26be6c074c89ad9b7487982906d8c11e108460b8e924b",
+      "original_bytes": 2260141,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v4/curobo-fruit-s401-tight25-dev01/report.json",
+      "original_sha256": "84ec074cd36e3947cd45b528fe31707be34750366f0b0057930bde1c4150d6c8",
+      "original_bytes": 33222646,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/extensions-v4/mplib-fruit-s401-tight25-dev01/report.json",
+      "original_sha256": "786e8882086adea38a82e0022b373a9e5e7591a3e8202e8f891cceb74312aad7",
+      "original_bytes": 2260355,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/curobo-s1001/report.json",
+      "original_sha256": "45d594385d89c70c93d0b2a21fbe463bb1b49e84d2914824fc4943a7f6af2b18",
+      "original_bytes": 4393916,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/curobo-s1002/report.json",
+      "original_sha256": "4d148ac9e3770d5ec17a443a3905cf5ac8379172da1be82b6f7ca9522c84bda8",
+      "original_bytes": 4360497,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/curobo-s1003/report.json",
+      "original_sha256": "e8ddb496570f2be7bfe7875f94fcbb4180c3e34775251bcacaccabed38841494",
+      "original_bytes": 4421576,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/curobo-s1004/report.json",
+      "original_sha256": "4cdb5d9ea5c213b175db2e9e59e67f8fa88507a3d194731a17d22adc016faed2",
+      "original_bytes": 3978699,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/curobo-s1005/report.json",
+      "original_sha256": "986b5950d683f73c4c2a1ccc99a0d762b615b3302da29f7e9e404f2d4f4d67f3",
+      "original_bytes": 4396116,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/mplib-s1001/report.json",
+      "original_sha256": "e9d63323d2a213cbea90a48d6b4383194cb86f2ad687385a17ed1e5fa5113ab8",
+      "original_bytes": 2229769,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/mplib-s1002/report.json",
+      "original_sha256": "f36c8843e99e9900a11bc25fe51feb83323d018f379868a86b0e2b9e27b23a14",
+      "original_bytes": 2185190,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/mplib-s1003/report.json",
+      "original_sha256": "948d4ff12ed2944900d8d77d487d9c40cc7bb9b2daa9b367e7bff02ccfc0495b",
+      "original_bytes": 1697008,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/mplib-s1004/report.json",
+      "original_sha256": "3aba35b57c9b480adefd3ecb4185935adc6339c135874b46c27915c8f89474a5",
+      "original_bytes": 2207571,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/paired-unseen-v1/mplib-s1005/report.json",
+      "original_sha256": "0232f4aea948dd193863e6c3c4b6379ce8f0a8557fdbff85a602671d3ad71474",
+      "original_bytes": 2217299,
+      "included_copy": null,
+      "storage": "Original report and adjacent H5/NPZ/MP4/source archives remain in the local validation directory; no external artifact store uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/task-extension-protocol-v1-resource-amendment.json",
+      "original_sha256": "299e4191adb42c079ab4e9c762d3d07c5d115807fb4b6fe2497af46878670c06",
+      "original_bytes": 18039,
+      "included_copy": "docs/tig-dual-arm/evidence/task-extension-protocol-v1-resource-amendment.json",
+      "included_sha256": "fd4e0f71f02e2f5ab3c5ee872f7aba9d7ce5d6e8d44999d9fd8f2871401d9a85",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/replay/curobo-pill-s401-direct-v2-dev01/report.json",
+      "original_sha256": "822910d8b4eb4c33ca4477b6cb8a087ccb32e3ec0d7f05554842b499d632c780",
+      "original_bytes": 35229,
+      "included_copy": "docs/tig-dual-arm/evidence/replay/curobo-pill-s401-direct-v2-dev01/report.json",
+      "included_sha256": "74692e1f85c6cf69758bd48c13219dd398dac3ba9d7e1c8c36e9201019c5de59",
+      "transformation": "JSON formatting; replace source path prefixes, GPU UUIDs and process metadata where present. Original remains local and unchanged."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/capabilities/curobo-held-conflict-s401-native-dev01/report.json",
+      "original_sha256": "1e4236ab8f2d4f76d2d4d6f52b40b67640d99f6c33530a2de8894ff158f3c376",
+      "original_bytes": 3485590,
+      "included_copy": null,
+      "storage": "Local raw evidence; not uploaded."
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/curobo-complete-20261116/capabilities/mplib-held-conflict-s401-native-dev01/report.json",
+      "original_sha256": "3315009dc83a87afaecde64fab1e15d65c0f347224245a87426a5d483379ad55",
+      "original_bytes": 1925058,
+      "included_copy": null,
+      "storage": "Local raw evidence; not uploaded."
+    }
+  ]
+}

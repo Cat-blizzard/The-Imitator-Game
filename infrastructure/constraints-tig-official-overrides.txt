@@ -1,0 +1,12 @@
+# Exact override-dependencies from the official TIG d6d16ec pyproject.toml.
+# These are upstream resolution overrides, not satisfied package requirements.
+# Do not edit wheel metadata or suppress the resulting uv pip check findings.
+ml-dtypes>=0.5.0
+tensorstore==0.1.74
+gymnasium==0.29.1
+draccus>=0.11.5
+diffusers>=0.36.0
+numpy>=1.22.4,<2.0.0
+huggingface-hub==0.33.1
+tensorflow>=2.16.1
+tensorflow-cpu>=2.16.1

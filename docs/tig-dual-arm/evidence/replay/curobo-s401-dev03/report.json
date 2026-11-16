@@ -1,0 +1,722 @@
+{
+  "status": "passed",
+  "mode": "action-replay",
+  "task": "TwoRobotPickAppleBananaToBaskets-v1",
+  "seed": 401,
+  "max_episode_steps": 200,
+  "gpu_uuid": "<REDACTED_GPU_UUID>",
+  "started_at": "2026-11-16T12:18:57.060863+00:00",
+  "input_dir": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-complete-20261116/development/curobo-s401-dev03",
+  "input_sha256": {
+    "trajectory.h5": "053a80972bc2138c2af5a8c3510079060e86fc0c009f0643c73cd9b094f8d126",
+    "trajectory.json": "fc14f6385958d1752ebd7cc85aee1cfa4736cf19e6b643aa2a18257aa756489e",
+    "ticks.jsonl": "fe71fdb0e443d99a0321b4e84de3f5b6f5f369f3ed54b5a3e0bd111e61863798",
+    "physics-substeps.jsonl": "f876cf969664bdc813e9a9a2074965ada539da86f6b0d516dd7477a8af436855",
+    "all-robot-contacts.json": "421668dbbb2683251c2e9e975601342a5e88d7e35f13d6ec02c7ef475a3f4292",
+    "report.json": "27113eca604b655672070bc40ee97c531bfc0fba5f1f03decd2d2b34f89bec42",
+    "execution.mp4": "76fb704ae2b9629f55063cc6cb653e447fb7c020e24667291346835cb6c728b9"
+  },
+  "input_receipt": {
+    "action_steps": 198,
+    "state_frames": 199,
+    "phase_counts": {
+      "preparation": 10,
+      "pregrasp": 44,
+      "descend": 19,
+      "close_and_confirm": 7,
+      "lift_and_hold": 23,
+      "carry_orient_and_transport": 40,
+      "carry_lower": 13,
+      "release": 7,
+      "retreat": 15,
+      "verify_placement": 20
+    },
+    "task": "TwoRobotPickAppleBananaToBaskets-v1",
+    "critical_execution_sources_match": true
+  },
+  "limits": {
+    "pose_translation_m": 0.005,
+    "pose_rotation_rad": 0.05,
+    "arm_joint_max_rad": 0.01,
+    "finger_max_m": 0.002
+  },
+  "source_sha256": {
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_timing_regression.py": "b350b531321914cd90ac83c8a750f23813d30b302b774db4cf20daacdc1b2e92",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_spatial_replanning.py": "3f23f20e911a049951f64eafceb9ac81ac4c3ca8c6e0303ed6bac16a7bf31e5f",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_sessions.py": "9cf46ac48acf0f0deef5dc77e386423d57c5205aedcc9e3eebda327ca752a5e4",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_compact_replay.py": "e73f99ba43f1003aca9b0fcb091300e46f4bebd03b4663280aa71151b952e543",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/fixed_root_restore.py": "45b5132c8f81a0685d096efb39bc20911acb8b330575146b56411222d71337ce",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/path_conflict_fixture.py": "d276ca7d74da749294aa5c5a55095e26f56b2b73d2b4505b6ca2afd6beda9544",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_held_conflict.py": "e80da00c75ae7e97dc84ed8e2bb3ff44237d276c863fa750b5909a64678a47c5",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/single_arm_execution.py": "972483ffdb035704b553eb6297af50d17fabe1c5f530220bac266098e1714e3d",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_near_support_regression.py": "60a8a269c241afde4c9479006baf521cfcc4b4116d81947ab088e5b09ce42d29",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/diagnose_sync_restore.py": "a38754d07745832bddff470c5e1fa5d6253bf906cd21ae2f4ccc6b130d7e2f49",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_scene.py": "209415a029a654e607cb1649bd6f4e8cd2051f388f5a05d494a396e1effc9930",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/table_support_collision.py": "4e67b24ca89ba1043e655200cddca12b4ab630204efb2a1030a3892802ee6add",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/transfer_execution.py": "848c382a89c45c52ca95200b1cfbc0e4a4e284ca1de6279f74012a07c2fd980d",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_path_conflict.py": "2e768cd3968f105272184a01bee5ba7169ff4bc37029de5419b183e34efe9981",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/utils.py": "b9e4b46f8fa05fd967b2fa9eb77eb5b448bc4b972fe0b8aaef505637e7de1195",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo.py": "b541772864be32d08c252e134aa6d36d71cf106455ed5752f69c6a59319ecdbe",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_sessions.py": "30f9e2a8b2b64a826c1658d88af3daf9715d99596fb34f5b6d4fe744ba8f8b29",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/transfer_collision.py": "f28e9b5b44e0994a3b112263314833ac4115354e7adb556d954138dd3e84674f",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/support_surface_collision.py": "64c38c5a02b2028f1dec467cd7bc619a39eb53d92e5a3fd4aab3c619dee57952",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_grasp.py": "aa683570cf0245351ad7f6f84e28517dd09845403be74fbada0fe6f1c60d0bf7",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_execution.py": "7b545736b6e5b8aa27a22e2077ffacd02f4a01ac3bddefdae8fe3d0bf7497e0f",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_task_payload.py": "015a7d396a2001b686620c2e880643eab72e7f47203dd247f2b2148ed8f7a010",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_banana.py": "69d78ccd71c3ca03e6964023a1b70db5fd8aa47d7d42eb6d0161b2741f49fb4d",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_sync_replay.py": "f1e056cbeee7cda7df406c9c8458e20275789d958c5229aad833a284a27efb74",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/spatial_replanning.py": "d70c5e86e8a4b0309336770bbffbccabecc95b2a99dcf6e4b1b8e83b31057a5b",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_complete.py": "322d37fdd1cc96938eb6ef9b32bd74e9d17edd1e473298a59ebd536579e53522",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/lift_execution.py": "c8390e67c378b31b49024b02a39e1d26a54a8f991283bbc6b4a9d904df6a6605",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/grasp_execution.py": "fc5d6f29ba6dd7f62472458ac084c1a7dc2f2d5a32f6ede892e690e284f977ce",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/held_conflict_fixture.py": "af2375a25811ad5774f3f54e18705721566bb162e5fd872241a6fab50708760d",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/dual_arm_execution.py": "467dac2866c78bb6be39ad72883b34d24fe17ee637eb5e4520924124b872e09e",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/combined_collision.py": "d0c2d0e73fef233c06d780a2f885e9e9442568c7cbf3cfc1b5d4892fc793aa3c",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_sync.py": "42cac15bcac450062282f44dfbecd096c3859caa8047f997aca9a460d0855ea4",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_multitask_serial.py": "d9fc47f7ca41f23ed6a7a7ab6a86b510a9925e4c8217f0f1d44e6aeeb95adc89",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_payload.py": "3ef061e5fe073389e9a781cc8ad5a1d2b38717d9535faff93bead2decd99ad69",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_multitask.py": "3e5fa4e683303a0f65e748b8fa88462dafade2ee89e195449b9b6e99db2769bf",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_compact_seeds.py": "adcbcdcf5a5148b0965bd8595648cbcd0819a0212bfe8034528b64cd5d326fd7",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_replay.py": "991ade04a90d0da5950572b93b4caf3e57bd35fddfc1c511f641ab3edefc0348",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/replay_metrics.py": "992e9799bbafaf3df81a0421363bb1d447d23ce10b150096157f80aec7ee8685",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/multitask_adapters.py": "11f102b219dc24740a79adb0ad21c5b2154983c6078ba3832a2695c7ad44e8ff",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/compact_loader_audit.py": "0950357306c3d8a5b193f15fa50865d26bf669de2046992dd8a1bf3c77320d81",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_backend.py": "9192a5b333327fafed65657672576f20f926fbacf3c04120abc08e1ee9de8898",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_recovery.py": "dfe54648d5687f5a7849e117caf9ce363cd1fa611079d6dcdb9c40dd2fbc0cf1",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_clearance_regression.py": "1e98f6484ec74c24bf333f7b7dfdd8e9b98bb561e1e1d25929ace77a96538aea",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_handoff.py": "25488a0d4c9691e4bb9a1362b2084148333a7285e547b251f4088dd12d53172b",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/grasp_collision.py": "f3a543c4243bc0606938821e5350216d7379fcfc9634234690accf0fb5f11ee5",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/scene_collision.py": "30852ab4e05e4c599d62605880bd2d490b9249b8b0ae6736b0fd6977bf4fe732",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/held_collision.py": "7caaf1bbe49f0831d96f04b8efb876eaba62d8045e73a9c67a8536f51948d504",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/dual_payload_collision.py": "c37b13e3277300ed9cf05825ba6ff17eff962fdc16dd50d333faf6b4f2fcf08b",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/diagnose_support_geometry.py": "7274fce440e6e1703496ff00420409904a21687c1a65e91408fe3ed45aa14fc9",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/curobo_comparison.py": "0581cf532fae4c081e52cc82f833555a8b4404a4adccb4dee0262ffef709f77c",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_payload.py": "0cbe48ef54dbf4fd59d2c70efad242c99eedfb57b4cda1c6b5bde8e34d292bdf",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_held_path_conflict.py": "20444ff04460aae67643d9b272348a94170c0a66fb09ff516f36a5ce96a181ea",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/two_robot_run.py": "ae7f2f4bbcfd32e2a247ea624452ed2e97d47af17a98b27f53457d53bfa8ac14",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_lift.py": "5ca78f63450130ad4547cda8939b38e676a9e32b4db6e1f3f5df55dd5570d645",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_sync_compact.py": "ecc2088e12947921d829056d02cf11041f048a6da682497ed2a5871ee6758409",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_unseen_seeds.py": "5346b39541627576bf1cf79be4dc3ba9b15b0c7b7a27489b23e9161c1aecbb42",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/conflict_coordination.py": "79df9ef8af83c958fd9b3f48cfb0df5ebfac1a379367d258a693c31f25f96613",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/multitask_recording.py": "377787d7af4eaf1653f630f471c141bcbad7b787a65365451b64d04f6a97cc93",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/pill_support_collision.py": "015bdb0fa1ef60aa798d9743858da631bb3c187733d1f8c038b7585b6eda3114",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/sync_replay_metrics.py": "2aaa37ff4e847ce6010dc55ee7b65ce32ed74bc1ee0e537b85c77f14427d8182",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/trajectory_schedule.py": "031be254905ac34f156e65dd337a952b4c7fd31724109492d62cb6229189ba17",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/compact_replay_metrics.py": "46ce3aff5c2dba16463b8fd3030a3d2964e776ff10e43e797369be645ede4726",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_place.py": "0399d9765ecf1e1c071adc77c3e4020a986fa3b8268fe67338eadbb4328c6b37",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/recovery_execution.py": "492732b3499504e60919d2a0e4c0ba3030724c2e546cb2f50ec1c3ac368d6e69",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_curobo_complete_replay.py": "0e423b1d94ce4f6e287291cd82ff3a338079de4870b4e4875957cb843a221b0d",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/validate_support_regression.py": "b0ba4e06b0183c1bf9a362de7bfb054e3eec044c443ac53891a9a9cd3117ca36",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/trajectory_execution.py": "24163a75a6add7df31bb5f48fb1916590c187096f52309018770edad953a3b8b",
+    "${TIG_WORKSPACE}/infrastructure/development/tig-dual-arm/mani_skill/examples/motionplanning/dual/place_execution.py": "2df2633f403fa65834f8a24742e967719f8b6c49632681096fa471b4b095f2ab"
+  },
+  "replanning_performed": false,
+  "per_tick_state_correction": false,
+  "hidden_contact_or_sleep_state_restored": false,
+  "controller_reset_after_restoration": false,
+  "physical_attachments_created": false,
+  "continuous_collision_detection": false,
+  "contact_policy": "unchanged validate_curobo_payload.contact_allowed and multitask_recording",
+  "source_video_timing": {
+    "status": "passed",
+    "actual_frames": 229,
+    "expected_frames": 229,
+    "physical_state_frames": 199,
+    "padding_frames_before": 10,
+    "padding_frames_after": 20,
+    "fps": 20.0
+  },
+  "artifact_errors": [],
+  "fault_events": [],
+  "state_restore_frames": [
+    0
+  ],
+  "restoration_receipts": [
+    {
+      "policy": "already_exact_fixed_root_pose",
+      "root_pose_precondition_exact": true,
+      "root_pose_postcondition_exact": true,
+      "skipped_root_pose_setters": [
+        "panda_wristcam-agent-0",
+        "panda_wristcam-agent-1"
+      ],
+      "setter_events": [
+        "set_state_dict(actors)",
+        "panda_wristcam-agent-0:root_linear_velocity,root_angular_velocity,qpos,qvel",
+        "panda_wristcam-agent-1:root_linear_velocity,root_angular_velocity,qpos,qvel"
+      ],
+      "hidden_physics_state_restored": false
+    }
+  ],
+  "task_configuration": {
+    "adapter_version": "m1-task-adapters-v12",
+    "task_id": "TwoRobotPickAppleBananaToBaskets-v1",
+    "canonical_arm_order": [
+      "left",
+      "right"
+    ],
+    "units": {
+      "position": "metres",
+      "quaternion": "WXYZ",
+      "angle": "radians"
+    },
+    "target_names": [
+      "apple_out",
+      "banana_out"
+    ],
+    "official_predicate_keys": [
+      "apple_in_basket",
+      "banana_in_basket"
+    ],
+    "initial_support_names": [
+      "table",
+      "table"
+    ],
+    "destination_names": [
+      "076_breadbasket_1",
+      "076_breadbasket_2"
+    ],
+    "destination_support_names": [
+      "076_breadbasket_1",
+      "076_breadbasket_2"
+    ],
+    "destination_contents_contact_policy": {
+      "policy_version": "paired-applebanana-basket-contents-v1",
+      "enabled": true,
+      "allowed_phases": [
+        "release",
+        "retreat",
+        "verify_placement"
+      ],
+      "contact_class": "destination_contents",
+      "pairs": [
+        {
+          "canonical_target_index": 0,
+          "target_name": "apple_out",
+          "target_actor_name": "apple_out",
+          "target_state_name": "apple_out",
+          "contents_actor_name": "apple_in",
+          "contents_state_name": "apple_in",
+          "basket_actor_name": "076_breadbasket_1",
+          "basket_state_name": "076_breadbasket_1"
+        },
+        {
+          "canonical_target_index": 1,
+          "target_name": "banana_out",
+          "target_actor_name": "banana_out",
+          "target_state_name": "banana_out",
+          "contents_actor_name": "banana_in",
+          "contents_state_name": "banana_in",
+          "basket_actor_name": "076_breadbasket_2",
+          "basket_state_name": "076_breadbasket_2"
+        }
+      ],
+      "proof": "current full native collision geometry and pose for target, corresponding contents, corresponding basket; both physical_region and all original contact points inside basket region",
+      "geometry_center": "midpoint_of_current_world_collision_AABB",
+      "geometry_xy_margin_m": 0.002,
+      "geometry_floor_margin_m": 0.005,
+      "geometry_center_above_rim_m": 0.01,
+      "contact_point_xy_margin_m": 0.0,
+      "contact_point_floor_margin_m": 0.005,
+      "contact_point_above_rim_m": 0.01,
+      "local_geometry_hash": "sha256(np.ascontiguousarray(vertices,dtype=float64).tobytes(order='C'))",
+      "other_contact_rules_changed": false,
+      "physical_contact_definition_changed": false
+    },
+    "initial_object_quaternions_wxyz": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.7071067690849304,
+        0.0,
+        0.0,
+        -0.7071067690849304
+      ]
+    ],
+    "grasp_policy": "official-OBB-depth25mm",
+    "pregrasp_local_tcp_offset_m": [
+      0.0,
+      0.0,
+      -0.08
+    ],
+    "pill_grasp_height_above_actor_origin_m": null,
+    "pill_pregrasp_height_above_actor_origin_m": null,
+    "pill_grasp_object_order": null,
+    "pill_object_model_configuration": null,
+    "pill_grasp_geometry_evidence": null,
+    "selected_release_tcp_xyz_m": [
+      [
+        0.14351560056209564,
+        -0.1582991164922714,
+        0.10259696342982352
+      ],
+      [
+        0.14250817030668259,
+        0.2521430552005768,
+        0.12259696342982351
+      ]
+    ],
+    "release_height_policy": "retained-fixed-offset",
+    "release_geometry_capture": null,
+    "release_geometry_captures": [
+      null,
+      null
+    ],
+    "release_geometry_capture_counts": [
+      0,
+      0
+    ],
+    "task_execution_parameters": {
+      "task_id": "TwoRobotPickAppleBananaToBaskets-v1",
+      "parameter_version": "development-v12",
+      "joint_vel_limit": 1.5,
+      "joint_acc_limit": 2.6,
+      "approach_vel_limit": 0.9,
+      "approach_acc_limit": 0.9,
+      "preparation_steps": 10,
+      "max_episode_steps": 200,
+      "approach_phases": [
+        "pregrasp",
+        "descend"
+      ],
+      "task_phase_overrides": {},
+      "units": {
+        "joint_velocity": "radians/second",
+        "joint_acceleration": "radians/second^2"
+      },
+      "physical_acceptance_thresholds_changed": false,
+      "evidence_status": "development configuration; native acceptance must be established separately"
+    },
+    "planned_pill_release_clearance_m": null,
+    "planned_fruit_release_clearance_m": null,
+    "release_height_formula": null,
+    "fruit_release_height_evidence": null,
+    "source_plate_support_required": false,
+    "fruit_goal_slot_y_offsets_m": null,
+    "fruit_carry_world_yaw_rad": null,
+    "official_max_episode_steps": 200,
+    "official_success_conjunction": "apple_in_basket AND banana_in_basket",
+    "official_static_or_upright_required": false,
+    "physical_region_policy": "unchanged-applebanana-physical-region",
+    "route_difference_from_official": "same applebanana selected release recipe"
+  },
+  "physical_capture_hard_step_budget": 200,
+  "physical_recording_version": "multitask-recording-v06-verified-destination-contents",
+  "custom_target_contact_policy": false,
+  "destination_contents_contact_policy": {
+    "policy_version": "paired-applebanana-basket-contents-v1",
+    "enabled": true,
+    "allowed_phases": [
+      "release",
+      "retreat",
+      "verify_placement"
+    ],
+    "contact_class": "destination_contents",
+    "pairs": [
+      {
+        "canonical_target_index": 0,
+        "target_name": "apple_out",
+        "target_actor_name": "apple_out",
+        "target_state_name": "apple_out",
+        "contents_actor_name": "apple_in",
+        "contents_state_name": "apple_in",
+        "basket_actor_name": "076_breadbasket_1",
+        "basket_state_name": "076_breadbasket_1"
+      },
+      {
+        "canonical_target_index": 1,
+        "target_name": "banana_out",
+        "target_actor_name": "banana_out",
+        "target_state_name": "banana_out",
+        "contents_actor_name": "banana_in",
+        "contents_state_name": "banana_in",
+        "basket_actor_name": "076_breadbasket_2",
+        "basket_state_name": "076_breadbasket_2"
+      }
+    ],
+    "proof": "current full native collision geometry and pose for target, corresponding contents, corresponding basket; both physical_region and all original contact points inside basket region",
+    "geometry_center": "midpoint_of_current_world_collision_AABB",
+    "geometry_xy_margin_m": 0.002,
+    "geometry_floor_margin_m": 0.005,
+    "geometry_center_above_rim_m": 0.01,
+    "contact_point_xy_margin_m": 0.0,
+    "contact_point_floor_margin_m": 0.005,
+    "contact_point_above_rim_m": 0.01,
+    "local_geometry_hash": "sha256(np.ascontiguousarray(vertices,dtype=float64).tobytes(order='C'))",
+    "other_contact_rules_changed": false,
+    "physical_contact_definition_changed": false
+  },
+  "physical_initial_support_policy": {
+    "version": "measured-physical-support-exit-v2",
+    "minimum_actual_origin_lift_m": 0.003,
+    "release_requires": "geometric support already released AND measured lift>=3mm AND no native actual source contact",
+    "reference": "minimum measured origin before first geometric support release; frozen thereafter",
+    "permanent": true,
+    "geometric_collision_thresholds_changed": false,
+    "physical_contact_definition_changed": false
+  },
+  "attachment_capture": {
+    "T_tcp_objects": [
+      [
+        [
+          0.9748152694327511,
+          0.22300944313183382,
+          0.001406682189495946,
+          -0.00026284979988128176
+        ],
+        [
+          0.22300645818216971,
+          -0.974814896278033,
+          0.002009378881979877,
+          -6.925495238571666e-05
+        ],
+        [
+          0.001819365218160846,
+          -0.0016450740033622639,
+          -0.9999969918163384,
+          -0.0005587832463263345
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      [
+        [
+          -0.043233243811291365,
+          0.999064944366066,
+          -0.000351522947264766,
+          -0.0011037662023895
+        ],
+        [
+          0.999046934363621,
+          0.043230342799055,
+          -0.006029958551025181,
+          0.012194605878561665
+        ],
+        [
+          -0.006009123746797669,
+          -0.0006118825910317826,
+          -0.9999817578493576,
+          9.65465531754077e-05
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    ],
+    "physical_weld": false,
+    "grasp_stable_steps_observed": [
+      5,
+      5
+    ],
+    "environment_step": 80
+  },
+  "sequence": {
+    "state_restore_calls": 1,
+    "physical_environment_steps": 198,
+    "observed_frames": 199
+  },
+  "trajectory_errors": {
+    "per_entity": {
+      "actors/table": {
+        "pose_translation_m": 0.0,
+        "pose_rotation_rad": 0.0,
+        "linear_velocity_m_s": 0.0,
+        "angular_velocity_rad_s": 0.0
+      },
+      "actors/apple_in": {
+        "pose_translation_m": 0.0,
+        "pose_rotation_rad": 0.0,
+        "linear_velocity_m_s": 0.0,
+        "angular_velocity_rad_s": 0.0
+      },
+      "actors/apple_out": {
+        "pose_translation_m": 0.0,
+        "pose_rotation_rad": 0.0,
+        "linear_velocity_m_s": 0.0,
+        "angular_velocity_rad_s": 0.0
+      },
+      "actors/banana_out": {
+        "pose_translation_m": 0.0,
+        "pose_rotation_rad": 0.0,
+        "linear_velocity_m_s": 0.0,
+        "angular_velocity_rad_s": 0.0
+      },
+      "actors/banana_in": {
+        "pose_translation_m": 0.0,
+        "pose_rotation_rad": 0.0,
+        "linear_velocity_m_s": 0.0,
+        "angular_velocity_rad_s": 0.0
+      },
+      "articulations/panda_wristcam-agent-0": {
+        "finger_max_m": 0.0,
+        "finger_velocity_max_m_s": 0.0,
+        "arm_joint_max_rad": 0.0,
+        "arm_joint_velocity_max_rad_s": 0.0,
+        "pose_rotation_rad": 0.0,
+        "pose_translation_m": 0.0,
+        "joint_velocity_max": 0.0,
+        "linear_velocity_m_s": 0.0,
+        "angular_velocity_rad_s": 0.0
+      },
+      "articulations/panda_wristcam-agent-1": {
+        "finger_max_m": 0.0,
+        "finger_velocity_max_m_s": 0.0,
+        "arm_joint_max_rad": 0.0,
+        "arm_joint_velocity_max_rad_s": 0.0,
+        "pose_rotation_rad": 0.0,
+        "pose_translation_m": 0.0,
+        "joint_velocity_max": 0.0,
+        "linear_velocity_m_s": 0.0,
+        "angular_velocity_rad_s": 0.0
+      }
+    },
+    "global": {
+      "pose_translation_m": 0.0,
+      "pose_rotation_rad": 0.0,
+      "linear_velocity_m_s": 0.0,
+      "angular_velocity_rad_s": 0.0,
+      "arm_joint_max_rad": 0.0,
+      "finger_max_m": 0.0,
+      "joint_velocity_max": 0.0,
+      "arm_joint_velocity_max_rad_s": 0.0,
+      "finger_velocity_max_m_s": 0.0
+    },
+    "entity_count": 7,
+    "sample_count": 199
+  },
+  "object_errors": {
+    "sample_count": 199,
+    "objects": [
+      {
+        "actor": "apple_out",
+        "object_pose": {
+          "pose_translation_m": 0.0,
+          "pose_rotation_rad": 0.0
+        },
+        "tcp_pose": {
+          "pose_translation_m": 0.0,
+          "pose_rotation_rad": 0.0
+        },
+        "object_sample_count": 199,
+        "tcp_sample_count": 198
+      },
+      {
+        "actor": "banana_out",
+        "object_pose": {
+          "pose_translation_m": 0.0,
+          "pose_rotation_rad": 0.0
+        },
+        "tcp_pose": {
+          "pose_translation_m": 0.0,
+          "pose_rotation_rad": 0.0
+        },
+        "object_sample_count": 199,
+        "tcp_sample_count": 198
+      }
+    ]
+  },
+  "outcome": {
+    "status": "passed",
+    "checks": {
+      "all_actions_observed": true,
+      "both_grasp_sequences_match": true,
+      "both_physically_released_last_three": true,
+      "both_actual_retreats_at_least80mm": true,
+      "release_retreat_order": true,
+      "common_final20_window": true,
+      "both_final_placements_valid": true,
+      "final_official_success": true,
+      "no_failure_or_truncation": true
+    },
+    "actual_retreat_tcp_rise_m": [
+      0.08190396428108215,
+      0.08137930184602737
+    ],
+    "release_steps": 7,
+    "placement_steps": 20
+  },
+  "held_physics_audit": {
+    "status": "passed",
+    "physical_substeps": 380,
+    "objects": [
+      {
+        "actor": "apple_out",
+        "max_position_slip_m": 1.3947931097213154e-05,
+        "max_rotation_slip_rad": 0.002819048513517739
+      },
+      {
+        "actor": "banana_out",
+        "max_position_slip_m": 7.804361662723952e-05,
+        "max_rotation_slip_rad": 0.004536335830669298
+      }
+    ],
+    "position_limit_m": 0.005,
+    "rotation_limit_rad": 0.15,
+    "scope": "both actual grasp-relative physical poses at100Hz; not collision checking orCCD"
+  },
+  "checks": {
+    "all_state_errors_within_existing_action_limits": true,
+    "all_frames_observed": true,
+    "one_initial_restore_only": true,
+    "one_control_step_per_original_action": true,
+    "actions_applied_exactly": true,
+    "outcome_reproduced": true,
+    "held_slip_within_existing_limits": true,
+    "all100Hz_observations_recorded": true,
+    "no_forbidden100Hz_contacts": true,
+    "target0_object_pose_within_existing_limits": true,
+    "target0_tcp_pose_within_existing_limits": true,
+    "target1_object_pose_within_existing_limits": true,
+    "target1_tcp_pose_within_existing_limits": true,
+    "native_flags_match_source": true
+  },
+  "total_environment_steps": 198,
+  "torch_cuda_initialized": true,
+  "official_task_evaluation": {
+    "apple_in_basket": [
+      true
+    ],
+    "banana_in_basket": [
+      true
+    ],
+    "is_apple_grasped": [
+      false
+    ],
+    "is_banana_grasped": [
+      false
+    ],
+    "is_robot_static": [
+      true
+    ],
+    "success": [
+      true
+    ],
+    "peak_r_reach_apple": [
+      0.0
+    ],
+    "peak_r_grasp_apple": [
+      0.0
+    ],
+    "peak_r_transport_apple": [
+      0.0
+    ],
+    "peak_r_place_apple": [
+      0.0
+    ],
+    "peak_r_reach_banana": [
+      0.0
+    ],
+    "peak_r_grasp_banana": [
+      0.0
+    ],
+    "peak_r_transport_banana": [
+      0.0
+    ],
+    "peak_r_place_banana": [
+      0.0
+    ],
+    "cur_r_reach_apple": [
+      0.0
+    ],
+    "cur_r_grasp_apple": [
+      0.0
+    ],
+    "cur_r_transport_apple": [
+      0.0
+    ],
+    "cur_r_place_apple": [
+      0.0
+    ],
+    "cur_r_reach_banana": [
+      0.0
+    ],
+    "cur_r_grasp_banana": [
+      0.0
+    ],
+    "cur_r_transport_banana": [
+      0.0
+    ],
+    "cur_r_place_banana": [
+      0.0
+    ]
+  },
+  "recording": {
+    "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-complete-20261116/replay/curobo-s401-dev03/trajectory.h5",
+    "recorded_steps": 198,
+    "actions_shape": [
+      198,
+      16
+    ],
+    "submitted_actions_matched": true,
+    "state_lengths": {
+      "env_states/actors/apple_in": 199,
+      "env_states/actors/apple_out": 199,
+      "env_states/actors/banana_in": 199,
+      "env_states/actors/banana_out": 199,
+      "env_states/actors/table": 199,
+      "env_states/articulations/panda_wristcam-agent-0": 199,
+      "env_states/articulations/panda_wristcam-agent-1": 199
+    },
+    "state_playback_tested": false,
+    "action_key_order": [
+      "panda_wristcam-0",
+      "panda_wristcam-1"
+    ]
+  },
+  "video": {
+    "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-complete-20261116/replay/curobo-s401-dev03/execution.mp4",
+    "fps": 20,
+    "padding_frames_before": 10,
+    "padding_frames_after": 20
+  },
+  "success_only_termination_continuation_ticks": 52,
+  "phase_step_counts": {
+    "preparation": 10,
+    "pregrasp": 44,
+    "descend": 19,
+    "close_and_confirm": 7,
+    "lift_and_hold": 23,
+    "carry_orient_and_transport": 40,
+    "carry_lower": 13,
+    "release": 7,
+    "retreat": 15,
+    "verify_placement": 20
+  },
+  "first_official_success_step": 147,
+  "official_200_step_complete": false,
+  "planning_wall_seconds": 0,
+  "physical_substeps": 990,
+  "standard_recording_timing": {
+    "status": "passed",
+    "state_frames": 199,
+    "action_steps": 198,
+    "all_measured_states_match_H5": true,
+    "all_submitted_actions_match_H5": true,
+    "initial_restore_precedes_RecordEpisode_frame0": true
+  },
+  "video_timing": {
+    "status": "passed",
+    "actual_frames": 229,
+    "expected_frames": 229,
+    "physical_state_frames": 199,
+    "padding_frames_before": 10,
+    "padding_frames_after": 20,
+    "fps": 20.0
+  },
+  "observed_state_frames": 199,
+  "applied_action_steps": 198,
+  "wall_s": 53.6369718950009,
+  "completed_at": "2026-11-16T12:19:50.893137+00:00",
+  "input_evidence_unchanged": true
+}
