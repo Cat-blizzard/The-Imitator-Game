@@ -1,5 +1,7 @@
 # 双臂基础设施收敛：阶段 1 开发快照
 
+> 本页保留 PR #3 发布时的状态。后续已完成的药瓶物理回归、运行模块提取、路径整理及独立 checkout 检查见[当前检查点](PORTABLE-RUNTIME.md)；本页下文中的“尚未验证”描述发布当时，不代表最新进度。原证据摘要保持原样。
+
 2026-11-17。本次保存现有双 Panda、MPLib/cuRobo 生成与动作回放的配置、结果和版本兼容改动。原严格配置已集中；相关 CPU 检查与四份旧录制的兼容性预检通过。**新代码的原生物理运行、实际动作回放与独立 checkout 启动尚未验证，阶段 1 验收仍未完成。**
 
 工程取舍见 [CHECKS-AND-QUALITY.md](CHECKS-AND-QUALITY.md)，长期任务见 [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)。历史轨迹、协议和原评分保留；本次没有更换规划后端或引入新机器人。
