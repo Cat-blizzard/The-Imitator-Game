@@ -31,10 +31,16 @@ import traceback
 from typing import Any, Callable, TextIO
 import xml.etree.ElementTree as ET
 
-from curobo_tig_worker import (
-    ARM_JOINT_NAMES, FINGER_JOINT_NAMES, CuroboBackend, _finite_json,
-    _matrix, _positive_float, _tensor_json, _vector,
-)
+if __package__:
+    from .curobo_tig_worker import (
+        ARM_JOINT_NAMES, FINGER_JOINT_NAMES, CuroboBackend, _finite_json,
+        _matrix, _positive_float, _tensor_json, _vector,
+    )
+else:
+    from curobo_tig_worker import (
+        ARM_JOINT_NAMES, FINGER_JOINT_NAMES, CuroboBackend, _finite_json,
+        _matrix, _positive_float, _tensor_json, _vector,
+    )
 
 PROTOCOL_VERSION = 1
 SESSION_IDS = frozenset(f"{side}:{profile}" for side in ("left", "right")

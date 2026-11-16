@@ -29,6 +29,10 @@ import tempfile
 import time
 import traceback
 from typing import Any, TextIO
+if __package__:
+    from .tig_runtime import RuntimePaths, ensure_cache_directories, resolve_runtime_paths
+else:
+    from tig_runtime import RuntimePaths, ensure_cache_directories, resolve_runtime_paths
 
 
 DOF = 7
@@ -298,8 +302,9 @@ def _compare_package(installed: Path, official: Path) -> dict[str, Any]:
     }
 
 
-def package_identity(module_file: Path) -> dict[str, Any]:
-    source_root = Path(__file__).resolve().parent / "backends" / "curobo"
+def package_identity(module_file: Path, *, paths: RuntimePaths | None = None) -> dict[str, Any]:
+    paths = paths or resolve_runtime_paths()
+    source_root = paths.curobo_source
     source_module = source_root / "curobo" / "__init__.py"
     identity = _git_identity(source_module)
     identity["source_module_path"] = str(source_module)
@@ -308,6 +313,7 @@ def package_identity(module_file: Path) -> dict[str, Any]:
         raise RuntimeError(f"expected clean official v0.9.0 source {CUROBO_COMMIT}, got {identity}")
     identity["git_dirty"] = False
     identity["installed_source_comparison"] = _compare_package(module_file.parent, source_module.parent)
+    identity["runtime_paths"] = paths.as_dict()
     return identity
 
 
@@ -352,11 +358,9 @@ class CuroboBackend:
         import curobo.runtime as public_runtime
         import warp as wp
 
-        cache_root = Path(__file__).resolve().parent / "tmp"
-        runtime_cache = cache_root / "curobo-v2-runtime-cache"
-        warp_cache = cache_root / "curobo-v2-warp-cache"
-        runtime_cache.mkdir(parents=True, exist_ok=True)
-        warp_cache.mkdir(parents=True, exist_ok=True)
+        paths = resolve_runtime_paths()
+        ensure_cache_directories(paths)
+        runtime_cache, warp_cache = paths.runtime_cache, paths.warp_cache
         # The public runtime module re-exports scalar values; set the documented
         # backing runtime too, before importing the planners or creating objects.
         curobo_runtime.cache_dir = str(runtime_cache)
@@ -370,7 +374,7 @@ class CuroboBackend:
 
         if not torch.cuda.is_available():
             raise RuntimeError("cuRobo planning requires an available CUDA device")
-        identity = package_identity(Path(curobo.__file__).resolve())
+        identity = package_identity(Path(curobo.__file__).resolve(), paths=paths)
         _phase("configure.source_identity.complete", configure_begin)
         locks = request["robot_cfg"]["kinematics"].get("lock_joints")
         if not isinstance(locks, dict) or set(locks) != set(FINGER_JOINT_NAMES):
@@ -764,11 +768,28 @@ def self_test() -> None:
     assert "synthetic vendor log" in errors.getvalue()
     assert "synthetic vendor log" not in sink.getvalue()
     assert responses[0]["result"]["positions"] == [[0, 0, 0]]
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory(prefix="tig-worker-source-path-") as directory:
+        root = Path(directory)
+        source = root / "external official source" / "curobo"
+        installed = root / "installed package"
+        source.mkdir(parents=True); installed.mkdir()
+        for target in (source, installed):
+            (target / "__init__.py").write_text("# source identity fixture\n")
+        paths = resolve_runtime_paths(code_root=root / "current checkout",
+            environ={"TIG_CUROBO_SOURCE": str(source.parent), "TIG_CACHE_DIR": str(root / "external cache")})
+        with patch.object(sys.modules[__name__], "_git_identity",
+                return_value={"git_commit": CUROBO_COMMIT, "git_status": ""}):
+            checked = package_identity(installed / "__init__.py", paths=paths)
+        assert checked["source_module_path"] == str(source / "__init__.py")
+        assert checked["runtime_paths"]["code_root"] == str(root / "current checkout")
+        assert not paths.cache_root.exists()
     assert "torch" not in sys.modules and "curobo" not in sys.modules
     print(json.dumps({"self_test": "PASS", "dof": DOF,
                       "rejected_boundary_cases": len(rejected),
                       "native_dof": 9, "native_mapping_rejected_cases": len(bad_natives),
-                      "json_responses": len(responses), "cuda_imported": False}))
+                      "json_responses": len(responses), "cuda_imported": False,
+                      "external_source_and_cache_resolution_tested": True}))
 
 
 def native_api_self_test() -> None:

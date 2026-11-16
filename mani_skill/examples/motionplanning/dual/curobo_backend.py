@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
+import math
 from pathlib import Path
 import selectors
 import subprocess
@@ -17,10 +17,13 @@ from typing import Any
 import xml.etree.ElementTree as ET
 
 import numpy as np
+from infrastructure.tig_runtime import (ensure_cache_directories,
+    resolve_runtime_paths, worker_launch_spec)
 
 from .trajectory_schedule import ArmTrajectory
 
-ROOT = Path(__file__).resolve().parents[7]
+# Compatibility alias for old imports; code and dependency paths are separate.
+ROOT = resolve_runtime_paths().code_root
 
 
 def urdf_tcp_pose(urdf: Path, joints: dict[str, float], *,
@@ -114,29 +117,24 @@ def trajectory_from_result(result: dict[str, Any], *, action_key: str,
 class CuroboProcess:
     """One task-owned planner process; native diagnostics go to a separate log."""
     def __init__(self, gpu_uuid: str, log_path: Path, *, timeout_s: float = 180.,
-                 python: Path | None = None) -> None:
-        python = python or ROOT / 'infrastructure/envs/curobo-tig/bin/python'
-        worker = ROOT / 'infrastructure/curobo_tig_worker.py'
-        if not python.exists() or not worker.exists():
-            raise FileNotFoundError('Independent cuRobo environment/worker is not installed')
-        if not gpu_uuid.startswith('GPU-') or timeout_s <= 0:
+                 python: Path | None = None, _worker: str | Path = 'curobo_tig_worker.py',
+                 _worker_args: tuple[str, ...] = ('--serve',)) -> None:
+        if not math.isfinite(timeout_s) or timeout_s <= 0:
             raise ValueError('Explicit GPU UUID and positive timeout required')
-        environment = os.environ.copy()
-        environment.pop('PYTHONPATH', None)
-        environment.update(CUDA_VISIBLE_DEVICES=gpu_uuid, PYTHONNOUSERSITE='1',
-                           PYTHONDONTWRITEBYTECODE='1')
-        cache = ROOT / 'infrastructure/tmp/curobo-v2-runtime-cache'
-        for variable, subdirectory in [('CUDA_CACHE_PATH', 'cuda'),
-                                       ('TORCHINDUCTOR_CACHE_DIR', 'inductor'),
-                                       ('WARP_CACHE_PATH', 'warp')]:
-            directory = cache / subdirectory
-            directory.mkdir(parents=True, exist_ok=True)
-            environment[variable] = str(directory)
+        launch = worker_launch_spec(_worker, gpu_uuid=gpu_uuid,
+            extra_args=_worker_args, python=python)
+        ensure_cache_directories(launch.paths)
         self._log = log_path.open('x')
-        self.process = subprocess.Popen([str(python), '-B', '-u', str(worker), '--serve'],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self._log,
-            env=environment, cwd=ROOT, text=True, bufsize=1)
-        self.timeout_s, self.sequence = timeout_s, 0
+        try:
+            self.process = subprocess.Popen(list(launch.argv), stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=self._log, **launch.popen_kwargs())
+        except BaseException:
+            self._log.close()
+            raise
+        self.runtime_paths = launch.paths
+        self.launch_identity = {'argv': list(launch.argv), 'cwd': str(launch.cwd),
+                                'paths': launch.paths.as_dict()}
+        self.timeout_s, self.sequence = float(timeout_s), 0
         self.failed = False
         self.receipts: list[dict[str, Any]] = []
 
@@ -206,7 +204,8 @@ def self_test() -> dict[str, Any]:
     pose = [1., 2., 3., 1., 0., 0., 0.]
     assert pose_error(pose, pose) == {'position_m': 0., 'rotation_rad': 0.}
     assert pose_error([1., 2., 3., -1., 0., 0., 0.], pose)['rotation_rad'] == 0
-    urdf = ROOT / 'infrastructure/development/tig-dual-arm/mani_skill/assets/robots/panda/panda_v3.urdf'
+    from mani_skill import PACKAGE_ASSET_DIR
+    urdf = PACKAGE_ASSET_DIR / 'robots/panda/panda_v3.urdf'
     zero_fk = urdf_tcp_pose(urdf, {f'panda_joint{i}': 0. for i in range(1, 8)})
     assert zero_fk.shape == (7,) and np.isfinite(zero_fk).all()
     assert np.isclose(np.linalg.norm(zero_fk[3:]), 1.)

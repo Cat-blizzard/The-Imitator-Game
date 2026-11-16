@@ -28,12 +28,20 @@ import time
 from typing import Any
 import xml.etree.ElementTree as ET
 
-from curobo_tig_payload_worker import (
-    FINGER_LINKS, PAYLOAD_LINK, SOURCE_TABLE, PayloadBackend, PayloadSessionManager,
-    _finite_json, _matrix, _tensor_json, _vector, canonical_hash, self_test as payload_self_test,
-    serve_payload, validate_model, validate_state,
-)
-from curobo_tig_worker import FINGER_JOINT_NAMES
+if __package__:
+    from .curobo_tig_payload_worker import (
+        FINGER_LINKS, PAYLOAD_LINK, SOURCE_TABLE, PayloadBackend, PayloadSessionManager,
+        _finite_json, _matrix, _tensor_json, _vector, canonical_hash, self_test as payload_self_test,
+        serve_payload, validate_model, validate_state,
+    )
+    from .curobo_tig_worker import FINGER_JOINT_NAMES
+else:
+    from curobo_tig_payload_worker import (
+        FINGER_LINKS, PAYLOAD_LINK, SOURCE_TABLE, PayloadBackend, PayloadSessionManager,
+        _finite_json, _matrix, _tensor_json, _vector, canonical_hash, self_test as payload_self_test,
+        serve_payload, validate_model, validate_state,
+    )
+    from curobo_tig_worker import FINGER_JOINT_NAMES
 
 
 def _rpy_rotation(value: list[float]) -> list[list[float]]:

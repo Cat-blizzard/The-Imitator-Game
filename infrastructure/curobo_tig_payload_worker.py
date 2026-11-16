@@ -26,11 +26,18 @@ import tempfile
 import time
 from typing import Any, Callable
 
-from curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _finite_json, _matrix, _tensor_json, _vector
-from curobo_tig_session_worker import (
-    ResidentBackend, SessionManager, canonical_hash, robot_topology, serve,
-    validate_request as validate_empty_request, world_topology, _pose, _tensor_identity,
-)
+if __package__:
+    from .curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _finite_json, _matrix, _tensor_json, _vector
+    from .curobo_tig_session_worker import (
+        ResidentBackend, SessionManager, canonical_hash, robot_topology, serve,
+        validate_request as validate_empty_request, world_topology, _pose, _tensor_identity,
+    )
+else:
+    from curobo_tig_worker import ARM_JOINT_NAMES, FINGER_JOINT_NAMES, _finite_json, _matrix, _tensor_json, _vector
+    from curobo_tig_session_worker import (
+        ResidentBackend, SessionManager, canonical_hash, robot_topology, serve,
+        validate_request as validate_empty_request, world_topology, _pose, _tensor_identity,
+    )
 
 PAYLOAD_LINK = "tig_payload"
 FINGER_LINKS = ["panda_leftfinger", "panda_rightfinger"]
@@ -547,7 +554,10 @@ def dispatch(request: Any, manager: PayloadSessionManager) -> dict[str, Any]:
 
 def serve_payload(source: Any, sink: Any, manager: PayloadSessionManager) -> None:
     """Reuse robust old framing, substituting only the payload-aware dispatch."""
-    import curobo_tig_session_worker as resident
+    if __package__:
+        from . import curobo_tig_session_worker as resident
+    else:
+        import curobo_tig_session_worker as resident
     previous = resident.dispatch
     resident.dispatch = dispatch
     try:
