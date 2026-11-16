@@ -27,16 +27,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = Path(__file__).resolve().parents[7]
 
 
-def banana_grasp_poses(raw: Any) -> tuple[Any, Any]:
-    """Apply the official task's OBB grasp to banana_out and the right TCP."""
-    import sapien
-    from mani_skill.examples.motionplanning.panda.utils import compute_grasp_info_by_obb, get_actor_obb
-    from .trajectory_execution import as_numpy
-    closing = as_numpy(raw.right_agent.tcp.pose.to_transformation_matrix())[0, :3, 1]
-    info = compute_grasp_info_by_obb(get_actor_obb(raw.banana_out), approaching=np.array([0, 0, -1]),
-                                   target_closing=closing, depth=.025)
-    grasp = raw.right_agent.build_grasp_pose(np.array([0, 0, -1]), info["closing"], info["center"])
-    return grasp * sapien.Pose([0, 0, -.08]), grasp
+# Compatibility exports: implementations live in shared runtime modules.
+from .task_targets import (banana_grasp_poses)
+
 
 
 def applied_action(action: dict[str, np.ndarray], *, mode: str, phase: str,

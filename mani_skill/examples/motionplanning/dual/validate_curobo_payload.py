@@ -38,86 +38,14 @@ HERE = Path(__file__).resolve().parent
 TASK = 'TwoRobotPickAppleBananaToBaskets-v1'
 
 
-def state_digest(raw: Any) -> str:
-    """Hash every actual actor/articulation state and elapsed step, without motion."""
-    from .validate_path_conflict import _state_arrays
-    values = _state_arrays(raw.get_state_dict())
-    digest = hashlib.sha256(as_numpy(raw.elapsed_steps).tobytes())
-    for name, value in sorted(values.items()):
-        array = np.asarray(value)
-        if not np.isfinite(array).all():
-            raise ValueError('Nonfinite actual simulator state')
-        digest.update(name.encode())
-        digest.update(str((array.shape, array.dtype.str)).encode())
-        digest.update(array.tobytes())
-    return digest.hexdigest()
+# Compatibility exports: implementations live in shared runtime modules.
+from .runtime_io import (state_digest)
+from .physical_observation import (contact_allowed, install_full_robot_contact_capture, audit_payload_spheres)
 
 
-def contact_allowed(sides: list[dict[str, Any]], phase: str,
-                    srdf: dict[int, set[frozenset[str]]]) -> bool:
-    """Exact physical robot-contact permissions; no broad target/palm exception."""
-    if len(sides) != 2:
-        return False
-    if any(s.get('link_name') == 'panda_link0' for s in sides) and any(s.get('actor') == 'table' for s in sides):
-        return True
-    if all(s.get('kind') == 'robot' for s in sides):
-        index = sides[0]['robot_index']
-        return sides[1]['robot_index'] == index and frozenset(s['link_name'] for s in sides) in srdf[index]
-    if phase in ('descend', 'close_and_confirm', 'lift_and_hold', 'release') or phase.startswith('carry_'):
-        for i in (0, 1):
-            robot, target = sides[i], sides[1-i]
-            if (robot.get('kind') == 'robot' and target.get('kind') == 'payload'
-                    and robot['robot_index'] == target['target_index']
-                    and robot['link_name'] in ('panda_leftfinger', 'panda_rightfinger')):
-                return True
-    return False
 
 
-def install_full_robot_contact_capture(raw: Any, capture: Any, adapter: Any,
-                                       output: list[dict[str, Any]]) -> None:
-    """Supplement existing target/interarm observer with all robot/world contacts."""
-    from .multitask_recording import contact_identities
-    from .scene_collision import scene_entities
-    from .validate_held_path_conflict import physical_contact_points
-    agents = tuple(raw.agent.agents)
-    identities, _ = contact_identities(raw, agents, adapter.target_names, adapter.targets)
-    for name, entity in scene_entities(raw).items():
-        identities.setdefault(entity, {'kind': 'actor', 'actor': name})
-    srdf = {}
-    for i, agent in enumerate(agents):
-        tree = ET.parse(Path(agent.urdf_path).with_suffix('.srdf')).getroot()
-        srdf[i] = {frozenset((node.attrib['link1'], node.attrib['link2']))
-                   for node in tree.findall('disable_collisions')}
-    original_record, original_step = capture.record_substep, capture.step
 
-    def record() -> None:
-        original_record()
-        rows = []
-        for contact in raw.scene.px.get_contacts():
-            sides = [identities.get(body.entity, {'kind': 'unknown', 'actor': body.entity.name})
-                     for body in contact.bodies]
-            if not any(side.get('kind') == 'robot' for side in sides):
-                continue
-            points = [{'position_m': np.asarray(point.position).tolist(),
-                       'normal': np.asarray(point.normal).tolist(),
-                       'impulse_Ns': np.asarray(point.impulse).tolist(),
-                       'separation_m': float(point.separation)} for point in contact.points]
-            rows.append({'sides': sides, 'points': points,
-                         'physical_contact': physical_contact_points(points),
-                         'allowed': contact_allowed(sides, capture.phase, srdf)})
-        output.append({'substep': len(output)+1, 'phase': capture.phase,
-                       'control_step': capture.pending_control_step, 'contacts': rows})
-
-    def step(action: dict[str, Any]) -> tuple[Any, ...]:
-        first = len(output)
-        outcome = original_step(action)
-        if any(c['physical_contact'] and not c['allowed']
-               for row in output[first:] for c in row['contacts']):
-            raise RuntimeError('Forbidden actual robot/world contact at100Hz')
-        return outcome
-
-    capture.record_substep = record
-    capture.step = step
 
 
 def audit_native_state(updates: list[dict[str, Any]], data: tuple[dict[str, Any], dict[str, Any]]) -> list[dict[str, Any]]:
@@ -164,28 +92,6 @@ def audit_native_state(updates: list[dict[str, Any]], data: tuple[dict[str, Any]
     return rows
 
 
-def audit_payload_spheres(fk: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
-    """Read actual native base-frame payload spheres and compare real actor geometry."""
-    spheres = np.asarray(fk['link_spheres']['tig_payload'], dtype=float)
-    model, state = snapshot['payload_model'], snapshot['payload_state']
-    if spheres.shape != (1, model['capacity'], 4) or not np.isfinite(spheres).all():
-        raise ValueError('Invalid actual native payload sphere tensor')
-    active = spheres[0, :, 3] > 0
-    if state['attachment'] is None:
-        if active.any():
-            raise RuntimeError('Unattached model retains active payload collision geometry')
-        return {'status': 'passed', 'active_spheres': 0}
-    attachment = state['attachment']
-    local = np.asarray(attachment['spheres'], dtype=float)
-    transform = _matrix(attachment['object_pose_base_wxyz'])
-    expected = local[:, :3] @ transform[:3, :3].T + transform[:3, 3]
-    actual = spheres[0, active]
-    if actual.shape != local.shape:
-        raise RuntimeError('Native attachment lost actual target collision spheres')
-    error = float(np.max(np.abs(actual[:, :3] - expected)))
-    if error > 1e-5 or not np.allclose(actual[:, 3], local[:, 3], rtol=0, atol=1e-7):
-        raise RuntimeError(f'Native held geometry differs from actual measured actor: {error}')
-    return {'status': 'passed', 'active_spheres': len(actual), 'max_center_coordinate_error_m': error}
 
 
 def native_run(args: argparse.Namespace, output: Path, report: dict[str, Any]) -> None:

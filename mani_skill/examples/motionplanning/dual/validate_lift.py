@@ -61,14 +61,9 @@ def release_control_valid(result: dict[str, Any], ticks: list[dict[str, Any]],
     return True
 
 
-def pose_matrix(pose: Any) -> np.ndarray:
-    from transforms3d.quaternions import quat2mat
-    values = np.asarray(pose, dtype=float)
-    if values.shape != (7,) or not np.isfinite(values).all() or not np.isclose(np.linalg.norm(values[3:]), 1, atol=1e-5):
-        raise ValueError("Expected one finite xyz/wxyz pose")
-    matrix = np.eye(4)
-    matrix[:3, :3], matrix[:3, 3] = quat2mat(values[3:]), values[:3]
-    return matrix
+# Compatibility exports: implementations live in shared runtime modules.
+from .physical_observation import (pose_matrix)
+
 
 
 def substep_summary(rows: list[dict[str, Any]], reference: np.ndarray) -> dict[str, Any]:

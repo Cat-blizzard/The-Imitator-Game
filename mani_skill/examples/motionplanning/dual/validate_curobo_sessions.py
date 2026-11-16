@@ -74,36 +74,9 @@ def verify_world_readback(updates: list[dict[str, Any]],
     return rows
 
 
-def verify_finger_spheres(result: dict[str, Any], data: dict[str, Any],
-                          queries: np.ndarray) -> list[dict[str, Any]]:
-    """Compare native base-frame spheres[N,K,4] with independent URDF FK."""
-    from scipy.spatial.transform import Rotation
-    kin = data['robot_cfg']['kinematics']
-    expected_links = ('panda_leftfinger', 'panda_rightfinger')
-    native = result['link_spheres']
-    rows = []
-    for link in expected_links:
-        local = kin['collision_spheres'][link]
-        centers = np.asarray([s['center'] for s in local], dtype=float)
-        radii = np.asarray([s['radius'] for s in local], dtype=float)
-        spheres = np.asarray(native[link], dtype=float)
-        if (spheres.shape != (len(queries), len(local), 4)
-                or not np.isfinite(spheres).all()):
-            raise ValueError(f'Invalid {link} sphere shape/values: {spheres.shape}')
-        errors = []
-        for q, row in zip(queries, spheres):
-            joints = dict(zip(data['joint_names'], q.tolist())) | kin['lock_joints']
-            pose = urdf_tcp_pose(Path(kin['urdf_path']), joints, tcp_link=link)
-            matrix = Rotation.from_quat(np.r_[pose[4:], pose[3]]).as_matrix()
-            expected = centers @ matrix.T + pose[:3]
-            errors.append(float(np.max(np.abs(expected - row[:, :3]))))
-        radius_error = float(np.max(np.abs(spheres[:, :, 3] - radii)))
-        if max(errors) > 1e-5 or radius_error > 1e-6:
-            raise RuntimeError(f'{link} collision geometry uses stale or wrong finger state')
-        rows.append({'link': link, 'sphere_count': len(local),
-                     'max_center_coordinate_error_m': max(errors),
-                     'max_radius_error_m': radius_error})
-    return rows
+# Compatibility exports: implementations live in shared runtime modules.
+from .physical_observation import (verify_finger_spheres)
+
 
 
 def export_pair(raw: Any, output: Path, label: str) -> tuple[dict[str, Any], dict[str, Any]]:
