@@ -323,7 +323,8 @@ def rename_held_audit_targets(audit: dict[str, Any], names: tuple[str, str]) -> 
 
 def finalize_physics_capture(env: Any, raw: Any, captured: Any, output: Path, report: dict[str, Any],
                              frames: list, ticks: list, substeps: list, keys: list,
-                             original_hook: Any, *, attachment_count: Any = None) -> None:
+                             original_hook: Any, *, attachment_count: Any = None,
+                             robot_contacts: list[dict[str, Any]] | None = None) -> None:
     """Preserve partial recordings after success, safety failure or exceptions."""
     import imageio.v2 as imageio
     import torch
@@ -362,14 +363,40 @@ def finalize_physics_capture(env: Any, raw: Any, captured: Any, output: Path, re
     report['phase_step_counts'] = {phase: sum(t['phase'] == phase for t in ticks) for phase in dict.fromkeys(t['phase'] for t in ticks)}
     report['first_official_success_step'] = next((t['environment_step'] for t in ticks
         if bool(np.asarray(t['official_evaluation'].get('success', False)).all())), None)
-    report['official_200_step_complete'] = bool(report.get('official_200_step_complete', False))
+    # This is an environment observation, independent of artifact acceptance.
+    # No final observation is represented by None rather than a fabricated fail.
+    from .run_results import official_completion
+    elapsed = report.get('total_environment_steps')
+    horizon = report.get('max_episode_steps')
+    report['official_200_step_complete'] = official_completion(
+        report.get('official_task_evaluation'), elapsed,
+        min(horizon, 200) if type(horizon) is int else None)
+    forbidden = sum(bool(c.get('physical_contact')) and c.get('class') == 'forbidden'
+        for row in substeps for c in row.get('object_contact_rows', []))
+    interarm = sum(bool(c.get('physical_contact')) for row in substeps
+        for c in row.get('interarm_contacts', []))
+    robot_forbidden = (None if robot_contacts is None else sum(
+        bool(c.get('physical_contact')) and not c.get('allowed')
+        for row in robot_contacts for c in row.get('contacts', [])))
+    control_dt, physics_dt = report.get('control_timestep_s'), report.get('physics_timestep_s')
+    expected = (None if elapsed is None or not control_dt or not physics_dt else
+        int(elapsed * round(control_dt / physics_dt)))
+    report['physical_monitoring'] = {'observed_substeps': len(substeps),
+        'expected_substeps': expected, 'forbidden_contact_count': int(forbidden),
+        'interarm_forbidden_count': int(interarm),
+        'robot_world_forbidden_count': robot_forbidden,
+        'robot_world_observed_substeps': None if robot_contacts is None else len(robot_contacts),
+        'robot_world_coverage_complete': None if robot_contacts is None else (
+            expected is not None and expected > 0 and len(robot_contacts) == expected),
+        'coverage_complete': expected is not None and expected > 0 and len(substeps) == expected,
+        'scope': 'recorded100Hz actual contact observations, not continuous collision proof'}
     calls = report.get('native_planning_calls')
     report['planning_wall_seconds'] = sum(float(x['wall_seconds']) for x in calls) if calls is not None else sum(
         x['native_backend_wall_seconds'] for x in report.get('planning', []))
     report['physical_substeps'] = len(substeps)
     if 'attachment_capture' in report and attachment_count is not None:
         report['attachment_capture']['count_at_end'] = attachment_count
-    if errors: report.update(status='failed', official_200_step_complete=False)
+    if errors: report['status'] = 'failed'
 
 
 def self_test() -> dict[str, Any]:
@@ -531,7 +558,38 @@ def self_test() -> dict[str, Any]:
             assert manifest['actors'][key]['state_name']==name
             assert np.array_equal(arrays[key+'_vertices'],local)
             assert manifest['actors'][key]['local_vertices_sha256']==hashlib.sha256(np.ascontiguousarray(local,dtype=np.float64).tobytes(order='C')).hexdigest()
-    return {'status':'passed','contact_and_geometry_boundary_cases':17,'physical_support_transition_cases':7,'fake_control_steps':2,
+    with tempfile.TemporaryDirectory() as directory:
+        final_report = {'status': 'passed', 'max_episode_steps': 200,
+            'total_environment_steps': 171, 'official_task_evaluation': {'success': [True]},
+            'project_complete_physical_closure': True, 'artifact_errors': ['video: fixture failure']}
+        finalize_physics_capture(None, None, None, Path(directory), final_report,
+            [], [], [], [], None)
+        assert final_report['status'] == 'failed'
+        assert final_report['official_200_step_complete'] is True
+        assert final_report['project_complete_physical_closure'] is True
+        assert not final_report['physical_monitoring']['coverage_complete']
+        unknown_report = {'status': 'failed', 'max_episode_steps': 200}
+        finalize_physics_capture(None, None, None, Path(directory), unknown_report,
+            [], [], [], [], None)
+        assert unknown_report['official_200_step_complete'] is None
+        engineering = {'status': 'passed', 'max_episode_steps': 400,
+            'total_environment_steps': 259, 'official_task_evaluation': {'success': [True]}}
+        finalize_physics_capture(None, None, None, Path(directory), engineering,
+            [], [], [], [], None)
+        assert engineering['official_200_step_complete'] is False
+        contact_report = {'total_environment_steps': 1, 'control_timestep_s': .05,
+            'physics_timestep_s': .01}
+        robot_rows = [{'contacts': []} for _ in range(5)]
+        robot_rows[-1]['contacts'] = [{'physical_contact': True, 'allowed': False}]
+        finalize_physics_capture(None, None, None, Path(directory), contact_report,
+            [], [], [{} for _ in range(5)], [], None, robot_contacts=robot_rows)
+        monitoring = contact_report['physical_monitoring']
+        assert monitoring['forbidden_contact_count'] == monitoring['interarm_forbidden_count'] == 0
+        assert monitoring['robot_world_forbidden_count'] == 1
+        assert monitoring['robot_world_observed_substeps'] == monitoring['expected_substeps'] == 5
+        assert monitoring['coverage_complete'] and monitoring['robot_world_coverage_complete']
+    return {'status':'passed','official_and_recording_results_independent':True,
+            'contact_and_geometry_boundary_cases':17,'physical_support_transition_cases':7,'fake_control_steps':2,
             'fake_substep_observations':10,'engineering400_fake_control_steps':1,'custom_contact_policy_cases':2,
             'recording_version':RECORDING_VERSION,'destination_contents_boundary_and_recording_cases':7,
             'contents_fake_substep_observations':5,'contents_proof_calls_per_substep':1,

@@ -5,6 +5,8 @@ barrier together; a shorter source trajectory holds its own endpoint. Carried
 objects move through contact physics, never through pose assignment or a weld.
 Held stability uses measured pose differences while raw velocities remain in
 the trace. These sampled checks do not establish continuous collision safety.
+Policy supplies numeric defaults; this executor does not select or skip quality
+phases. Explicit legacy window arguments remain recorded per-phase overrides.
 """
 from __future__ import annotations
 
@@ -18,13 +20,21 @@ import numpy as np
 from .combined_collision import validate_schedule
 from .grasp_execution import _actions_valid, _budget, _error, _measure, _positive
 from .lift_execution import _observe, _rotation_distance, _transform
+from .runtime_policy import LEGACY_STRICT, RuntimePolicy
 from .trajectory_execution import as_numpy, bindings, snapshot
 from .trajectory_schedule import ArmTrajectory, DualArmSchedule, build_hold_schedule, plan_pose
 
 JOINT_STEP, TRACK, ENDPOINT, ARM_SPEED, OPEN_TOL = .02, .2, .03, .05, .002
-POSITION_SLIP, ROTATION_SLIP, DROP = .005, .15, .01
+# Historical aliases remain available to old validation entry points.
+POSITION_SLIP, ROTATION_SLIP, DROP = LEGACY_STRICT.position_slip_m, LEGACY_STRICT.rotation_slip_rad, .01
 OBJECT_SPEED, OBJECT_ANGULAR_SPEED = .03, .2
 WINDOW_POSITION, WINDOW_ROTATION, WINDOW_JOINT = .003, .03, .003
+
+
+def _runtime_policy(value: RuntimePolicy) -> RuntimePolicy:
+    if not isinstance(value, RuntimePolicy):
+        raise ValueError("A resolved RuntimePolicy is required")
+    return value
 
 
 def _pair(value: Any, name: str) -> tuple[Any, Any]:
@@ -59,7 +69,9 @@ def _canonical(env: Any) -> tuple[Any, Any]:
 class _Phase:
     """Canonical measurements and one joint action for a shared control tick."""
 
-    def __init__(self, env: Any, checker: Any, name: str, *, targets: Any = None, held: bool = False):
+    def __init__(self, env: Any, checker: Any, name: str, *, targets: Any = None, held: bool = False,
+                 policy: RuntimePolicy = LEGACY_STRICT):
+        self.policy = _runtime_policy(policy)
         self.env, self.checker, self.held = env, checker, held
         self.arms = _canonical(env)
         required = ("refresh", "check", "set_target_contacts_allowed") + (("measured_check",) if held else ())
@@ -96,7 +108,7 @@ class _Phase:
             "continuous_collision_detection": False,
             "thresholds": {"joint_sample_rad": JOINT_STEP, "tracking_rad": TRACK, "endpoint_rad": ENDPOINT,
                            "arm_speed_rad_s": ARM_SPEED, "finger_open_m": OPEN_TOL,
-                           "position_slip_m": POSITION_SLIP, "rotation_slip_rad": ROTATION_SLIP,
+                           "position_slip_m": self.policy.position_slip_m, "rotation_slip_rad": self.policy.rotation_slip_rad,
                            "drop_below_attachment_m": DROP, "grasp_loss_ticks": 2,
                            "object_speed_m_s": OBJECT_SPEED, "object_angular_speed_rad_s": OBJECT_ANGULAR_SPEED,
                            "window_position_m": WINDOW_POSITION, "window_rotation_rad": WINDOW_ROTATION,
@@ -199,8 +211,8 @@ class _Phase:
             obj["consecutive_grasp_loss_ticks"] = self.loss[index]
             reason = None
             if obj["drop_below_predicted_attachment_m"] > DROP: reason = "object_dropped"
-            elif obj["position_slip_m"] > POSITION_SLIP: reason = "position_slip"
-            elif obj["rotation_slip_rad"] > ROTATION_SLIP: reason = "rotation_slip"
+            elif obj["position_slip_m"] > self.policy.position_slip_m: reason = "position_slip"
+            elif obj["rotation_slip_rad"] > self.policy.rotation_slip_rad: reason = "rotation_slip"
             elif self.loss[index] >= 2 or (hovering and not obj["is_grasping"]): reason = "grasp_lost"
             if reason:
                 self.report.update(status="aborted", reason=reason, object_index=index)
@@ -213,8 +225,10 @@ class _Phase:
 
 
 def plan_dual_pose(left_solver: Any, right_solver: Any, target_poses: tuple[Any | None, Any | None], *,
-                   gripper_commands: tuple[int, int] = (1, 1)) -> DualArmSchedule:
+                   gripper_commands: tuple[int, int] = (1, 1),
+                   policy: RuntimePolicy = LEGACY_STRICT) -> DualArmSchedule:
     """Dry-run both native plans at one state; None holds that measured arm."""
+    _runtime_policy(policy)
     raw = left_solver.base_env
     if raw is not right_solver.base_env:
         raise ValueError("Both solvers must share one physical environment")
@@ -238,11 +252,15 @@ def plan_dual_pose(left_solver: Any, right_solver: Any, target_poses: tuple[Any 
 
 
 def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool, targets: Any,
-               minimum: Any, hold_steps: int, settle_max_steps: int, stable_steps: int) -> dict[str, Any]:
+               minimum: Any, hold_steps: int, settle_max_steps: int | None, stable_steps: int | None,
+               policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
+    policy = _runtime_policy(policy)
+    settle_max_steps = policy.max_settle_steps if settle_max_steps is None else settle_max_steps
+    stable_steps = policy.reach_stable_steps if stable_steps is None else stable_steps
     settling, required = _budget(settle_max_steps, "settle_max_steps", zero=True), _budget(stable_steps, "stable_steps")
     hover = _budget(hold_steps, "hold_steps", zero=True)
     minima = tuple(None if value is None else _positive(value, "min_height_gain_m") for value in _pair(minimum, "min_height_gain_m"))
-    phase = _Phase(env, checker, "dual_held_move" if held else "dual_reach", targets=targets, held=held)
+    phase = _Phase(env, checker, "dual_held_move" if held else "dual_reach", targets=targets, held=held, policy=policy)
     initial = phase.report["initial_observation"]
     if tuple(source.action_key for source in schedule.trajectories) != tuple(arm.key for arm in phase.arms):
         raise ValueError("Schedule must retain physical left/right order")
@@ -260,7 +278,7 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
         _actions_valid(env, phase.arms, action)
     phase.report.update(planned_control_steps=len(actions), settle_max_steps=settling,
                         stable_steps_required=required, min_height_gain_m=list(minima), hold_steps_required=hover)
-    if held and any(not obj["is_grasping"] or obj["position_slip_m"] > POSITION_SLIP or obj["rotation_slip_rad"] > ROTATION_SLIP for obj in initial["objects"]):
+    if held and any(not obj["is_grasping"] or obj["position_slip_m"] > policy.position_slip_m or obj["rotation_slip_rad"] > policy.rotation_slip_rad for obj in initial["objects"]):
         phase.report.update(status="rejected", reason="initial_grasp_or_attachment_invalid")
         return phase.finish()
     if not phase.preflight():
@@ -319,25 +337,30 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
 
 def execute_dual_reach(env: Any, schedule: DualArmSchedule, checker: Any, *,
                        allow_target_contacts: tuple[bool, bool] = (False, False),
-                       settle_max_steps: int = 15, stable_steps: int = 3) -> dict[str, Any]:
+                       settle_max_steps: int | None = None, stable_steps: int | None = None,
+                       policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
+    """Reach with policy defaults; explicit legacy window overrides still apply."""
     allowed = _pair(allow_target_contacts, "allow_target_contacts")
     if any(type(value) is not bool for value in allowed):
         raise ValueError("Target-contact permissions must be explicit booleans")
     checker.set_target_contacts_allowed(allowed)
     try:
         return _scheduled(env, schedule, checker, held=False, targets=None, minimum=(None, None), hold_steps=0,
-                          settle_max_steps=settle_max_steps, stable_steps=stable_steps)
+                          settle_max_steps=settle_max_steps, stable_steps=stable_steps, policy=policy)
     finally:
         checker.set_target_contacts_allowed((False, False))
 
 
 def close_dual_and_confirm(env: Any, checker: Any, targets: tuple[Any, Any], *,
-                           max_steps: int = 40, stable_steps: int = 5) -> dict[str, Any]:
+                           max_steps: int = 40, stable_steps: int | None = None,
+                           policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
+    policy = _runtime_policy(policy)
+    stable_steps = policy.grasp_stable_steps if stable_steps is None else stable_steps
     targets = _pair(targets, "targets")
     if any(target is None for target in targets): raise ValueError("Both physical targets are required")
     budget, required = _budget(max_steps, "max_steps"), _budget(stable_steps, "stable_steps")
     if budget < required: raise ValueError("Grasp budget cannot be smaller than the required stable interval")
-    phase = _Phase(env, checker, "dual_close", targets=targets)
+    phase = _Phase(env, checker, "dual_close", targets=targets, policy=policy)
     action = phase.hold(-1); _actions_valid(env, phase.arms, action)
     previous = [np.asarray(phase.report["initial_measurements"][arm.key]["finger_qpos_m"]) for arm in phase.arms]
     counts = [0, 0]
@@ -369,20 +392,24 @@ def close_dual_and_confirm(env: Any, checker: Any, targets: tuple[Any, Any], *,
 
 def execute_dual_held_move(env: Any, schedule: DualArmSchedule, checker: Any, targets: tuple[Any, Any], *,
                            min_height_gain_m: tuple[float | None, float | None] = (None, None),
-                           hold_steps: int = 0, settle_max_steps: int = 15, stable_steps: int = 3) -> dict[str, Any]:
+                           hold_steps: int = 0, settle_max_steps: int | None = None, stable_steps: int | None = None,
+                           policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
     targets = _pair(targets, "targets")
     if any(target is None for target in targets): raise ValueError("Both physical held targets are required")
     return _scheduled(env, schedule, checker, held=True, targets=targets, minimum=min_height_gain_m,
-                      hold_steps=hold_steps, settle_max_steps=settle_max_steps, stable_steps=stable_steps)
+                      hold_steps=hold_steps, settle_max_steps=settle_max_steps, stable_steps=stable_steps, policy=policy)
 
 
 def release_dual_and_confirm(env: Any, checker: Any, targets: tuple[Any, Any], *,
-                             max_steps: int = 30, stable_steps: int = 3) -> dict[str, Any]:
+                             max_steps: int = 30, stable_steps: int | None = None,
+                             policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
+    policy = _runtime_policy(policy)
+    stable_steps = policy.release_stable_steps if stable_steps is None else stable_steps
     targets = _pair(targets, "targets")
     if any(target is None for target in targets): raise ValueError("Both physical release targets are required")
     if getattr(checker, "attached", False): raise ValueError("Detach collision predictions before physical release")
     budget, required = _budget(max_steps, "max_steps"), _budget(stable_steps, "stable_steps")
-    phase = _Phase(env, checker, "dual_release", targets=targets)
+    phase = _Phase(env, checker, "dual_release", targets=targets, policy=policy)
     action = phase.hold(1); _actions_valid(env, phase.arms, action)
     count = 0
     phase.report.update(max_steps=budget, stable_steps_required=required)
@@ -425,14 +452,17 @@ def _regions(env: Any, targets: Any, keys: Any, predicates: Any) -> list[dict[st
 def verify_dual_placement(env: Any, checker: Any, targets: tuple[Any, Any], *,
                           official_predicate_keys: tuple[str, str] = ("apple_in_basket", "banana_in_basket"),
                           region_predicates: tuple[Callable[[Any], Any], Callable[[Any], Any]],
-                          max_steps: int = 60, stable_steps: int = 20) -> dict[str, Any]:
+                          max_steps: int = 60, stable_steps: int | None = None,
+                          policy: RuntimePolicy = LEGACY_STRICT) -> dict[str, Any]:
+    policy = _runtime_policy(policy)
+    stable_steps = policy.final_stable_steps if stable_steps is None else stable_steps
     targets, keys, predicates = _pair(targets, "targets"), _pair(official_predicate_keys, "official_predicate_keys"), _pair(region_predicates, "region_predicates")
     if any(target is None for target in targets) or any(not callable(predicate) for predicate in predicates):
         raise ValueError("Both actual targets and physical region callbacks are required")
     if any(not isinstance(key, str) or not key for key in keys): raise ValueError("Explicit official predicate keys are required")
     if getattr(checker, "attached", False): raise ValueError("Placement verification requires detached collision predictions")
     budget, required = _budget(max_steps, "max_steps"), _budget(stable_steps, "stable_steps")
-    phase = _Phase(env, checker, "dual_placement_verification", targets=targets)
+    phase = _Phase(env, checker, "dual_placement_verification", targets=targets, policy=policy)
     if not all(phase.opened(arm, phase.report["initial_observation"]) for arm in phase.arms):
         raise ValueError("Both hands must already physically be open")
     phase.report.update(initial_regions=_regions(env, targets, keys, predicates), max_steps=budget,
@@ -726,6 +756,45 @@ def self_test() -> dict[str, Any]:
     reject(lambda: execute_dual_held_move(env, schedule(env), Checker(env), env.targets, min_height_gain_m=(None, -1.)))
     assert not env.actions
     checks.append("attached release and invalid targets/thresholds reject before stepping")
+    from dataclasses import replace
+    selected = replace(LEGACY_STRICT, policy_id="cpu-fixture-selected-values",
+        grasp_stable_steps=7, release_stable_steps=4, reach_stable_steps=4,
+        final_stable_steps=22, max_settle_steps=6, position_slip_m=.004, rotation_slip_rad=.1)
+    env = Env(False); closed = close_dual_and_confirm(env, Checker(env, held=False), env.targets, policy=selected)
+    assert closed["status"] == "passed" and closed["stable_steps_required"] == 7 and len(env.actions) == 8
+    env = Env(); released = release_dual_and_confirm(env, Checker(env, held=False), env.targets, policy=selected)
+    assert released["status"] == "passed" and released["stable_steps_required"] == 4 and len(env.actions) == 4
+    env = Env(False)
+    candidate = plan_dual_pose(Solver(env, 0), Solver(env, 1),
+        (target_pose(env, 0, [.04]), target_pose(env, 1, [.08])), policy=selected)
+    reached = execute_dual_reach(env, candidate, Checker(env, held=False), policy=selected)
+    assert reached["status"] == "passed" and reached["stable_steps_required"] == 4 and reached["settle_max_steps"] == 6
+    env = Env(False); placed = verify_dual_placement(env, Checker(env, held=False), env.targets,
+        region_predicates=predicates, policy=selected)
+    assert placed["status"] == "passed" and placed["stable_steps_required"] == 22 and len(env.actions) == 22
+    # Existing explicit caller overrides still resolve and are reported.
+    env = Env(False); overridden = close_dual_and_confirm(env, Checker(env, held=False), env.targets,
+        stable_steps=2, policy=selected)
+    assert overridden["status"] == "passed" and overridden["stable_steps_required"] == 2
+    checks.append("resolved policy supplies grasp/release/reach/final windows and settle defaults; explicit overrides remain visible")
+    for field, value, reason in (("position_slip_m", .0045, "position_slip"),
+                                 ("rotation_slip_rad", .12, "rotation_slip")):
+        env = Env(); phase = _Phase(env, Checker(env), "policy-monitor-fixture", held=True, policy=selected)
+        row = phase.observe(); row["objects"][1][field] = value
+        assert not phase.monitor(row) and phase.report["reason"] == reason
+        assert phase.report["thresholds"][field] == getattr(selected, field) and not env.actions
+        env = Env(); legacy_phase = _Phase(env, Checker(env), "legacy-monitor-fixture", held=True)
+        row = legacy_phase.observe(); row["objects"][1][field] = value
+        assert legacy_phase.monitor(row) and not env.actions
+    env = Env(); env.targets[1].pose.matrix[0, 3] += .0045
+    result = execute_dual_held_move(env, schedule(env), Checker(env), env.targets, policy=selected)
+    assert result["status"] == "rejected" and result["reason"] == "initial_grasp_or_attachment_invalid" and not env.actions
+    assert POSITION_SLIP == .005 and ROTATION_SLIP == .15
+    checks.append("selected slip thresholds govern initial and sampled held checks; legacy aliases stay unchanged")
+    env = Env(False)
+    reject(lambda: close_dual_and_confirm(env, Checker(env, held=False), env.targets, policy=None))
+    assert not env.actions
+    checks.append("invalid policy rejects before any paired step")
     return {"status": "passed", "gpu_used": False, "native_physics_tested": False,
             "checks": checks, "check_count": len(checks)}
 

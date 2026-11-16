@@ -120,22 +120,30 @@ def collision_vertex_region(object_vertices: Any, object_pose: Any,
     return physical_region(center, bounds[1], bounds[0])
 
 
-def held_substep_audit(rows: list[dict[str, Any]], references: Any) -> dict[str, Any]:
+def held_substep_audit(rows: list[dict[str, Any]], references: Any, *, policy: Any = None,
+                       target_names: Any = None) -> dict[str, Any]:
     from .lift_execution import _rotation_distance
+    from .runtime_policy import LEGACY_STRICT, RuntimePolicy
+    policy = LEGACY_STRICT if policy is None else policy
+    if not isinstance(policy, RuntimePolicy):
+        raise ValueError('A validated runtime policy is required')
+    names = ACTOR_NAMES if target_names is None else tuple(target_names)
+    if len(names) != 2 or len(set(names)) != 2:
+        raise ValueError('Two canonical target names required')
     held = [r for r in rows if r["phase"] == "lift_and_hold" or r["phase"].startswith("carry_")]
     refs = np.asarray(references, dtype=float)
     if not held or refs.shape != (2, 4, 4) or not np.isfinite(refs).all():
         raise ValueError("Need paired actual attachment transforms and held substeps")
     objects = []
-    for i, name in enumerate(ACTOR_NAMES):
+    for i, name in enumerate(names):
         dp, dr = [], []
         for row in held:
             pose = np.linalg.inv(pose_matrix(row["tcp_poses"][i])) @ pose_matrix(row["object_poses"][i])
             dp.append(float(np.linalg.norm(pose[:3, 3] - refs[i, :3, 3])))
             dr.append(_rotation_distance(refs[i, :3, :3], pose[:3, :3]))
         objects.append({"actor": name, "max_position_slip_m": max(dp), "max_rotation_slip_rad": max(dr)})
-    return {"status": "passed" if all(o["max_position_slip_m"] <= .005 and o["max_rotation_slip_rad"] <= .15 for o in objects) else "failed",
-            "physical_substeps": len(held), "objects": objects, "position_limit_m": .005, "rotation_limit_rad": .15,
+    return {"status": "passed" if all(o["max_position_slip_m"] <= policy.position_slip_m and o["max_rotation_slip_rad"] <= policy.rotation_slip_rad for o in objects) else "failed",
+            "physical_substeps": len(held), "objects": objects, "position_limit_m": policy.position_slip_m, "rotation_limit_rad": policy.rotation_slip_rad,
             "scope": "both actual grasp-relative physical poses at100Hz; not collision checking orCCD"}
 
 
