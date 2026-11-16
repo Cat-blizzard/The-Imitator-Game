@@ -1,0 +1,498 @@
+{
+  "status": "representative_repair_acceptance_passed",
+  "checked_at": "2026-11-16T19:53:29.704686+00:00",
+  "scope": "Known-failure engineering repairs and development regression, not new unseen scoring or backend ranking",
+  "base_commit": "f65ebc616ba0323665f05ece1b3137c8c0a57f65",
+  "runtime_commit": "99a546c2ad216b1b2de22a18608c445fef18363f",
+  "frozen_source_count": 83,
+  "criteria": {
+    "max_episode_steps": 200,
+    "completion_before_step": 200,
+    "actual_lift_m": 0.1,
+    "position_slip_m": 0.005,
+    "rotation_slip_rad": 0.15,
+    "actual_retreat_m": 0.08,
+    "final_stable_ticks": 20
+  },
+  "old_failure_reproductions": [
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/geometry/archive-region-report.json",
+      "sha256": "2d846c13d7f40802f9b69d0ae85c7c4b23ce511783294c45009d919b850ba5ac"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/endpoint/reproduction.json",
+      "sha256": "ef8187686d7f350a4c31a6fad20e9848f596a862f6e60c3100a7a50577dc6da1"
+    }
+  ],
+  "native_replan_geometry_diagnostic": {
+    "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/endpoint/candidate-v3/reproduction.json",
+    "sha256": "4d63134e0f1800a28b0aa9717a1a8e10a88ceb690fafaa6d6671f0b812ee59e1"
+  },
+  "final_representatives": [
+    {
+      "case": "curobo-apple-s1003-final",
+      "backend": "curobo",
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1003,
+      "planner_seed": 0,
+      "approach_recipe": "compact-4cm",
+      "payload_refinement": "baseline",
+      "transport_recipe": "standard",
+      "runtime_commit": "99a546c2ad216b1b2de22a18608c445fef18363f",
+      "source_manifest_count": 83,
+      "source_identity_matches_freeze": true,
+      "initial_state_content_sha256": "ffea02e75150426ff76368e841065258884e9e0c48d03fcaacad16d5fe9619bc",
+      "native_status": "passed",
+      "steps": 192,
+      "native_official_200_step_complete": true,
+      "native_project_complete_physical_closure": true,
+      "actual_retreat_z_m": [
+        0.08183103054761887,
+        0.0813111737370491
+      ],
+      "phase_step_counts": {
+        "preparation": 10,
+        "pregrasp": 40,
+        "descend": 18,
+        "close_and_confirm": 7,
+        "lift_and_hold": 23,
+        "carry_orient_and_transport": 39,
+        "carry_lower": 13,
+        "release": 7,
+        "retreat": 15,
+        "verify_placement": 20
+      },
+      "replay_status": "passed",
+      "replay_action_checks": {
+        "all_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "replay_outcome_checks": {
+        "all_actions_observed": true,
+        "both_grasp_sequences_match": true,
+        "both_physically_released_last_three": true,
+        "both_actual_retreats_at_least80mm": true,
+        "release_retreat_order": true,
+        "common_final20_window": true,
+        "both_final_placements_valid": true,
+        "final_official_success": true,
+        "no_failure_or_truncation": true
+      },
+      "replay_report_top_level_official200_field": false,
+      "native_exit_code": 0,
+      "replay_exit_code": 0,
+      "native_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/curobo-apple-s1003-final/report.json",
+        "sha256": "2f2e185e139eb49eeacd541d94f7be3925c54c2097f5db254ec9279549681062"
+      },
+      "replay_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/replay/curobo-apple-s1003-final/report.json",
+        "sha256": "94e4deec4891c57eb140533e710845daf6259ce2d163b5877d5d5ecaa8b74a73"
+      },
+      "native_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/curobo-apple-s1003-final-receipt.json",
+        "sha256": "ecc5f7890febc3e173ff91fd61c27ae5782bc8496367a3f92bf4ad7dbdf5af4b"
+      },
+      "replay_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/replay-curobo-apple-s1003-final-receipt.json",
+        "sha256": "eab40e5c230e71931c235bde96bfb7877d989416468e6538d6aecc95f18d1e48"
+      }
+    },
+    {
+      "case": "curobo-apple-s1004-final",
+      "backend": "curobo",
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 1004,
+      "planner_seed": 0,
+      "approach_recipe": "compact-4cm",
+      "payload_refinement": "baseline",
+      "transport_recipe": "direct-release-v2",
+      "runtime_commit": "99a546c2ad216b1b2de22a18608c445fef18363f",
+      "source_manifest_count": 83,
+      "source_identity_matches_freeze": true,
+      "initial_state_content_sha256": "f7028153012110c3ea7a581b756cec06bb1ec97c9c9ddecd40e2f86fd120c4fb",
+      "native_status": "passed",
+      "steps": 187,
+      "native_official_200_step_complete": true,
+      "native_project_complete_physical_closure": true,
+      "actual_retreat_z_m": [
+        0.08189138770103455,
+        0.08171551674604416
+      ],
+      "phase_step_counts": {
+        "preparation": 10,
+        "pregrasp": 44,
+        "descend": 19,
+        "close_and_confirm": 7,
+        "lift_and_hold": 23,
+        "carry_lower": 42,
+        "release": 7,
+        "retreat": 15,
+        "verify_placement": 20
+      },
+      "replay_status": "passed",
+      "replay_action_checks": {
+        "all_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "replay_outcome_checks": {
+        "all_actions_observed": true,
+        "both_grasp_sequences_match": true,
+        "both_physically_released_last_three": true,
+        "both_actual_retreats_at_least80mm": true,
+        "release_retreat_order": true,
+        "common_final20_window": true,
+        "both_final_placements_valid": true,
+        "final_official_success": true,
+        "no_failure_or_truncation": true
+      },
+      "replay_report_top_level_official200_field": false,
+      "native_exit_code": 0,
+      "replay_exit_code": 0,
+      "native_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/curobo-apple-s1004-final/report.json",
+        "sha256": "e1d8d2bfc864861be173f5f8818d5c1a99396bfc667b84d1293e134259e7e1e7"
+      },
+      "replay_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/replay/curobo-apple-s1004-final/report.json",
+        "sha256": "74faa9b33b7fee8ed7a5d687f7381b7332f6d8fc4d18ac55e5fb8ae0ec3ee112"
+      },
+      "native_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/curobo-apple-s1004-final-receipt.json",
+        "sha256": "48806fa44e5e3ed1ee44fd58b081756d61ca1e68b1383ebdbd48a7aae2f36de6"
+      },
+      "replay_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/replay-curobo-apple-s1004-final-receipt.json",
+        "sha256": "a655f8ba751106065d9cd0a090280b7d95d5ddb3f44bcb1d461a12b2875aa761"
+      }
+    },
+    {
+      "case": "curobo-pill-s401-final",
+      "backend": "curobo",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "seed": 401,
+      "planner_seed": 0,
+      "approach_recipe": "compact-5cm",
+      "payload_refinement": "fixed-task-v1",
+      "transport_recipe": "direct-release-v2",
+      "runtime_commit": "99a546c2ad216b1b2de22a18608c445fef18363f",
+      "source_manifest_count": 83,
+      "source_identity_matches_freeze": true,
+      "initial_state_content_sha256": "a591c5d80fac6aaeed6a35279bea8bdb930f9d4656480fc6122c227dfc43d238",
+      "native_status": "passed",
+      "steps": 191,
+      "native_official_200_step_complete": true,
+      "native_project_complete_physical_closure": true,
+      "actual_retreat_z_m": [
+        0.0815676599740982,
+        0.08167165517807007
+      ],
+      "phase_step_counts": {
+        "preparation": 10,
+        "pregrasp": 48,
+        "descend": 21,
+        "close_and_confirm": 6,
+        "lift_and_hold": 23,
+        "carry_lower": 42,
+        "release": 6,
+        "retreat": 15,
+        "verify_placement": 20
+      },
+      "replay_status": "passed",
+      "replay_action_checks": {
+        "all_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "replay_outcome_checks": {
+        "all_actions_observed": true,
+        "both_grasp_sequences_match": true,
+        "both_physically_released_last_three": true,
+        "both_actual_retreats_at_least80mm": true,
+        "release_retreat_order": true,
+        "common_final20_window": true,
+        "both_final_placements_valid": true,
+        "final_official_success": true,
+        "no_failure_or_truncation": true
+      },
+      "replay_report_top_level_official200_field": false,
+      "native_exit_code": 0,
+      "replay_exit_code": 0,
+      "native_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/curobo-pill-s401-final/report.json",
+        "sha256": "b8b5a48b51af3a47c04d8e58f89d00d8374a5770bbbd29374c57ab03dc9e6943"
+      },
+      "replay_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/replay/curobo-pill-s401-final/report.json",
+        "sha256": "2c01d3cfcd2d70c35c065a834d62be51ae3079b80e89802bd92bc7f04a8673ec"
+      },
+      "native_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/curobo-pill-s401-final-receipt.json",
+        "sha256": "ee3b993c0ea3d43b6b5a599190fc42cedaacc0cd6ea8a1726001215224886e49"
+      },
+      "replay_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/replay-curobo-pill-s401-final-receipt.json",
+        "sha256": "95adf3e601f18799c4207747ecb69ea12695a22a717ba981b26db97bff3a5547"
+      }
+    },
+    {
+      "case": "mplib-pill-s401-replan-v3",
+      "backend": "mplib",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "seed": 401,
+      "planner_seed": 0,
+      "approach_recipe": "standard-8cm",
+      "payload_refinement": "fixed-task-v1",
+      "transport_recipe": "direct-release-v2",
+      "runtime_commit": "99a546c2ad216b1b2de22a18608c445fef18363f",
+      "source_manifest_count": 82,
+      "source_identity_matches_freeze": true,
+      "initial_state_content_sha256": "a591c5d80fac6aaeed6a35279bea8bdb930f9d4656480fc6122c227dfc43d238",
+      "native_status": "passed",
+      "steps": 171,
+      "native_official_200_step_complete": true,
+      "native_project_complete_physical_closure": true,
+      "actual_retreat_z_m": [
+        0.08145087957382202,
+        0.08146889507770538
+      ],
+      "phase_step_counts": {
+        "preparation": 10,
+        "pregrasp": 34,
+        "descend": 23,
+        "close_and_confirm": 6,
+        "lift_and_hold": 22,
+        "carry_lower": 35,
+        "release": 6,
+        "retreat": 15,
+        "verify_placement": 20
+      },
+      "replay_status": "passed",
+      "replay_action_checks": {
+        "all_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "replay_outcome_checks": {
+        "all_actions_observed": true,
+        "both_grasp_sequences_match": true,
+        "both_physically_released_last_three": true,
+        "both_actual_retreats_at_least80mm": true,
+        "release_retreat_order": true,
+        "common_final20_window": true,
+        "both_final_placements_valid": true,
+        "final_official_success": true,
+        "no_failure_or_truncation": true
+      },
+      "replay_report_top_level_official200_field": false,
+      "native_exit_code": 0,
+      "replay_exit_code": 0,
+      "native_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/mplib-pill-s401-replan-v3/report.json",
+        "sha256": "651bad3908cb44c1a05334c34868fb666bdc8845e2b090abb07a5e5c8081b2c1"
+      },
+      "replay_report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/replay/mplib-pill-s401-replan-v3/report.json",
+        "sha256": "a0594e5dc5b132d616d486502e100a7cbff999836f1b8e65253fffac463179d4"
+      },
+      "native_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/mplib-pill-s401-replan-v3-receipt.json",
+        "sha256": "00a406c1938709f7c60b83dad124e6e18c60ffb1933d63a7e229e0f638b057c8"
+      },
+      "replay_receipt": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/logs/replay-mplib-pill-s401-replan-v3-receipt.json",
+        "sha256": "bfe86ea9c6835810a57d28c4bc90e0d7a9471f047709deda3456d02478046352"
+      },
+      "endpoint_contract": {
+        "count": 10,
+        "position_limit_m": 0.0005,
+        "rotation_limit_rad": 0.001,
+        "max_position_error_m": 0.0003308404634410909,
+        "max_rotation_error_rad": 0.0004955923340005981,
+        "all_fresh_native_joint_replans": true
+      }
+    }
+  ],
+  "all_development_native_failures": [
+    {
+      "case": "curobo-fruits-s401-compact",
+      "status": "failed",
+      "steps": 138,
+      "stage": "carry_lower",
+      "error": "cuRobo planning failed: CONSTRAINT_OR_POSE_FAILURE",
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/curobo-fruits-s401-compact/report.json",
+        "sha256": "217ffa9a3466eb69ba64de635956b30806cb8600922bb6f3ffe5cb8e68109f69"
+      }
+    },
+    {
+      "case": "curobo-fruits-s401-direct",
+      "status": "failed",
+      "steps": 147,
+      "stage": "retreat",
+      "error": "cuRobo planning failed: CONSTRAINT_OR_POSE_FAILURE",
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/curobo-fruits-s401-direct/report.json",
+        "sha256": "b8df8e049a4cd54d3dd22fe17e347f56192e401f23066f6fdfcc042613c0a640"
+      }
+    },
+    {
+      "case": "curobo-pill-s401-compact",
+      "status": "failed",
+      "steps": 10,
+      "stage": null,
+      "error": "Selected pregrasp recipe lacks complete open-end-effector Z clearance: {'arm_index': 0, 'end_effector_collision_shapes': 10, 'measured_open_end_effector_minimum_z_m': 0.1518617513686929, 'measured_target_maximum_z_m': 0.15474416764408053, 'positive_vertical_separation_m': -0.002882416275387628, 'endpoint_only': True, 'full_scene_and_path_checks_still_required': True}",
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/curobo-pill-s401-compact/report.json",
+        "sha256": "067b283ebbd4a70e083753170ceca77161bbc85c369524a5bfa153c63f71a6c5"
+      }
+    },
+    {
+      "case": "mplib-pill-s401-endpoint",
+      "status": "failed",
+      "steps": 52,
+      "stage": "descend",
+      "error": "Native TOPP reconstruction failed",
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/mplib-pill-s401-endpoint/report.json",
+        "sha256": "3e0f0fedcaf23d42da259675af0fb41659cfffbdd2256a138ad82f55850ee98e"
+      }
+    },
+    {
+      "case": "mplib-pill-s401-endpoint-v2",
+      "status": "failed",
+      "steps": 138,
+      "stage": "carry_lower",
+      "error": "carry_lower: aborted: step_or_measurement_failed",
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/mplib-pill-s401-endpoint-v2/report.json",
+        "sha256": "a61d344786a0f19c30286d1c3f0c260b9a4ddd99c18d37a5ab2d47ee35633b38"
+      }
+    },
+    {
+      "case": "mplib-pill-s401-staged-5cm",
+      "status": "failed",
+      "steps": 38,
+      "stage": "pregrasp",
+      "error": "pregrasp: aborted: measured_collision",
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/native/mplib-pill-s401-staged-5cm/report.json",
+        "sha256": "8dbb0fc986524954c47c9f9270aea027631f78a617e6d8cb28c9ca2e40f220ce"
+      }
+    }
+  ],
+  "cpu_final_selftests": {
+    "status": "passed",
+    "runs": [
+      {
+        "module": "planning_endpoint",
+        "command": [
+          "${TIG_WORKSPACE}/infrastructure/envs/tig-official/bin/python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.planning_endpoint",
+          "--self-test"
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "trajectory_schedule",
+        "command": [
+          "${TIG_WORKSPACE}/infrastructure/envs/tig-official/bin/python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.trajectory_schedule",
+          "--self-test"
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "dual_arm_execution",
+        "command": [
+          "${TIG_WORKSPACE}/infrastructure/envs/tig-official/bin/python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.dual_arm_execution",
+          "--self-test"
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "validate_curobo_complete",
+        "command": [
+          "${TIG_WORKSPACE}/infrastructure/envs/tig-official/bin/python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.validate_curobo_complete",
+          "--self-test"
+        ],
+        "exit_code": 0
+      }
+    ],
+    "environment_steps": 0
+  },
+  "known_limits": [
+    "Fruit compact and direct-release candidates failed; no claim of improved fruit tail margin or cross-seed success rate.",
+    "Historical frozen cuRobo3/5 and MPLib4/5 scores are unchanged.",
+    "Replay top-level official_200_step_complete has a pre-existing default false; replay conclusions use14 actual checks plus9 outcome checks, exact original actions and exit0.",
+    "Native held-audit actor display names retain apple/banana labels for pill. Semantic targets pill_a/pill_b are correctly bound to native H5 actor keys080_pillbottle_1/080_pillbottle_2; H5 keys were not renamed.",
+    "direct-release-v2 is opt-in; standard remains the default.",
+    "No new-machine installation or backend performance ranking is claimed."
+  ],
+  "revision": {
+    "prior_summary_path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/acceptance-summary-v1.json",
+    "prior_summary_sha256": "cc1c2596c67e8c8c6c40fce4c4f385fcf2579a7ffc25b000abd68ece8f957624",
+    "reason": "Correct semantic object names versus native H5 actor keys in the explanatory note; native reports, scores and results unchanged."
+  },
+  "copy_provenance": {
+    "original_summary_path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/geometry-endpoint-budget-20261117/acceptance-summary-v2.json",
+    "original_summary_sha256": "8fc15da68d82f4f2baea9c3e8eb9aabab582e05d090a35830b9bca7fa5c797dc",
+    "transformation": "Replace absolute workspace prefix with ${TIG_WORKSPACE}; preserve results and original evidence identities. This copy has its own file identity."
+  }
+}
