@@ -1,0 +1,315 @@
+{
+  "schema": "tig-infra-convergence-stage1-public-v1",
+  "date": "2026-11-17",
+  "checkpoint": "development snapshot; stage1 native acceptance pending",
+  "previous_repair_base_commit": "0b59c279ea92df53476ef7b3c4226bbd9b864397",
+  "legacy_policy_sha256": "b196d14685d546ee46a47139f600453559019855352ab5d85a7a7662527aa5d3",
+  "cpu": {
+    "status": "passed",
+    "environment_steps": 0,
+    "runs": [
+      {
+        "module": "runtime_policy",
+        "command": [
+          "python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.runtime_policy",
+          "--self-test"
+        ],
+        "exit_code": 0,
+        "source_sha256": "25a6bb8cce8e4bb41a0f79f4e15aebbf115847668f2a25d88ef171e7930f8ad1",
+        "local_log_sha256": "f0f3976826bc413b3fcf7445ec3e58ec89d404e2bdd1cc2c18000d4652ed9831"
+      },
+      {
+        "module": "dual_arm_execution",
+        "command": [
+          "python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.dual_arm_execution",
+          "--self-test"
+        ],
+        "exit_code": 0,
+        "source_sha256": "ec035ed4a7089bd4a9fb1c4f8cbb1317c46e7cd3ec1bb2981dc73b70c83100a8",
+        "local_log_sha256": "1893a8eac198c0f9f07725e05fc084e034ecef88c79a6a79dde40691f4c1e3f8"
+      },
+      {
+        "module": "validate_sync",
+        "command": [
+          "python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.validate_sync",
+          "--self-test"
+        ],
+        "exit_code": 0,
+        "source_sha256": "6f7ff4090442594b1876a496e0d7aeb587f54134ceab59de455d9a17df7bb56b",
+        "local_log_sha256": "bb936cab38bf0df0db9dd696f012c2101a8c1656bd57c370abee2bff2751f9bb"
+      },
+      {
+        "module": "run_results",
+        "command": [
+          "python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.run_results",
+          "--self-test"
+        ],
+        "exit_code": 0,
+        "source_sha256": "1c576989cc37f87a812a7c328b734116606bafc61daabb9615cc9409d4c5aa20",
+        "local_log_sha256": "d7c295290acaf76fe1e0a42c40330d20c10124ca8175d5fb2d68b23d0fff048f"
+      },
+      {
+        "module": "multitask_recording",
+        "command": [
+          "python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.multitask_recording",
+          "--self-test"
+        ],
+        "exit_code": 0,
+        "source_sha256": "b4f89eb48d0b9e21bcddc9bc3438b6e6112b7c025f0c30fcd7ca33be28626f8c",
+        "local_log_sha256": "3c6ecb1c736060cec0285c9c79596ab306cc7e4537aba9330d3296b8b3e102dd"
+      },
+      {
+        "module": "validate_curobo_complete",
+        "command": [
+          "python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.validate_curobo_complete",
+          "--self-test"
+        ],
+        "exit_code": 0,
+        "source_sha256": "b7b3086a7c61e3920963b3dcaca271f0b1b3f662bdf326f176c0c3d03a873a34",
+        "local_log_sha256": "2048f894da634604bf6ce26538f7cc397e98e3ddcdcdd9cb1f7d82ad5f2a8931"
+      },
+      {
+        "module": "validate_curobo_complete_replay",
+        "command": [
+          "python",
+          "-B",
+          "-m",
+          "mani_skill.examples.motionplanning.dual.validate_curobo_complete_replay",
+          "--self-test"
+        ],
+        "exit_code": 0,
+        "source_sha256": "100ec7703bc4f31ab8a91e674f2e6ab3b2dc35bbf6dbf85c6d0c48d3a533bd90",
+        "local_log_sha256": "9c235e68f48124dc353657ddb0150f4c8c6c2e0437e9035a5a9d86d3dc58365e"
+      }
+    ]
+  },
+  "old_recording_preflight": {
+    "status": "passed",
+    "environment_created": false,
+    "physics_steps": 0,
+    "cases": [
+      {
+        "case": "curobo-apple-s1003-final",
+        "strict": {
+          "status": "rejected",
+          "reason": "Current execution/contact dependency differs from source: dual_arm_execution.py, multitask_recording.py, validate_sync.py"
+        },
+        "cross_version_preflight": "passed",
+        "action_steps": 192,
+        "state_frames": 193,
+        "source_archive_files": 83,
+        "critical_source_differences": [
+          "dual_arm_execution.py",
+          "multitask_recording.py",
+          "validate_sync.py"
+        ],
+        "source_evidence_unchanged": true,
+        "synthetic_live_assets": {
+          "status": "passed",
+          "rejected_incompatible": [
+            {
+              "case": "changed_initial_support_world_pose",
+              "reason": "Live task initial role pose differs: initial_support0"
+            },
+            {
+              "case": "changed_target_collision_vertices",
+              "reason": "Live task collision mesh differs: target0"
+            },
+            {
+              "case": "changed_native_actor_identity",
+              "reason": "Live task geometry actor/state identity differs: target0"
+            },
+            {
+              "case": "changed_contents_target_pairing",
+              "reason": "Live destination contents semantic pairing differs: contents0"
+            }
+          ],
+          "native_environment_created": false
+        }
+      },
+      {
+        "case": "curobo-apple-s1004-final",
+        "strict": {
+          "status": "rejected",
+          "reason": "Current execution/contact dependency differs from source: dual_arm_execution.py, multitask_recording.py, validate_sync.py"
+        },
+        "cross_version_preflight": "passed",
+        "action_steps": 187,
+        "state_frames": 188,
+        "source_archive_files": 83,
+        "critical_source_differences": [
+          "dual_arm_execution.py",
+          "multitask_recording.py",
+          "validate_sync.py"
+        ],
+        "source_evidence_unchanged": true,
+        "synthetic_live_assets": {
+          "status": "passed",
+          "rejected_incompatible": [
+            {
+              "case": "changed_initial_support_world_pose",
+              "reason": "Live task initial role pose differs: initial_support0"
+            },
+            {
+              "case": "changed_target_collision_vertices",
+              "reason": "Live task collision mesh differs: target0"
+            },
+            {
+              "case": "changed_native_actor_identity",
+              "reason": "Live task geometry actor/state identity differs: target0"
+            },
+            {
+              "case": "changed_contents_target_pairing",
+              "reason": "Live destination contents semantic pairing differs: contents0"
+            }
+          ],
+          "native_environment_created": false
+        }
+      },
+      {
+        "case": "curobo-pill-s401-final",
+        "strict": {
+          "status": "rejected",
+          "reason": "Current execution/contact dependency differs from source: dual_arm_execution.py, multitask_recording.py, validate_sync.py"
+        },
+        "cross_version_preflight": "passed",
+        "action_steps": 191,
+        "state_frames": 192,
+        "source_archive_files": 83,
+        "critical_source_differences": [
+          "dual_arm_execution.py",
+          "multitask_recording.py",
+          "validate_sync.py"
+        ],
+        "source_evidence_unchanged": true,
+        "synthetic_live_assets": {
+          "status": "passed",
+          "rejected_incompatible": [
+            {
+              "case": "changed_initial_support_world_pose",
+              "reason": "Live task initial role pose differs: initial_support0"
+            },
+            {
+              "case": "changed_target_collision_vertices",
+              "reason": "Live task collision mesh differs: target0"
+            },
+            {
+              "case": "changed_native_actor_identity",
+              "reason": "Live task geometry actor/state identity differs: target0"
+            }
+          ],
+          "native_environment_created": false
+        }
+      },
+      {
+        "case": "mplib-pill-s401-replan-v3",
+        "strict": {
+          "status": "rejected",
+          "reason": "Current execution/contact dependency differs from source: dual_arm_execution.py, multitask_recording.py, validate_sync.py"
+        },
+        "cross_version_preflight": "passed",
+        "action_steps": 171,
+        "state_frames": 172,
+        "source_archive_files": 82,
+        "critical_source_differences": [
+          "dual_arm_execution.py",
+          "multitask_recording.py",
+          "validate_sync.py"
+        ],
+        "source_evidence_unchanged": true,
+        "synthetic_live_assets": {
+          "status": "passed",
+          "rejected_incompatible": [
+            {
+              "case": "changed_initial_support_world_pose",
+              "reason": "Live task initial role pose differs: initial_support0"
+            },
+            {
+              "case": "changed_target_collision_vertices",
+              "reason": "Live task collision mesh differs: target0"
+            },
+            {
+              "case": "changed_native_actor_identity",
+              "reason": "Live task geometry actor/state identity differs: target0"
+            }
+          ],
+          "native_environment_created": false
+        }
+      }
+    ]
+  },
+  "pre_migration_fruit_baseline": {
+    "task": "TwoRobotPickFruitsToPlate-v1",
+    "seed": 401,
+    "purpose": "same-version baseline captured before production changes; not current-code regression",
+    "runs": [
+      {
+        "case": "curobo-fruits-s401-standard8-v4",
+        "status": "passed",
+        "steps": 196,
+        "exit_code": 0,
+        "source_identity_unchanged": true
+      },
+      {
+        "case": "curobo-fruits-s401-standard8-v4",
+        "status": "passed",
+        "steps": 196,
+        "exit_code": 0,
+        "source_identity_unchanged": true
+      }
+    ]
+  },
+  "current_code_native_generation": "NOT_RUN",
+  "current_code_actual_action_replay": "NOT_RUN",
+  "independent_checkout_startup": "NOT_RUN",
+  "external_evidence": {
+    "root": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/infra-convergence-20261117",
+    "receipts": {
+      "cpu": {
+        "local_relative_path": "cpu/publish-stage1.json",
+        "sha256": "77b7b925494bc4ddeb4728d224db844730ab3b18c797245467c055a4a2fb3cfb",
+        "uploaded": false
+      },
+      "recording_preflight": {
+        "local_relative_path": "logs/replay-mode-cpu-preflight-publish.json",
+        "sha256": "bcd3b716a9e4a2b4cacf41775a2bd5a14669157ba3881e7465f592940b3e058e",
+        "uploaded": false
+      },
+      "baseline_fruit_native": {
+        "local_relative_path": "logs/baseline-fruit-receipt.json",
+        "sha256": "6e364ed558b82c5a9d2b400514a0ba9d2020ca55f0baf95b007aba7cca336d75",
+        "uploaded": false
+      },
+      "baseline_fruit_replay": {
+        "local_relative_path": "logs/baseline-fruit-replay-receipt.json",
+        "sha256": "c6beb9d7ccd7e29089abad751a7d7d18dc731a07857c681eb9840bda95906797",
+        "uploaded": false
+      }
+    },
+    "large_trajectories_videos_assets_and_full_logs_uploaded": false
+  },
+  "historical_reports_or_scores_modified": false,
+  "notes": [
+    "Raw source receipts remain external; this is a selected publication summary with machine paths and GPU identifiers omitted.",
+    "Cross-version CPU preflight does not establish physical replay success.",
+    "Legacy strict policy and universal three-tick reserve remain active; new task quality policy is later work."
+  ]
+}
