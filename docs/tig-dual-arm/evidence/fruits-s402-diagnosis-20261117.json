@@ -1,0 +1,135 @@
+{
+  "schema": "tig-fruits-s402-diagnosis-v1",
+  "date": "2026-11-17",
+  "status": "diagnosis_confirmed_repair_not_implemented",
+  "runtime_commit": "700827c",
+  "production_code_modified": false,
+  "runtime_sources_verified": 100,
+  "baseline_preserved": true,
+  "diagnosis": {
+    "failure_stage": "carry_lower",
+    "environment_steps": 137,
+    "native_validation": {
+      "path_valid": [
+        [
+          true
+        ]
+      ],
+      "collision_valid": [
+        [
+          false
+        ]
+      ],
+      "limits_and_dynamics_valid": [
+        [
+          true
+        ]
+      ]
+    },
+    "native_candidate_samples": 131,
+    "dense_buffer_capacity": 1000,
+    "native_world_collision_frames": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "native_self_collision_positive_frames": 0,
+    "implicated_pair": {
+      "active_link": "panda_link5",
+      "active_link_local_sphere": 161,
+      "native_global_sphere": 1366,
+      "world_obstacle": "peer::panda_link6::shape_0"
+    },
+    "maximum_exact_proxy_overlap_m": 0.00870847212439205,
+    "maximum_proxy_overlap_frame": 11,
+    "maximum_native_penetration_reconstruction_error_m": 7.412118685188318e-08,
+    "minimum_actual_convex_pair_gap_m": 0.03181029111146927,
+    "minimum_actual_gap_frame": 8,
+    "actual_convex_pair_separated_all_samples": true,
+    "physical_scope": "sampled native convex geometry and executed137step contact observations; not continuous-time proof or accepted/executed failed candidate",
+    "proxy_depth_authoritative_receipt": "cpu-geometry/native-sphere-distance-refinement.json",
+    "EPA_contact_depth_caveat": "FCL EPA contact penetration estimate differs at frames11/12; exact surface gap is authoritative for sphere-vs-convex penetration. Boolean classifications and implicated pair unchanged. Full actual link5 native convex versus peer6 remained separately verified positively separated."
+  },
+  "reproduction": {
+    "initial_state_content_equal": true,
+    "actions_equal": true,
+    "actions_shape": [
+      137,
+      16
+    ],
+    "native_geometry_state_equal_except_grasp_report_reference_sha": true,
+    "provenance_hash_differences": 2,
+    "same_phase_counts": true,
+    "same_failure": true,
+    "original_failed_exit_code_retained": 1,
+    "forbidden_contacts": 0,
+    "native_parameters_changed": false,
+    "collision_permissions_changed": false,
+    "failed_candidate_executed": false
+  },
+  "repair_candidate": {
+    "scope": "Geometric counterfactual only: existing fixed complete-solid25mm link5 cover, original captured joint candidate and all other world/robot geometry unchanged; no native solver/metric rerun, physics, GPU, or accepted trajectory claim",
+    "old_link5_spheres": 387,
+    "new_link5_spheres": 368,
+    "complete_solid_coverage": true,
+    "sample_count": 131,
+    "changed_world_pairs_clear": true,
+    "changed_self_pairs_clear": true,
+    "minimum_new_link5_peer6_proxy_gap_m": 0.014841677621006966,
+    "native_solver_rerun": "not_run",
+    "closed_loop_rollout": "not_run"
+  },
+  "raw_evidence_root": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/fruits-s402-diagnosis-20261117",
+  "raw_sha256": {
+    "protocol.json": "c1cc7e19a121dd52286fc0005c8f85a37762d58b9a7d5f7280a72ac5ea9160f9",
+    "diagnostic_worker.py": "76a692c3aae201a4460de9084f1ae826a020ee3680a0859bb6fb616d9effd236",
+    "native_capture.py": "ad8a643df14ee15b2827cafa9ea339f287a1323c230805573a1d22a82b19f248",
+    "manifest.json": "567d39a0ccbd007e0cc6188474392a85749ddcaa6a596fe9ba1f51029f3375a9",
+    "native-process.json": "ad7a4a6f8f0c5ab75e53957badcbd5dca87799b170cd62961e15fd5df81fa2c0",
+    "reproduction-comparison.json": "ead9e4a57d6ae54d65f340da208297a6cc54befed7faf9633714b5eaf2a9feb7",
+    "native-repro/summary.json": "dd350eebadb6f11530024508a8ec3f9342f5cebdb3cb9fb908be785d697bef2e",
+    "native-repro/observer-identity.json": "22a4664d4ece0a3762d38e2e490d601feb22a0b9411eb852ecbb4583720fb6b0",
+    "native-repro/episodes/s402/report.json": "a0efda7c542f97b2fd48224eb7fad82db9bad139e274537ead34ed629d6ee3ac",
+    "native-repro/episodes/s402/carry_lower-arm-0-snapshot.json": "bcb58040add76af7c07cd8e8ae7bc5592527d998092fa259eef2f5bf0cdf34c4",
+    "native-repro/episodes/s402/carry_lower-arm-0-native-result.json": "c6ebf036e2c8bca12715ac5c2c5a47f2bdfc60db72fffd30e4daaccdee21fd92",
+    "native-capture/summary.json": "73a19314f4e43df1c2569fa617367fbb02dbb2ae4f30aa88aa3ba032aedb6d2d",
+    "native-capture/arrays.npz": "264a84471b10a10b9f67be10c95864aa0331d5cb0adb719a6b0dcffcc5d9212d",
+    "native-capture/request.json": "d9178c586143be4ac147ec591c8fc57ec6b26ef69f87294abf350c2b17650020",
+    "native-capture/observer-identity.json": "776df28160412f6138439e432b9f3817c338cddceeba2f7655010f7a0e85dbfa",
+    "cpu-geometry/audit.py": "f044336066c16093dfcfd83dd66a3da4f504dac51681a0d009102dd853d3c663",
+    "cpu-geometry/code-trace.json": "746d3ad1436662089afd668c8952ed0b82b4d43151a4bea85db8347866d90329",
+    "cpu-geometry/goal-geometry-audit.json": "9afff66cdb2bc1a9dd640f5e809f42b877ee27d95a1fc65ef7f4e27457517829",
+    "cpu-geometry/ik_probe.py": "710628cce2b58821fdca122536524dfe3cae7d6120817e80417f639633d25fb8",
+    "cpu-geometry/independent-ik-probe.json": "da37f0ea4891c6355d2a1a9052180d64b334085185508d58fbca98abaf1a621f",
+    "cpu-geometry/index-complete-before-native-candidate.json": "dae4c875b775a6d4cce3426189cabe6ef248332bbbc2e6c894c0bafc9896e9d5",
+    "cpu-geometry/index-complete.json": "8c33245d3c8b7bb6f3da8da1d32a4f394f3c0ad0c32a6a31e1cff38a6b1bdd36",
+    "cpu-geometry/index.json": "41757fe507ccd5ca26c4a6132c5be506c97b31851a46d0aa96f7f6351a3b0647",
+    "cpu-geometry/link5-peer6-exact.json": "c7b2b05897d3c74d0263e367f2b59cf6576707ed41db5336c54a47e3c0fa9b08",
+    "cpu-geometry/link5_peer6_exact.py": "582fc5f50dab51de491491a50dd3ddae147950bbf265fc8f32ffa0abdc533088",
+    "cpu-geometry/native-candidate-geometry.json": "dd4b0c735d2212975a7cedf3b07e8ec1083c75e06d0c9c77e564377229e24e16",
+    "cpu-geometry/native-sphere-distance-refinement.json": "5414b6bc32c52c5359e811d8814d20444173856165c53942a361361935a27b9f",
+    "cpu-geometry/native-tight-cover-counterfactual.json": "aaaef0cbcb61809301c679dd033bc02ab2f9d497b265e57050e4b9558d0ddb22",
+    "cpu-geometry/native_candidate_audit.py": "62ef0f5faf9691f8b5eecda36b302e80c7d0c391400f430673fb8d20059695a1",
+    "cpu-geometry/native_sphere_distance_refinement.py": "49d979fd185169fa068dffd39bb1496e949ccc13f6a77cad4f67ef2a3329680d",
+    "cpu-geometry/native_tight_cover_counterfactual.py": "3767349f5602febaf478f1e61e2a199696bbfb028e7cc6d45b828116cd1fd3ba",
+    "cpu-geometry/phase-snapshot-contrast.json": "925dcf60cc6a268a35f78d50fda8a5a2c4a910cae25bd5e4eb13bb8a532e5ed6",
+    "cpu-geometry/phase_snapshot_contrast.py": "24818ff06e3219d58a8f96bc35c640a03bd16dc63c2121755c75322fe985ca48",
+    "cpu-geometry/sphere-excess.json": "955cc0ad2cc6074538663eb6d0cde55e61ee6d34a362de505cf77f0252dcb248",
+    "cpu-geometry/sphere_excess.py": "64b5e0e53d5d9f41217f4b7b4fcb98ba4094e9ede6f9dec2a080b501bfbef6cc",
+    "cpu-geometry/tight-cover-probe.json": "44ffd472b5b0f0ebc466920d7d369473a6eb40eb56c3682ea04915ae724c719e",
+    "cpu-geometry/tight_cover_probe.py": "c41feb10b2c75c68b750b5e476d47752bc8a52ac00a49dae70e256946ad85f23"
+  },
+  "raw_trajectories_uploaded": false
+}

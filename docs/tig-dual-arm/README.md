@@ -2,6 +2,10 @@
 
 新数据下游首轮闭环已完成：药瓶seed401的一条同步轨迹补录观测、转LeRobot、实际短训ACT并严格重载，模型随后实际执行200步。本次策略任务未完成、超时；接口链路通过。入口、配置和结果见[同步数据到ACT](DATA-ACT-BRIDGE.md)。
 
+水果同盘seed402的link5／link6球代理误拒已修复；三个水果种子、苹果、药瓶、失败后重置及五条严格回放的结果见[覆盖修复验收](FRUITS-COLLISION-COVER-REPAIR.md)。
+
+cuRobo 后续性能工作见[跨回合复用与配置诊断](CUROBO-EPISODE-REUSE.md)：保留四实例，显式 manifest 批次支持回合重置和常驻复用；单回合入口继续沿用原生命周期。三任务九组冷暖配对的合格结果一致，观察到整批吞吐提高 1.70–2.29 倍；25 回合连续运行、三个未释放负控及恢复、四次严格动作回放的结果与保留失败见[扩展证据索引](evidence/curobo-episode-reuse-extended-20261117.json)。
+
 当前进度见[最终本地验收](INFRA-CONVERGENCE-ACCEPTANCE.md)：五阶段收敛已完成，统一配置、独立结果、运行去重、可选质量与normal/diagnostic录制均接通。最终运行版本 `f390fdf` 的四个代表案例及第三个水果任务原生／严格回放分别为171、191、192、187、196步；可选配置、legacy、旧轨迹跨版本回放和实际未释放负例另存验证。命令见[运行指南](RUNTIME-STRATEGIES.md)。阶段1、2的证据分别见[发布快照](INFRA-CONVERGENCE.md)和[独立checkout检查点](PORTABLE-RUNTIME.md)。旧轨迹、评分和下文历史快照保留。
 
 2026-11-17 后续修复：快照 PR 已合入 fork `main`（`f65ebc6`）。基于该版本完成放置几何、MPLib 终点与收尾预算修复；同一源码的四例代表运行及实际动作回放均通过，见 [修复与验收说明](REPAIR-20261117.md)。下文保留前次快照保存时的状态与历史结果。

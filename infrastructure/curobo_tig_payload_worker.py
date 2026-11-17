@@ -248,6 +248,15 @@ def _validate_payload_request(request: Any, *, profile_validator: Callable[[str,
     if operation == "init_session":
         validate_model(request.get("payload_model"), request["robot_cfg"], request["world"],
                        extra_fields=model_fields)
+    elif operation == "begin_episode":
+        for row in request["sessions"]:
+            validate_model(row["payload_model"], row["robot_cfg"], row["world"],
+                           extra_fields=model_fields)
+            state = row["payload_state"]
+            validate_state(state, row["payload_model"], row["robot_cfg"])
+            if state != {"contact_allowed": False, "source_support_allowed": False,
+                         "source_support_obstacle_names": [], "attachment": None}:
+                raise ValueError("begin_episode requires explicit empty-hand state with no permissions")
     elif operation == "update_session" and "payload_state" not in request:
         raise ValueError("each measured update requires explicit complete payload_state")
     return request
@@ -278,6 +287,14 @@ class PayloadBackend(ResidentBackend):
         result = super().configure(request)
         result["payload_model"] = deepcopy(self.payload_model)
         result["timeopt_payload_inertia_applied"] = False
+        return result
+
+    def begin_episode(self, robot_cfg: dict[str, Any], world: dict[str, Any], seed: int,
+                      payload_model: dict[str, Any], payload_state: dict[str, Any]) -> dict[str, Any]:
+        """Restore empty hands through the normal complete in-place state update."""
+        self.payload_model = deepcopy(payload_model)
+        result = self.update(robot_cfg, world, payload_state)
+        result["seed_protocol"] = self._reset_episode_seed(seed)
         return result
 
     def _failure_geometry(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -509,6 +526,24 @@ class PayloadSessionManager(SessionManager):
                              "source_support_obstacle_names": [], "attachment": None}
         return super().init_session(request)
 
+    def _validate_episode_session(self, row: dict[str, Any]) -> None:
+        super()._validate_episode_session(row)
+        name = row["session_id"]
+        validate_model(row["payload_model"], row["robot_cfg"], row["world"])
+        if row["payload_model"] != self.models[name]:
+            raise ValueError("episode immutable payload geometry or policy changed")
+
+    def _reset_native_episode(self, row: dict[str, Any], seed: int) -> dict[str, Any]:
+        return self.sessions[row["session_id"]].backend.begin_episode(
+            deepcopy(row["robot_cfg"]), deepcopy(row["world"]), seed,
+            deepcopy(row["payload_model"]), deepcopy(row["payload_state"]))
+
+    def _commit_episode_session(self, row: dict[str, Any]) -> None:
+        super()._commit_episode_session(row)
+        name = row["session_id"]
+        self.models[name], self.states[name] = deepcopy(row["payload_model"]), deepcopy(row["payload_state"])
+        self.support_revoked.discard(name.split(":")[0])
+
     def update_session(self, request: dict[str, Any]) -> dict[str, Any]:
         session = self._session(request, require_valid=False)
         name, side = request["session_id"], request["session_id"].split(":")[0]
@@ -557,7 +592,9 @@ def dispatch(request: Any, manager: PayloadSessionManager) -> dict[str, Any]:
         _finite_json(response)
         return response
     except Exception as error:
-        if isinstance(request, dict) and request.get("op") == "update_session":
+        if isinstance(request, dict) and request.get("op") == "begin_episode":
+            manager.invalidate_all(f"{type(error).__name__}: {error}")
+        elif isinstance(request, dict) and request.get("op") == "update_session":
             manager.invalidate(request.get("session_id"), f"{type(error).__name__}: {error}")
         raise
 
@@ -604,6 +641,12 @@ def self_test() -> None:
                 raise RuntimeError("synthetic partial native failure")
             self.lock_joints = deepcopy(robot["kinematics"]["lock_joints"])
             return {"payload": deepcopy(state)}
+
+        def begin_episode(self, robot: dict[str, Any], world: dict[str, Any], seed: int,
+                          model: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
+            self.payload_model, self.payload_state = deepcopy(model), deepcopy(state)
+            self.measured_world = deepcopy(world)
+            return self.update(robot, world, state)
 
         def plan_pose(self, request: dict[str, Any]) -> dict[str, Any]:
             return {"success": True}
@@ -699,6 +742,48 @@ def self_test() -> None:
         bad_init["session_id"] = "right:approach"
         bad_init["robot_cfg"]["kinematics"]["self_collision_ignore"][PAYLOAD_LINK].append("panda_hand")
         rejected(bad_init, manager)
+        # Four native instances survive an episode boundary, while all grasp
+        # lifecycle evidence, support revocation and old snapshot tokens do not.
+        for name in ("left:transport", "right:approach", "right:transport"):
+            additional = deepcopy(init)
+            additional["session_id"] = name
+            if name.endswith(":transport"):
+                additional["robot_cfg"]["kinematics"]["cspace"].update(
+                    velocity_scale=[.75]*7+[.45]*2, max_acceleration=[2.6]*7+[.9]*2)
+            dispatch(additional, manager)
+        rows = [{"session_id": name, "robot_cfg": deepcopy(session.robot_cfg),
+                 "world": deepcopy(session.world), "payload_model": deepcopy(manager.models[name]),
+                 "payload_state": deepcopy(free)} for name, session in sorted(manager.sessions.items())]
+        reset = {"id": 10, "op": "begin_episode", "episode_id": "payload-A", "seed": 0,
+                 "interpolation_dt": .02, "sessions": rows}
+        manager.support_revoked.update({"left", "right"})
+        for label, target_x in (("payload-A", .2), ("payload-B", .4), ("payload-A-again", .2)):
+            episode = deepcopy(reset)
+            episode["episode_id"] = label
+            for row in episode["sessions"]:
+                row["world"]["cuboid"]["scene::apple::shape_0"]["pose"][0] = target_x
+            dispatch(episode, manager)
+            assert not manager.support_revoked
+            for name, session in manager.sessions.items():
+                assert manager.states[name] == free and session.backend.payload_state == free
+                assert not session.valid and not session.used_snapshots and session.snapshot_id is None
+                assert session.backend.measured_world["cuboid"]["scene::apple::shape_0"]["pose"][0] == target_x
+            assert id(manager.sessions["left:approach"].backend.planner) == before_id
+        failed = deepcopy(reset)
+        failed["sessions"][2]["world"]["cuboid"][SOURCE_TABLE]["pose"][0] = 999
+        rejected(failed, manager)
+        assert manager.episode_reset_pending and all(not session.valid for session in manager.sessions.values())
+        rejected(update, manager)
+        dispatch(reset, manager)
+        invalid_reset = deepcopy(reset)
+        invalid_reset["sessions"][0]["payload_state"]["contact_allowed"] = True
+        rejected(invalid_reset, manager)
+        assert all(not session.valid for session in manager.sessions.values())
+        dispatch(reset, manager)
+        # A new episode can reuse the old token text only after complete reset.
+        dispatch(update, manager)
+        dispatch(request, manager)
+        assert manager.states["left:approach"]["attachment"] is not None
         stream, sink = io.StringIO('{"id":5,"op":"unknown"}\n{"id":6,"op":"shutdown"}\n'), io.StringIO()
         with contextlib.redirect_stderr(io.StringIO()):
             serve_payload(stream, sink, manager)
@@ -709,7 +794,10 @@ def self_test() -> None:
                       "checks": ["exact_target_ownership", "reserved_tcp_topology", "own_fingers_only",
                                  "finite_positive_spheres", "physical_inertia_shape", "version_identity",
                                  "failed_update_invalidates", "bounded_source_support_lifecycle",
-                                 "persistent_planner_identity", "strict_ndjson", "no_cuda_or_env_step"]}))
+                                 "persistent_planner_identity", "episode_payload_A_B_A",
+                                 "episode_clears_grasp_history_and_source_revocation",
+                                 "partial_episode_failure_requires_complete_reset",
+                                 "strict_ndjson", "no_cuda_or_env_step"]}))
 
 
 def main() -> None:

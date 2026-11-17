@@ -30,8 +30,10 @@ import time
 import traceback
 from typing import Any, TextIO
 if __package__:
+    from .curobo_config_profile import create_profiled_config
     from .tig_runtime import RuntimePaths, ensure_cache_directories, resolve_runtime_paths
 else:
+    from curobo_config_profile import create_profiled_config
     from tig_runtime import RuntimePaths, ensure_cache_directories, resolve_runtime_paths
 
 
@@ -398,14 +400,19 @@ class CuroboBackend:
         kwargs = planner_kwargs(request, self.tensor_args)
         inspect.signature(MotionPlannerCfg.create).bind(**kwargs)
         _phase("configure.MotionPlannerCfg.create.start", configure_begin)
-        config = MotionPlannerCfg.create(**kwargs)
+        config, config_timings = create_profiled_config(
+            MotionPlannerCfg.create, kwargs,
+            source_root=paths.curobo_source, code_root=paths.code_root,
+        )
         _phase("configure.MotionPlannerCfg.create.complete", configure_begin)
         if (config.ik_solver_config.robot_config.dynamics is not None
                 or config.trajopt_solver_config.robot_config.dynamics is not None
                 or not config.trajopt_solver_config.enable_timeopt):
             raise RuntimeError("expected unloaded RobotCfg dynamics with default TimeOpt enabled")
         _phase("configure.MotionPlanner.construct.start", configure_begin)
+        planner_construct_begin = time.perf_counter()
         self.planner = MotionPlanner(config)
+        planner_construct_s = time.perf_counter() - planner_construct_begin
         _phase("configure.MotionPlanner.construct.complete", configure_begin)
         torch.cuda.synchronize()
         initialization_s = time.perf_counter() - begin
@@ -438,6 +445,13 @@ class CuroboBackend:
             "tool_frames": frames,
             "locked_finger_positions": self.lock_joints,
             "initialization_s": initialization_s,
+            **config_timings,
+            "planner_construct_s": planner_construct_s,
+            "initialization_timing_scope": (
+                "initialization_s includes config create, planner construction, final CUDA "
+                "synchronization and diagnostic summary if enabled; phase wall times do not "
+                "introduce CUDA synchronizations. Profile instrumentation overhead is unmeasured."
+            ),
             "warmup_s": warmup_s,
             "warmup_requested": request.get("warmup", False),
             "warmup_success": warmup_success,
@@ -644,6 +658,14 @@ def serve(source: TextIO, sink: TextIO, backend: Any) -> None:
 def self_test() -> None:
     """Exercise shape, finite, error isolation and JSON framing on CPU only."""
     assert "torch" not in sys.modules and "curobo" not in sys.modules
+    if __package__:
+        from .curobo_config_profile import self_test as profile_self_test
+    else:
+        from curobo_config_profile import self_test as profile_self_test
+    profile_output = io.StringIO()
+    with contextlib.redirect_stdout(profile_output):
+        profile_self_test()
+    assert json.loads(profile_output.getvalue())["self_test"] == "PASS"
     assert _vector([0] * DOF, DOF, "q") == [0.0] * DOF
     assert len(_matrix([[0] * DOF], DOF, "q")) == 1
     q_boundary = [[0] * DOF, [1] * DOF]
@@ -789,6 +811,7 @@ def self_test() -> None:
                       "rejected_boundary_cases": len(rejected),
                       "native_dof": 9, "native_mapping_rejected_cases": len(bad_natives),
                       "json_responses": len(responses), "cuda_imported": False,
+                      "config_profile_tested": True,
                       "external_source_and_cache_resolution_tested": True}))
 
 

@@ -64,6 +64,7 @@ INFRASTRUCTURE_SOURCES = ('tig_runtime.py', 'curobo_tig_worker.py',
     'curobo_tig_payload_worker.py', 'curobo_tig_task_payload_worker.py',
     'curobo_tig_fast_payload_worker.py', 'curobo_tig_seed_policy_worker.py',
     'curobo_tig_session_worker.py')
+OPTIONAL_INFRASTRUCTURE_SOURCES = ('curobo_config_profile.py',)
 
 
 def current_source_paths(current_directory: Path = HERE) -> dict[str, Path]:
@@ -83,7 +84,7 @@ def current_source_paths(current_directory: Path = HERE) -> dict[str, Path]:
     sources = {path.name: path for path in current_directory.glob('*.py') if path.is_file()}
     # Actual worker code belongs to infrastructure even if another same-named
     # file exists among the dual modules. A missing worker remains missing.
-    for name in INFRASTRUCTURE_SOURCES:
+    for name in INFRASTRUCTURE_SOURCES + OPTIONAL_INFRASTRUCTURE_SOURCES:
         sources.pop(name, None)
         path = infrastructure/name
         if path.is_file():
@@ -260,6 +261,17 @@ def source_identity(directory: Path, report: dict[str, Any], replay_mode: str = 
               or report.get('completion_contract') == SELECTED_COMPLETION_CONTRACT)
     if stage4:
         critical += ('runtime_profiles.py', 'recording_policy.py', 'task_outcome.py', 'run_results.py')
+    # These modules did not exist in historical archives. New reports explicitly
+    # declare their contracts, including profiling='off' and cold pool runs.
+    if 'config_profile_schema' in report:
+        _require(report['config_profile_schema'] == 'tig-curobo-config-profile-v1',
+                 'Unknown cuRobo configuration profile schema')
+        critical += ('curobo_config_profile.py',)
+    if 'episode_reuse' in report:
+        _require(isinstance(report['episode_reuse'], dict)
+                 and report['episode_reuse'].get('schema') == 'tig-curobo-episode-reuse-v1',
+                 'Unknown cuRobo episode reuse schema')
+        critical += ('curobo_episode_pool.py',)
     _require(set(critical) <= set(recorded), 'Source lacks critical execution identities')
     paths = current_source_paths(current_directory)
     archive = (directory/'source').resolve()
@@ -1157,6 +1169,55 @@ def self_test() -> dict[str, Any]:
         for mode in REPLAY_MODES:
             reject(lambda mode=mode: source_identity(directory, absent_worker, mode, current_directory=current))
         (source/worker).write_bytes(original)
+        # Optional helpers are mandatory only for reports which declare the
+        # new contracts. This preserves old archive acceptance unchanged.
+        profile_name, pool_name = 'curobo_config_profile.py', 'curobo_episode_pool.py'
+        for name, location in ((profile_name, infrastructure/profile_name), (pool_name, current/pool_name)):
+            location.write_text('# current optional helper '+name+'\n')
+        old = source_identity(directory, identity_report, current_directory=current)
+        assert old['critical_execution_sources_match']
+        assert profile_name not in old['critical_sources'] and pool_name not in old['critical_sources']
+        modern_report = copy.deepcopy(identity_report)
+        modern_report['config_profile_schema'] = 'tig-curobo-config-profile-v1'
+        modern_report['episode_reuse'] = {'schema': 'tig-curobo-episode-reuse-v1', 'mode': 'cold'}
+        for mode in REPLAY_MODES:
+            reject(lambda mode=mode: source_identity(directory, modern_report, mode, current_directory=current))
+        for name, location in ((profile_name, infrastructure/profile_name), (pool_name, current/pool_name)):
+            payload = location.read_bytes()
+            (source/name).write_bytes(payload)
+            modern_report['source_sha256'][name] = hashlib.sha256(payload).hexdigest()
+        current_identity = source_identity(directory, modern_report, current_directory=current)
+        assert {profile_name, pool_name} <= set(current_identity['critical_sources'])
+        # The optional profiler must resolve to infrastructure, not a dual shadow.
+        (current/profile_name).write_text('# wrong profiler shadow\n')
+        assert source_identity(directory, modern_report, current_directory=current)['critical_execution_sources_match']
+        for name, location in ((profile_name, infrastructure/profile_name), (pool_name, current/pool_name)):
+            original = location.read_bytes()
+            location.write_text('# changed current optional helper\n')
+            reject(lambda: source_identity(directory, modern_report, current_directory=current))
+            cross = source_identity(directory, modern_report, 'cross-version', current_directory=current)
+            assert cross['critical_source_differences'] == [name]
+            assert cross['current_source_paths'][name] == str(location)
+            location.unlink()
+            reject(lambda: source_identity(directory, modern_report, current_directory=current))
+            assert source_identity(directory, modern_report, 'cross-version', current_directory=current)[
+                'critical_source_differences'] == [name]
+            location.write_bytes(original)
+            (source/name).write_text('# changed archived optional helper\n')
+            for mode in REPLAY_MODES:
+                reject(lambda mode=mode: source_identity(directory, modern_report, mode, current_directory=current))
+            (source/name).write_bytes(original)
+            absent = copy.deepcopy(modern_report)
+            absent['source_sha256'].pop(name)
+            (source/name).unlink()
+            for mode in REPLAY_MODES:
+                reject(lambda mode=mode: source_identity(directory, absent, mode, current_directory=current))
+            (source/name).write_bytes(original)
+        for marker, value in (('config_profile_schema', 'unknown'), ('episode_reuse', {}),
+                              ('episode_reuse', None)):
+            broken = {**modern_report, marker: value}
+            for mode in REPLAY_MODES:
+                reject(lambda mode=mode: source_identity(directory, broken, mode, current_directory=current))
         isolated = resolve_runtime_paths(code_root=current,
             environ={'TIG_WORKSPACE': str(directory/'dependencies')})
         assert isolated.code_root == current and isolated.workspace_root == directory/'dependencies'
@@ -1196,6 +1257,9 @@ def self_test() -> dict[str, Any]:
         'runtime_helper_worker_current_changes_rejected_only_in_strict': True,
         'archived_runtime_helper_worker_changes_rejected_in_both_modes': True,
         'recorded_archive_cannot_substitute_for_current_sources': True,
+        'optional_profile_pool_sources_conditionally_required': True,
+        'optional_helper_archive_and_current_changes_checked': True,
+        'historical_archives_do_not_require_new_helpers': True,
         'source_resolved_release_retreat_final_limits_verified': True,
         'lift_measurement_uses_observed_phase_entry': True,
         'missing_lift_measurement_is_unknown': True,

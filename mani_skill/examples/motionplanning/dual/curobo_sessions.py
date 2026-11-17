@@ -149,7 +149,8 @@ class _SessionProcess(CuroboProcess):
         self.receipts.append({"id": self.sequence, "op": op,
                               "wall_s": time.monotonic() - before,
                               "ok": response.get("ok"), "session_id": payload.get("session_id"),
-                              "snapshot_id": payload.get("snapshot_id")})
+                              "snapshot_id": payload.get("snapshot_id"),
+                              "episode_id": payload.get("episode_id")})
         if response.get("ok") is not True:
             raise RuntimeError(f"cuRobo {op}: {response.get('error')}")
         if not isinstance(response.get("result"), dict):
@@ -175,6 +176,12 @@ class CuroboSessions:
         self._tokens: dict[str, str | None] = {}
         self._snapshot_digests: dict[str, str] = {}
         self._current_snapshot_id: str | None = None
+        self._initial_seed: int | None = None
+        self._interpolation_dt: float | None = None
+        self._episode_id: str | None = None
+        self._episode_serial = 0
+        self._episode_reset_failed = False
+        self._episode_receipt_start = 0
 
     @property
     def process(self) -> subprocess.Popen[str]:
@@ -183,6 +190,49 @@ class CuroboSessions:
     @property
     def receipts(self) -> list[dict[str, Any]]:
         return self._rpc.receipts
+
+    @property
+    def episode_receipts(self) -> list[dict[str, Any]]:
+        """Only requests belonging to the current cold or reused episode."""
+        return self._rpc.receipts[self._episode_receipt_start:]
+
+    @property
+    def episode_id(self) -> str | None:
+        return self._episode_id
+
+    def _invalidate_episode(self) -> None:
+        self._tokens.clear()
+        self._snapshot_digests.clear()
+        self._current_snapshot_id = None
+
+    def _require_episode_ready(self) -> None:
+        if self._episode_reset_failed:
+            raise RuntimeError("Episode reset did not complete; retry begin_episode or rebuild the worker")
+
+    def _begin_episode_request(self, episode_id: str, seed: int,
+                               interpolation_dt: float) -> None:
+        # Invalidate before validation: a rejected reset may never authorize an
+        # old physical snapshot, including when only one arm changed remotely.
+        self._episode_receipt_start = len(self._rpc.receipts)
+        self._invalidate_episode()
+        self._episode_reset_failed = True
+        self._episode_serial += 1
+        if not self._initialized:
+            raise RuntimeError("Initialize all four planners before beginning a reused episode")
+        if not isinstance(episode_id, str) or not episode_id.strip():
+            raise ValueError("A nonempty episode_id is required")
+        if type(seed) is not int or seed < 0 or seed != self._initial_seed:
+            raise ValueError("Resident planners retain their original planner seed; rebuild to change it")
+        if (isinstance(interpolation_dt, bool) or not math.isfinite(interpolation_dt)
+                or interpolation_dt <= 0 or interpolation_dt != self._interpolation_dt):
+            raise ValueError("Resident planners retain their interpolation timestep; rebuild to change it")
+        self._episode_id = episode_id
+
+    def _wire_snapshot_id(self, snapshot_id: str) -> str:
+        if self._episode_id is None:
+            return snapshot_id  # Preserve the existing single-episode protocol.
+        return "episode:" + json.dumps([self._episode_serial, self._episode_id, snapshot_id],
+                                        ensure_ascii=True, separators=(",", ":"))
 
     @property
     def current_snapshot_id(self) -> str | None:
@@ -220,6 +270,7 @@ class CuroboSessions:
         configs = {(arm, profile): profile_config(snapshot["robot_cfg"], profile)
                    for profile in PROFILE_LIMITS for arm, snapshot in enumerate(snapshots)}
         self._initialization_attempted = True
+        self._initial_seed, self._interpolation_dt = seed, float(interpolation_dt)
         results = []
         for profile in PROFILE_LIMITS:
             for arm, snapshot in enumerate(snapshots):
@@ -229,12 +280,14 @@ class CuroboSessions:
                     robot_cfg=configs[arm, profile], world=snapshot["world"], seed=seed,
                     interpolation_dt=float(interpolation_dt), warmup=warmup))
         self._initialized = True
+        self._episode_reset_failed = False
         return results
 
     def update_pair(self, snapshots: tuple[dict[str, Any], dict[str, Any]], *,
                     profile: str, snapshot_id: str) -> list[dict[str, Any]]:
         if not self._initialized:
             raise RuntimeError("Initialize all four fixed sessions before updating state")
+        self._require_episode_ready()
         sessions = [self.session_id(arm, profile) for arm in (0, 1)]
         # A rejected attempted update cannot leave old state authorized locally.
         self._current_snapshot_id = None
@@ -250,7 +303,7 @@ class CuroboSessions:
         results = []
         for arm, snapshot in enumerate(snapshots):
             results.append(self._rpc.request("update_session", session_id=sessions[arm],
-                robot_cfg=configs[arm], world=snapshot["world"], snapshot_id=snapshot_id))
+                robot_cfg=configs[arm], world=snapshot["world"], snapshot_id=self._wire_snapshot_id(snapshot_id)))
         self._snapshot_digests[snapshot_id] = digest
         for session in sessions:
             self._tokens[session] = snapshot_id
@@ -258,6 +311,7 @@ class CuroboSessions:
         return results
 
     def _ready(self, arm: int, profile: str, snapshot_id: str) -> str:
+        self._require_episode_ready()
         session = self.session_id(arm, profile)
         if (not self._initialized or self._tokens.get(session) != snapshot_id
                 or self._current_snapshot_id != snapshot_id or snapshot_id is None):
@@ -271,7 +325,7 @@ class CuroboSessions:
             array = array[None, :]
         if array.ndim != 2 or array.shape[1] != 7 or len(array) == 0 or not np.isfinite(array).all():
             raise ValueError("FK requires a nonempty finite seven-joint array[N,7]")
-        return self._rpc.request("fk", session_id=session, snapshot_id=snapshot_id,
+        return self._rpc.request("fk", session_id=session, snapshot_id=self._wire_snapshot_id(snapshot_id),
                                  positions=array.tolist())
 
     def plan_pose(self, *, arm: int, profile: str, snapshot_id: str, start: Any,
@@ -283,16 +337,16 @@ class CuroboSessions:
             raise ValueError("Planning goal quaternion must be normalized")
         if isinstance(max_attempts, bool) or not isinstance(max_attempts, int) or max_attempts < 1:
             raise ValueError("Maximum native attempts must be a positive integer")
-        return self._rpc.request("plan_pose", session_id=session, snapshot_id=snapshot_id,
+        return self._rpc.request("plan_pose", session_id=session, snapshot_id=self._wire_snapshot_id(snapshot_id),
             start=start_array.tolist(), goal_pose=goal.tolist(), max_attempts=max_attempts)
 
     def inspect_sessions(self) -> dict[str, Any]:
         return self._rpc.request("inspect_sessions")
 
     def close(self) -> None:
-        self._tokens.clear()
+        self._invalidate_episode()
         self._initialized = False
-        self._current_snapshot_id = None
+        self._episode_reset_failed = True
         self._rpc.close()
 
 

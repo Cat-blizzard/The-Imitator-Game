@@ -262,6 +262,7 @@ class CuroboTaskPayloadSessions(CuroboPayloadSessions):
         configs = {(arm, profile): task_profile_config(snapshot["robot_cfg"], self.task_id, profile)
                    for profile in ("approach", "transport") for arm, snapshot in enumerate(pair)}
         self._initialization_attempted = True
+        self._initial_seed, self._interpolation_dt = seed, float(interpolation_dt)
         self._models = tuple(copy.deepcopy(snapshot["payload_model"]) for snapshot in pair)
         results = []
         for profile in ("approach", "transport"):
@@ -272,11 +273,50 @@ class CuroboTaskPayloadSessions(CuroboPayloadSessions):
                     world=snapshot["world"], seed=seed, interpolation_dt=float(interpolation_dt), warmup=warmup,
                     payload_model=snapshot["payload_model"]))
         self._initialized = True
+        self._episode_reset_failed = False
         return results
+
+    def begin_episode(self, snapshots: tuple[dict[str, Any], dict[str, Any]], *,
+                      episode_id: str, seed: int = 401,
+                      interpolation_dt: float = .02) -> dict[str, Any]:
+        """Reset all four existing planners to a measured empty-hand scene.
+
+        No planner is created or warmed here. Geometry/topology and fixed
+        planner settings must remain compatible; the worker checks the whole
+        four-session request before mutating native state. A failed request
+        invalidates every local token and blocks queries until a successful
+        retry (or a newly constructed worker). ``seed`` is the planner seed,
+        separate from the simulator's independently chosen episode seed.
+        """
+        try:
+            self._begin_episode_request(episode_id, seed, interpolation_dt)
+            pair = self._payload_pair(snapshots)
+            for snapshot in pair:
+                state = snapshot["payload_state"]
+                if (state["attachment"] is not None or state["contact_allowed"]
+                        or state["source_support_allowed"] or state["source_support_obstacle_names"]):
+                    raise ValueError("Begin every episode empty-handed with no contact or support exceptions")
+            sessions = [{"session_id": self.session_id(arm, profile),
+                "robot_cfg": task_profile_config(snapshot["robot_cfg"], self.task_id, profile),
+                "world": snapshot["world"], "payload_model": snapshot["payload_model"],
+                "payload_state": snapshot["payload_state"]}
+                for profile in ("approach", "transport") for arm, snapshot in enumerate(pair)]
+            result = self._rpc.request("begin_episode", episode_id=episode_id, seed=seed,
+                interpolation_dt=float(interpolation_dt), sessions=sessions)
+            if result.get("episode_id") != episode_id:
+                raise RuntimeError("Worker reset receipt does not identify the requested episode")
+            self._models = tuple(copy.deepcopy(snapshot["payload_model"]) for snapshot in pair)
+            self._episode_reset_failed = False
+            return result
+        except Exception:
+            self._models = None
+            self._invalidate_episode()
+            raise
 
     def update_pair(self, snapshots: tuple[dict[str, Any], dict[str, Any]], *, profile: str, snapshot_id: str) -> list[dict[str, Any]]:
         if not self._initialized:
             raise RuntimeError("Initialize every fixed task session before updating")
+        self._require_episode_ready()
         sessions = [self.session_id(arm, profile) for arm in (0, 1)]
         self._current_snapshot_id = None
         for session in sessions:
@@ -293,7 +333,7 @@ class CuroboTaskPayloadSessions(CuroboPayloadSessions):
         results = []
         for arm, snapshot in enumerate(pair):
             results.append(self._rpc.request("update_session", session_id=sessions[arm], robot_cfg=configs[arm],
-                world=snapshot["world"], snapshot_id=snapshot_id, payload_state=snapshot["payload_state"]))
+                world=snapshot["world"], snapshot_id=self._wire_snapshot_id(snapshot_id), payload_state=snapshot["payload_state"]))
         self._snapshot_digests[snapshot_id] = digest
         for session in sessions:
             self._tokens[session] = snapshot_id
@@ -323,6 +363,12 @@ def self_test() -> None:
             self.lock_joints = copy.deepcopy(robot["kinematics"]["lock_joints"])
             return {"state": copy.deepcopy(state)}
 
+        def begin_episode(self, robot: dict[str, Any], world: dict[str, Any], seed: int,
+                          payload_model: dict[str, Any], payload_state: dict[str, Any]) -> dict[str, Any]:
+            self.payload_model = copy.deepcopy(payload_model)
+            native = self.update(robot, world, payload_state)
+            return {"native_update": native, "seed": seed, "planner_id": id(self.planner)}
+
         def plan_pose(self, request: dict[str, Any]) -> dict[str, Any]:
             return {"success": True}
 
@@ -344,6 +390,7 @@ def self_test() -> None:
             self.manager.shutdown({})
 
     protocol_cases = 0
+    episode_reset_cases = 0
     with tempfile.TemporaryDirectory(prefix="tig-task-client-cpu-") as directory:
         path = Path(directory)/"panda.urdf"
         names = list(ARM_NAMES+FINGER_NAMES)
@@ -422,13 +469,75 @@ def self_test() -> None:
             assert not rpc.manager.sessions["right:approach"].valid
             client.update_pair(tuple(pair),profile="approach",snapshot_id="recovered")
             assert client.plan_pose(arm=1,profile="approach",snapshot_id="recovered",start=[0.]*7,goal_pose=identity)["success"]
+            initial_planners = {name: id(session.backend.planner) for name, session in rpc.manager.sessions.items()}
+            shifted = copy.deepcopy(pair)
+            for arm, snapshot in enumerate(shifted):
+                for source in SOURCES[task]:
+                    snapshot["world"]["cuboid"][f"scene::{source}::shape_0"]["pose"][0] = .02
+                snapshot["payload_model"].update(_source_manifest(snapshot, task, arm,
+                    SOURCES[task][arm], "PhysxRigidStaticComponent"))
+            reset = client.begin_episode(tuple(shifted), episode_id="B")
+            assert reset["episode_id"] == "B" and not client._tokens and not client._snapshot_digests
+            assert client.episode_receipts[0]["op"] == "begin_episode"
+            assert len(client.episode_receipts) == 1 and len(client.receipts) > 1
+            assert client._models == tuple(snapshot["payload_model"] for snapshot in shifted)
+            client.update_pair(tuple(shifted), profile="approach", snapshot_id="initial")
+            b_token = rpc.manager.sessions["left:approach"].snapshot_id
+            assert b_token != "initial" and client.current_snapshot_id == "initial"
+            assert client.plan_pose(arm=0,profile="approach",snapshot_id="initial",start=[0.]*7,goal_pose=identity)["success"]
+            client.begin_episode(tuple(pair), episode_id="A")
+            client.update_pair(tuple(pair), profile="approach", snapshot_id="initial")
+            assert rpc.manager.sessions["left:approach"].snapshot_id != b_token
+            assert initial_planners == {name: id(session.backend.planner) for name, session in rpc.manager.sessions.items()}
+            try:
+                client.begin_episode(tuple(broken), episode_id="failed")
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("Failed native episode reset was accepted")
+            assert not client._tokens and not client._snapshot_digests and client._models is None
+            for operation in (
+                    lambda: client.update_pair(tuple(pair), profile="approach", snapshot_id="initial"),
+                    lambda: client.plan_pose(arm=0,profile="approach",snapshot_id="initial",start=[0.]*7,goal_pose=identity)):
+                try:
+                    operation()
+                except RuntimeError:
+                    pass
+                else:
+                    raise AssertionError("Failed episode reset left queries authorized")
+            client.begin_episode(tuple(pair), episode_id="recovered")
+            client.update_pair(tuple(pair), profile="approach", snapshot_id="initial")
+            assert client.plan_pose(arm=1,profile="approach",snapshot_id="initial",start=[0.]*7,goal_pose=identity)["success"]
+            for values in ({"seed": 402}, {"interpolation_dt": .01}):
+                try:
+                    client.begin_episode(tuple(pair), episode_id="invalid", **values)
+                except ValueError:
+                    pass
+                else:
+                    raise AssertionError("Incompatible episode settings accepted")
+                assert not client._tokens and not client._snapshot_digests
+            client.begin_episode(tuple(pair), episode_id="final")
+            assert sum(row["op"] == "init_session" for row in rpc.receipts) == 4
+            empty_rpc = FakeRPC(task)
+            empty = CuroboTaskPayloadSessions("GPU-synthetic",Path(directory)/"unused-empty.log",task_id=task,transport=empty_rpc)
+            try:
+                empty.begin_episode(tuple(pair), episode_id="too-early")
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("Uninitialized client began an episode")
+            assert not empty_rpc.receipts
+            empty.close()
+            episode_reset_cases += 1
             client.close()
             assert rpc.manager.closed
             protocol_cases += 1
-    print(json.dumps({"task_client_self_test":"PASS","task_arm_shape":[3,2],"client_worker_protocol_cases":protocol_cases,
+    print(json.dumps({"task_client_self_test":"PASS","task_arm_shape":[3,2],"client_worker_protocol_cases":protocol_cases,"episode_reset_protocol_cases":episode_reset_cases,
         "checks":["exact_task_profiles","repeated_profile_no_double_scaling","complete_static_source_manifest",
                   "static_pose_change_rejected","foreign_source_rejected","legacy_full_payload_self_test",
-                  "four_resident_task_planners","paired_failure_invalidates_both_client_tokens","stale_plan_rejection_and_recovery"]}))
+                  "four_resident_task_planners","paired_failure_invalidates_both_client_tokens","stale_plan_rejection_and_recovery",
+                  "episode_aba_reuses_four_planners","episode_source_pose_refresh","episode_token_namespace",
+                  "failed_reset_blocks_queries_and_explicit_retry_recovers","episode_receipt_slice","uninitialized_episode_rejected"]}))
 
 
 def main() -> None:
