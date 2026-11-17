@@ -1,4 +1,4 @@
-"""Synchronous dual-Panda phases with one paired environment step per tick.
+"""Synchronous dual-arm phases with one paired environment step per tick.
 
 Physical left/right identities are never reordered. Both arms cross each phase
 barrier together; a shorter source trajectory holds its own endpoint. Carried
@@ -52,7 +52,7 @@ def _canonical(env: Any) -> tuple[Any, Any]:
     raw = env.unwrapped
     agents = raw.agent.agents
     if len(agents) != 2:
-        raise ValueError("Exactly two physical Panda agents are required")
+        raise ValueError("Exactly two physical arm agents are required")
     if hasattr(raw, "left_agent") and (agents[0] is not raw.left_agent or agents[1] is not raw.right_agent):
         raise ValueError("Agent sequence must retain physical left/right identity")
     keys = []
@@ -134,9 +134,10 @@ class _Phase:
         return {"measurements": measurements, "objects": objects}
 
     def opened(self, arm: Any, row: dict[str, Any]) -> bool:
-        fingers = [index for index in range(9) if index not in arm.indices]
+        fingers = arm.finger_indices
         upper = as_numpy(arm.agent.robot.get_qlimits())[0, fingers, 1]
-        return bool(np.allclose(row["measurements"][arm.key]["finger_qpos_m"], upper, rtol=0, atol=OPEN_TOL))
+        expected = np.broadcast_to(getattr(arm.agent, "gripper_open_qpos", upper), upper.shape)
+        return bool(np.allclose(row["measurements"][arm.key]["finger_qpos_m"], expected, rtol=0, atol=OPEN_TOL))
 
     def hold(self, grip: int) -> dict[str, np.ndarray]:
         return {arm.key: np.r_[self.report["initial_measurements"][arm.key]["qpos_rad"], grip] for arm in self.arms}
@@ -170,7 +171,7 @@ class _Phase:
             if self.held and getattr(self.checker, "measured_attachment_prediction", False):
                 current = self.observe()
                 receipt = self.checker.validate_measured_command(
-                    *(actual[arm.key][:7] for arm in self.arms),
+                    *(actual[arm.key][:len(arm.names)] for arm in self.arms),
                     grasping=tuple(bool(obj["is_grasping"]) for obj in current["objects"]),
                     max_joint_step_rad=JOINT_STEP)
                 row["attachment_geometry"] = receipt
@@ -202,7 +203,7 @@ class _Phase:
                 obj["control_frame_angular_speed_rad_s"] = _rotation_distance(self.previous[index][:3, :3], pose[:3, :3]) / self.dt
                 self.previous[index] = pose
             row["collisions"] = self.collisions(row)
-            row["tracking_error_rad"] = max(float(np.max(np.abs(joints[arm.key] - actual[arm.key][:7]))) for arm in self.arms)
+            row["tracking_error_rad"] = max(float(np.max(np.abs(joints[arm.key] - actual[arm.key][:len(arm.names)]))) for arm in self.arms)
             row["max_arm_velocity_rad_s"] = max(float(np.max(np.abs(row["measurements"][arm.key]["qvel_rad_s"]))) for arm in self.arms)
         except Exception as exc:
             row["observed_elapsed_steps_after_error"] = as_numpy(self.env.unwrapped.elapsed_steps).tolist()
@@ -322,7 +323,7 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
         label = "moving" if index < len(actions) else "settling"
         row = phase.tick(actions[index] if label == "moving" else final, label)
         if row is None or phase.report["status"] != "running": break
-        row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:7]))) for arm in phase.arms)
+        row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:len(arm.names)]))) for arm in phase.arms)
         if held and not phase.monitor(row): break
         count = count + 1 if stable(row) else 0
         row["stable_steps"] = count
@@ -339,7 +340,7 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
         for _ in range(hover):
             row = phase.tick(final, "hover")
             if row is None or phase.report["status"] != "running": break
-            row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:7]))) for arm in phase.arms)
+            row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:len(arm.names)]))) for arm in phase.arms)
             if not phase.monitor(row, hovering=True): break
             for obj, reference in zip(row["objects"], references):
                 pose = _transform(obj["object_T_world"])

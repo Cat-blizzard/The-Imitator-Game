@@ -44,10 +44,18 @@ def _contact_values(contact: dict[str, Any]) -> tuple[float, np.ndarray, np.ndar
 def _scaled_vertices(live: Any, name: str) -> np.ndarray:
     try:
         _, shape = live._shape_refs[name]
-        if not isinstance(shape, physx.PhysxCollisionShapeConvexMesh):
-            raise RuntimeError("Tabletop support requires actual SAPIEN convex shapes")
-        vertices = np.asarray(shape.vertices, dtype=np.float64)
-        scale = np.asarray(shape.scale, dtype=np.float64)
+        if isinstance(shape, physx.PhysxCollisionShapeBox):
+            half_size = np.asarray(shape.half_size, dtype=np.float64)
+            if half_size.shape != (3,) or not np.isfinite(half_size).all() or np.any(half_size <= 0):
+                raise RuntimeError("Invalid actual target Box geometry")
+            vertices = np.array([[x, y, z] for x in (-1, 1) for y in (-1, 1)
+                                 for z in (-1, 1)], dtype=np.float64)
+            scale = half_size
+        elif isinstance(shape, physx.PhysxCollisionShapeConvexMesh):
+            vertices = np.asarray(shape.vertices, dtype=np.float64)
+            scale = np.asarray(shape.scale, dtype=np.float64)
+        else:
+            raise RuntimeError("Tabletop support requires actual convex or Box shapes")
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         raise RuntimeError("Actual target convex geometry unavailable") from exc
     if (vertices.ndim != 2 or vertices.shape[1:] != (3,) or len(vertices) < 4
@@ -179,7 +187,8 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
         self._table_pose = self._table_side = None
         if TABLE_NAME not in objects:
             self._legacy_support_mode = "legacy_missing_table"
-        elif not all(isinstance(self.live._shape_refs[name][1], physx.PhysxCollisionShapeConvexMesh)
+        elif not all(isinstance(self.live._shape_refs[name][1],
+                                (physx.PhysxCollisionShapeConvexMesh, physx.PhysxCollisionShapeBox))
                      for name in self._target_names):
             self._legacy_support_mode = "legacy_nonconvex_support"
         if self._legacy_support_mode is not None:

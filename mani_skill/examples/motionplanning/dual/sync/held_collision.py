@@ -18,7 +18,7 @@ from mplib.pymp.collision_detection import fcl
 from transforms3d.quaternions import mat2quat, quat2mat
 
 from .combined_collision import NativeDualCollisionChecker, _vector
-from .grasp_collision import FINGER_LINKS, LiveGraspCollisionChecker, _pose
+from .grasp_collision import LiveGraspCollisionChecker, _pose
 from .scene_collision import check_plane_halfspaces
 
 
@@ -82,7 +82,7 @@ class AttachedObjectCollisionChecker:
 
     @classmethod
     def from_live(cls, live_checker: LiveGraspCollisionChecker, target_actor: Any,
-                  active_robot: str = "left", tcp_link_name: str = "panda_hand_tcp", *,
+                  active_robot: str = "left", tcp_link_name: str | None = None, *,
                   support_band_m: float = 0.003, support_penetration_m: float = 0.003,
                   support_depth_slop_m: float = 0.0002) -> AttachedObjectCollisionChecker:
         if active_robot not in ("left", "right") or active_robot != live_checker.active_robot:
@@ -102,6 +102,7 @@ class AttachedObjectCollisionChecker:
         self.env = live_checker.env
         self.active_robot = active_robot
         self._active_index = ("left", "right").index(active_robot)
+        tcp_link_name = tcp_link_name or live_checker.solvers[self._active_index].env_agent.ee_link_name
         self.tcp_link_name = tcp_link_name
         self._entity = entity
         self._target_names = frozenset(live_checker._target_names)
@@ -240,7 +241,8 @@ class AttachedObjectCollisionChecker:
             robot, link, other = record.get(robot_key), record.get(link_key), record.get(other_key)
             if (robot, link, other) in self.live.allowed_mount_contacts:
                 return True
-            if robot == self.active_robot and link in FINGER_LINKS and other in self._target_names:
+            if (robot == self.active_robot and link in self.live.finger_links[self.active_robot]
+                    and other in self._target_names):
                 return True
         return False
 
@@ -314,7 +316,8 @@ class AttachedObjectCollisionChecker:
 
     def check(self, left7: np.ndarray, right7: np.ndarray) -> list[dict[str, Any]]:
         """Check candidate arms with rigid TCP-relative payload prediction."""
-        joints = (_vector(left7, 7), _vector(right7, 7))
+        joints = tuple(_vector(value, len(indices)) for value, indices in
+                       zip((left7, right7), self.native.arm_indices))
         full_states = []
         for q, initial, arm, limits in zip(joints, self.native.full_qpos, self.native.arm_indices, self.native.joint_limits):
             if np.any(q < limits[:, 0] - 1e-6) or np.any(q > limits[:, 1] + 1e-6):

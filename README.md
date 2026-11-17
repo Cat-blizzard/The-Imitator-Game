@@ -81,6 +81,9 @@ solution is available for `TwoRobotPickPillToRegions-v1`; see
 [synchronous dual-arm generation](docs/dual-arm-sync.md) for generation,
 recording, configuration, replay, and 20 Hz dataset conversion.
 
+For additional fixed-base robots and a Panda/Piper task using the same
+synchronous executor, see [multi-embodiment integration](docs/multi-embodiment.md).
+
 ## Benchmark
 
 Each baseline has its own README.md with training and evaluation commands under [examples/baselines/](examples/baselines/). An example script for model training and evaluation: 

@@ -80,10 +80,18 @@ def checked_screw_plan(solver: Any, pose: Any, *,
     start = _array(solver.robot.get_qpos())
     if start.ndim == 2 and start.shape[0] == 1:
         start = start[0]
+    if hasattr(solver.robot, "get_active_joints"):
+        active_names = tuple(joint.get_name() for joint in solver.robot.get_active_joints())
+        planner_names = tuple(planner.user_joint_names)
+        if (start.shape != (len(active_names),) or len(set(active_names)) != len(active_names)
+                or len(set(planner_names)) != len(planner_names)
+                or set(active_names) != set(planner_names)):
+            raise ValueError("Measured and planner joint names must describe the same robot")
+        start = start[[active_names.index(name) for name in planner_names]]
     if (start.ndim != 1 or len(start) != len(planner.user_joint_names)
-            or indices.shape != (7,) or len(set(indices.tolist())) != 7
+            or indices.ndim != 1 or not len(indices) or len(set(indices.tolist())) != len(indices)
             or np.any(indices < 0) or np.any(indices >= len(start))):
-        raise ValueError("Expected full measured joints and seven unique move-group columns")
+        raise ValueError("Expected full measured joints and unique move-group columns")
     goal_world = _pose(pose)
     goal_base = _pose(planner.transform_goal_to_wrt_base(goal_world))
     timestep = float(solver.base_env.control_timestep)
@@ -97,8 +105,8 @@ def checked_screw_plan(solver: Any, pose: Any, *,
     def capture_topp(path: Any, step: float = .1, verbose: bool = False) -> Any:
         nonlocal native_topp_calls
         path = _array(path)
-        if path.ndim != 2 or path.shape[1] != 7 or len(path) < 2:
-            raise ValueError("Native TOPP source must have shape [N>=2, 7]")
+        if path.ndim != 2 or path.shape[1] != len(indices) or len(path) < 2:
+            raise ValueError("Native TOPP source must match the move-group columns")
         captured_paths.append(path)
         if capture_geometry_only:
             raise _CorrectionGeometryCaptured
@@ -108,8 +116,8 @@ def checked_screw_plan(solver: Any, pose: Any, *,
     def fk(arm_qpos: Any) -> np.ndarray:
         qpos = start.copy()
         arm_qpos = _array(arm_qpos)
-        if arm_qpos.shape != (7,):
-            raise ValueError("Expected seven arm joints at the endpoint")
+        if arm_qpos.shape != (len(indices),):
+            raise ValueError("Endpoint joints must match the move-group columns")
         qpos[indices] = arm_qpos
         planner.pinocchio_model.compute_forward_kinematics(qpos)
         return _pose(planner.pinocchio_model.get_link_pose(
@@ -158,7 +166,7 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         if not isinstance(result, Mapping) or result.get("status") != "Success":
             raise ValueError("Planner did not return a successful trajectory")
         positions = _array(result["position"])
-        if positions.ndim != 2 or positions.shape[1] != 7 or not len(positions):
+        if positions.ndim != 2 or positions.shape[1] != len(indices) or not len(positions):
             raise ValueError("Successful native plan has no sampled joint endpoint")
         if not captured_paths:
             raise ValueError("Native screw plan did not expose its TOPP geometric path")
@@ -167,7 +175,8 @@ def checked_screw_plan(solver: Any, pose: Any, *,
             raise ValueError("Native geometric path does not start at measured joints")
         actual = fk(positions[-1])
         error = pose_error(actual, goal_base)
-        audit["attempts"].append({"kind": "original_native_screw", **error})
+        initial_method = getattr(solver, "last_plan_method", {}).get("method", "screw")
+        audit["attempts"].append({"kind": f"original_native_{initial_method}", **error})
         corrections = 0
         while not within(error) and corrections < max_corrections:
             full_qpos = start.copy()
@@ -266,7 +275,7 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         else:
             result = dict(result)
         positions = _array(result["position"])
-        if positions.ndim != 2 or positions.shape[1] != 7 or not len(positions):
+        if positions.ndim != 2 or positions.shape[1] != len(indices) or not len(positions):
             raise ValueError("Native corrected TOPP has no sampled joint endpoint")
         actual = fk(positions[-1])
         final_error = pose_error(actual, goal_base)

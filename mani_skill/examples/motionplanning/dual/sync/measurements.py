@@ -25,9 +25,9 @@ def _measure(arms: tuple[ArmBinding, ArmBinding]) -> dict[str, Any]:
     for arm in arms:
         full = arm.full_qpos()
         velocity = as_numpy(arm.agent.robot.get_qvel())
-        if velocity.shape != (1, 9) or not np.isfinite(velocity).all():
-            raise ValueError("Expected one finite nine-joint Panda velocity state")
-        fingers = [i for i in range(9) if i not in arm.indices]
+        if velocity.shape != (1, len(arm.all_names)) or not np.isfinite(velocity).all():
+            raise ValueError("Expected one finite velocity state in active joint order")
+        fingers = arm.finger_indices
         result[arm.key] = {"qpos_rad": full[arm.indices].tolist(),
                            "qvel_rad_s": velocity[0, arm.indices].tolist(),
                            "finger_qpos_m": full[fingers].tolist(),
@@ -42,9 +42,10 @@ def _actions_valid(env: Any, arms: tuple[ArmBinding, ArmBinding], action: dict[s
     converted = {}
     for arm in arms:
         value = np.asarray(action[arm.key], dtype=np.float64)
-        if value.shape != (8,) or not np.isfinite(value).all() or abs(value[7]) > 1:
-            raise ValueError("Each action must contain seven finite radians and one normalized gripper command")
-        if np.any(value[:7] < arm.limits[:, 0] - 1e-6) or np.any(value[:7] > arm.limits[:, 1] + 1e-6):
+        count = len(arm.names)
+        if value.shape != (count + 1,) or not np.isfinite(value).all() or abs(value[-1]) > 1:
+            raise ValueError("Each action must contain the named arm radians and one normalized gripper command")
+        if np.any(value[:count] < arm.limits[:, 0] - 1e-6) or np.any(value[:count] > arm.limits[:, 1] + 1e-6):
             raise ValueError("Arm target exceeds joint limits")
         converted[arm.key] = value.astype(np.float32)
     if not env.unwrapped.agent.single_action_space.contains(converted):
