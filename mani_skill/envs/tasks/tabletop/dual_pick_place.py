@@ -34,8 +34,10 @@ class PickPlaceProfile:
 
 
 PROFILES = {
+    # The equivalent top-down grasp keeps joint6 away from its +/-pi limits.
     "piper": PickPlaceProfile(-.36, .48, -.04, .06,
-                             grasp_height_offset=.012, base_height=.16),
+                             grasp_height_offset=.012, base_height=.16,
+                             grasp_quaternion=(0., 0., 1., 0.)),
     "panda": PickPlaceProfile(-.60, .60, -.08, .12),
 }
 
