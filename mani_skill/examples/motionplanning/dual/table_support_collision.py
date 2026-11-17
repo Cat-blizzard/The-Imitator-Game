@@ -6,6 +6,9 @@ scaled convex vertices, the horizontal table Box, the original motion/depth
 limits, and a permanent measured-only release state. Near-coplanar contacts
 within the existing 1 micrometre bound do not rely on an unstable FCL normal.
 Candidate vertices come from the supplied object pose, never the live actor.
+Version 2 distinguishes the original 3 mm initial support region from a
+numerical contact. Region registration never invents an FCL contact; measured
+separation permanently closes it only after every piece clears that same band.
 """
 from __future__ import annotations
 
@@ -27,6 +30,7 @@ from .held_collision import AttachedObjectCollisionChecker, _object_transform, _
 NUMERICAL_TOP_TOLERANCE_M = 1e-6
 ZERO_NORMAL_TOLERANCE = 1e-8  # Diagnostic compatibility; no longer a support prerequisite.
 TABLE_NAME = "scene::table::shape_0"
+TABLE_SUPPORT_VERSION = "captured_table_physical_support_region_v02"
 
 
 def _contact_values(contact: dict[str, Any]) -> tuple[float, np.ndarray, np.ndarray]:
@@ -204,14 +208,17 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
             collision, contacts = _pair_result(objects[name], objects[TABLE_NAME])
             if not collision:
                 piece = pieces_by_name[name]
-                if (abs(piece["bottom_minus_table_top_m"]) <= NUMERICAL_TOP_TOLERANCE_M
+                if (0. <= piece["bottom_minus_table_top_m"] <= self.support_band_m
                         and piece["entire_footprint_inside"] and piece["vertices_above_top"]):
-                    # Initial geometry in the existing numerical band can be
-                    # valid support without a reported FCL intersection. Keep
-                    # this evidence distinct from real collision pairs/contacts.
+                    # Capture the existing physical support region, not a
+                    # claim of touching. This is deliberately distinct from
+                    # the 1um test for a numerical contact below.
                     self._initial_near_top_support_receipts.append({**piece,
                         "classification": "geometry_only_initial_near_top_support",
-                        "fcl_collision": False, "tolerance_m": NUMERICAL_TOP_TOLERANCE_M})
+                        "fcl_collision": False, "registration_band_m": self.support_band_m,
+                        "registration_does_not_assert_contact": True,
+                        "numerical_contact_tolerance_m": NUMERICAL_TOP_TOLERANCE_M,
+                        "support_version": TABLE_SUPPORT_VERSION})
                 continue
             receipt = self._validate_contact_geometry(name, contacts, self._initial_object, self.support_penetration_m)
             for contact in contacts:
@@ -248,10 +255,10 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
     def _update_support_release(self, objects: dict[str, Any], actual_object: np.ndarray) -> None:
         """Measured-only monotone transition, considering all actual convex pieces.
 
-        Release requires all vertex gaps > 1 micrometre AND no FCL piece/table
-        intersections, or the original 3mm actor-height band to be exceeded.
-        A sub-micrometre separation remains numerically ambiguous support; it
-        cannot undo a previous release or bypass any contact/motion gate.
+        Numerical clearance is telemetry. Region release requires every
+        actual piece to clear the original physical support band with no FCL
+        intersections. Origin motion alone is insufficient for a rotating,
+        offset convex piece. Candidates never advance this permanent state.
         """
         before = self.support_released
         if self._legacy_support_mode is not None:
@@ -272,16 +279,20 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
         touching = [name for name in sorted(self._target_names) if _pair_result(objects[name], objects[TABLE_NAME])[0]]
         displacement_z = float(actual_object[2, 3] - self._initial_object[2, 3])
         all_clear = bool(all(p["bottom_minus_table_top_m"] > NUMERICAL_TOP_TOLERANCE_M for p in pieces) and not touching)
+        physical_band_clear = bool(all(p["bottom_minus_table_top_m"] > self.support_band_m for p in pieces)
+                                   and not touching)
         reason = "already_released" if before else "object_support_active"
         if not self._initial_support_exists:
             reason = "no_initial_support"
-        elif not before and (displacement_z > self.support_band_m or all_clear):
+        elif not before and physical_band_clear:
             self.support_released = True
-            reason = "vertical_support_band_exceeded" if displacement_z > self.support_band_m else "all_convex_pieces_separated"
+            reason = "all_convex_pieces_exceed_initial_support_band"
         self._support_state_receipt = {"mode": "measured_refresh", "reason": reason, "released_before": before,
             "released_after": self.support_released, "actor_vertical_displacement_m": displacement_z,
             "control_step": self._control_step(),
             "separation_numeric_band_m": NUMERICAL_TOP_TOLERANCE_M, "all_pieces_separated": all_clear,
+            "geometry_all_pieces_clear": all_clear, "physical_support_band_clear": physical_band_clear,
+            "physical_support_band_m": self.support_band_m, "support_version": TABLE_SUPPORT_VERSION,
             "fcl_touching_pieces": touching, "pieces": pieces}
         identity = (reason, self.support_released, touching)
         previous = self._support_state_history[-1] if self._support_state_history else None
@@ -343,6 +354,7 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
         coverage = super().refresh()
         coverage.update(numerical_top_support_receipts=copy.deepcopy(self.numerical_top_support_receipts),
             support_semantics=self._legacy_support_mode or "whole_initial_object_with_bounded_convex_piece_transfer",
+            support_adapter_version=TABLE_SUPPORT_VERSION,
             initial_object_support_exists=self._initial_support_exists,
             initial_object_support_max_depth_m=self._initial_object_depth_m,
             initial_object_support_receipts=copy.deepcopy(self._initial_support_receipts),
@@ -446,42 +458,53 @@ def _self_test() -> dict[str, Any]:
         tests.append("real_" + label + "_contact_rejected")
     tilted_table = table_pose.copy(); tilted_table[:3, :3] = euler2mat(.1, 0, 0)
     reject(lambda: _vertex_receipt("tilted", vertices, tilted_table, side), "nonhorizontal_table_rejected")
-    empty, empty_objects = fixture(height=.002)
+    empty, empty_objects = fixture(height=.00301)
     assert not empty._initial_support_exists
     pose = empty._initial_object.copy(); pose[2, 3] = -1e-5
     assert not check_contact(empty, empty_objects, pose)[0]
     tests.append("no_initial_support_cannot_be_created_by_candidate")
     # Near-top registration is based on initial geometry alone, never invented
-    # collision pairs or contacts, and remains within the existing 1um band.
+    # collision pairs or contacts, within the existing 3mm physical region.
     near, near_objects = fixture(height=5e-7)
     assert not _pair_result(near_objects["piece0"], table)[0]
     assert near._initial_support_exists and not near._support_pairs and not near._initial_support_receipts
     assert len(near._initial_near_top_support_receipts) == 1
     receipt = near._initial_near_top_support_receipts[0]
     assert receipt["classification"] == "geometry_only_initial_near_top_support" and receipt["fcl_collision"] is False
-    assert receipt["bottom_minus_table_top_m"] == 5e-7 and receipt["tolerance_m"] == 1e-6
+    assert receipt["bottom_minus_table_top_m"] == 5e-7 and receipt["registration_band_m"] == .003
+    assert receipt["registration_does_not_assert_contact"] and receipt["numerical_contact_tolerance_m"] == 1e-6
     near_pose = near._initial_object.copy(); near_pose[2, 3] = -2.5e-7
     assert check_contact(near, near_objects, near_pose)[0] and not near.support_released
     assert not near._support_pairs and not near._initial_support_receipts
     tests.append("geometry_only_near_top_registration_allows_bounded_candidate_without_fabricated_contacts")
-    at_limit, _ = fixture(height=1e-6)
-    beyond, beyond_objects = fixture(height=np.nextafter(1e-6, np.inf))
+    at_limit, _ = fixture(height=.003)
+    beyond, beyond_objects = fixture(height=np.nextafter(.003, np.inf))
     assert at_limit._initial_support_exists and not beyond._initial_support_exists
     assert len(at_limit._initial_near_top_support_receipts) == 1 and not beyond._initial_near_top_support_receipts
-    tests.append("geometry_only_registration_uses_original_inclusive_one_micrometer_limit")
+    tests.append("geometry_only_registration_uses_existing_inclusive_physical_support_band")
+    just_above_numeric, just_above_objects = fixture(height=1.0308305861475575e-6)
+    just_above_numeric._update_support_release(just_above_objects, just_above_numeric._initial_object)
+    assert just_above_numeric._initial_support_exists and not just_above_numeric.support_released
+    assert just_above_numeric._support_state_receipt["geometry_all_pieces_clear"]
+    assert not just_above_numeric._support_state_receipt["physical_support_band_clear"]
+    just_above_contact = just_above_numeric._initial_object.copy()
+    just_above_contact[:3, :3] = euler2mat(0, .0002, 0)
+    assert check_contact(just_above_numeric, just_above_objects, just_above_contact)[0]
+    assert not just_above_numeric.support_released and not just_above_numeric._support_pairs
+    tests.append("one_point_zero_three_um_gap_keeps_region_and_allows_only_bounded_candidate_contact")
     outside, _ = fixture(height=5e-7, x=.999)
     assert not outside._initial_support_exists and not outside._initial_near_top_support_receipts
     reject(lambda: fixture(two_pieces=True, height=5e-7, x=-.951),
            "geometry_only_support_requires_entire_object_footprint_inside")
     tests.append("near_top_piece_outside_table_footprint_does_not_register")
-    beyond_pose = beyond._initial_object.copy(); beyond_pose[:3, :3] = euler2mat(0, .0002, 0)
+    beyond_pose = beyond._initial_object.copy(); beyond_pose[2, 3] = -1e-5
     assert not check_contact(beyond, beyond_objects, beyond_pose)[0]
     assert not beyond._initial_support_exists and not beyond._initial_near_top_support_receipts and not beyond.support_released
     tests.append("candidate_contact_within_rotation_limit_cannot_create_initial_near_top_support")
-    up = near._initial_object.copy(); up[2, 3] += .001
+    up = near._initial_object.copy(); up[2, 3] += .004
     clear = {TABLE_NAME: table, "piece0": fcl.CollisionObject(near_objects["piece0"].get_collision_geometry(), up[:3, 3])}
     near._update_support_release(clear, up)
-    assert near.support_released and near._support_state_receipt["reason"] == "all_convex_pieces_separated"
+    assert near.support_released and near._support_state_receipt["reason"] == "all_convex_pieces_exceed_initial_support_band"
     assert not check_contact(near, near_objects, near_pose)[0]
     near._update_support_release(near_objects, near._initial_object)
     assert near.support_released
@@ -513,13 +536,13 @@ def _self_test() -> dict[str, Any]:
     whole._update_support_release(measured_objects, pose)
     assert not whole.support_released and whole._support_state_receipt["fcl_touching_pieces"] == ["piece0"]
     tests.append("real_convex_piece_transfer_keeps_whole_object_support")
-    up = pose.copy(); up[2, 3] += .001
+    up = pose.copy(); up[2, 3] += .004
     clear = {TABLE_NAME: table}
     for name in sorted(whole._target_names):
         transform = up @ whole._shape_local[name]
         clear[name] = fcl.CollisionObject(whole_objects[name].get_collision_geometry(), transform[:3, 3], mat2quat(transform[:3, :3]))
     whole._update_support_release(clear, up)
-    assert whole.support_released and whole._support_state_receipt["reason"] == "all_convex_pieces_separated"
+    assert whole.support_released and whole._support_state_receipt["reason"] == "all_convex_pieces_exceed_initial_support_band"
     assert not check_contact(whole, whole_objects, pose)[0]
     whole._update_support_release(measured_objects, pose)
     assert whole.support_released
@@ -559,7 +582,8 @@ def _self_test() -> dict[str, Any]:
     missing._update_support_release({}, np.eye(4))
     assert not missing.support_released and missing.support_initial_geometry() == {}
     tests.append("missing_table_does_not_read_or_require_convex_geometry")
-    return {"status": "passed", "tests": tests, "physics_steps": 0,
+    return {"status": "passed", "support_version": TABLE_SUPPORT_VERSION,
+            "tests": tests, "test_count": len(tests), "environment_creations": 0, "physics_steps": 0,
             "geometry_shapes": {"convex_piece_vertices": list(cube.shape), "whole_object_pieces": 2},
             "whole_object_support_receipt": whole._support_state_receipt}
 
