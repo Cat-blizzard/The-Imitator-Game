@@ -181,12 +181,17 @@ def depth2rgb(d, zrange, *, output=None, sanitized=False, inv_depth=False, opts=
 def get_traj_names(h5_file):
     return sorted([k for k in h5_file.keys() if k.startswith('traj_')])
 
-def load_trajectory_data(h5_file, traj_name):
+def load_trajectory_data(h5_file, traj_name, drop_terminal_frame=False):
     traj = h5_file[traj_name]
     actions = traj['actions'][()].astype(np.float32)
     num_frames = len(actions) + 1
     qpos_left = traj['obs']['agent']['panda_wristcam-0']['qpos'][()].astype(np.float32)
     qpos_right = traj['obs']['agent']['panda_wristcam-1']['qpos'][()].astype(np.float32)
+    if actions.ndim != 2 or actions.shape[1] != 16 or len(actions) == 0:
+        raise ValueError(f"{traj_name}: expected nonempty (T, 16) joint-position actions")
+    for side, qpos in (("left", qpos_left), ("right", qpos_right)):
+        if qpos.shape != (num_frames, 9):
+            raise ValueError(f"{traj_name}: {side} qpos must have shape (T + 1, 9)")
     sensor_data = traj['obs']['sensor_data']
     rgb_data, depth_data = {}, {}
     camera_mapping = {
@@ -199,6 +204,15 @@ def load_trajectory_data(h5_file, traj_name):
             cg = sensor_data[h5_cam]
             if 'rgb' in cg: rgb_data[lr_cam] = cg['rgb'][()]
             if 'depth' in cg: depth_data[lr_cam] = cg['depth'][()]
+    for camera, frames in list(rgb_data.items()) + list(depth_data.items()):
+        if len(frames) != num_frames:
+            raise ValueError(f"{traj_name}: camera {camera} must contain T + 1 frames")
+    if drop_terminal_frame:
+        # Observation i precedes action i; the terminal observation has no next action.
+        num_frames = len(actions)
+        qpos_left, qpos_right = qpos_left[:-1], qpos_right[:-1]
+        rgb_data = {key: frames[:-1] for key, frames in rgb_data.items()}
+        depth_data = {key: frames[:-1] for key, frames in depth_data.items()}
     return {'actions': actions, 'qpos_left': qpos_left, 'qpos_right': qpos_right,
             'rgb_data': rgb_data, 'depth_data': depth_data, 'num_frames': num_frames}
 
@@ -239,14 +253,21 @@ def get_h5_trajectory_count(h5_path):
         with h5py.File(h5_path, 'r') as f: return len(get_traj_names(f))
     except: return 0
 
-def check_dataset_complete(dataset_dir, h5_path=None):
+def check_dataset_complete(dataset_dir, h5_path=None, fps=None, drop_terminal_frame=None):
     if not dataset_dir.exists(): return False, "directory does not exist"
     info_file = dataset_dir / "meta" / "info.json"
     if not info_file.exists(): return False, "missing meta/info.json"
     try:
-        with open(info_file) as f: actual = json.load(f).get('total_episodes', 0)
+        with open(info_file) as f: info = json.load(f)
+        actual = info.get('total_episodes', 0)
     except: return False, "cannot read info.json"
     if actual == 0: return False, "episode=0"
+    if fps is not None and info.get("fps") != fps:
+        return False, "sampling rate differs from requested fps"
+    if drop_terminal_frame is not None:
+        expected = "dropped" if drop_terminal_frame else "duplicate_last_action"
+        if info.get("terminal_observation", "duplicate_last_action") != expected:
+            return False, "terminal observation policy differs from requested policy"
     if h5_path and h5_path.exists():
         expected = get_h5_trajectory_count(h5_path)
         if expected == 0: return True, f"assumed complete ({actual} eps)"
@@ -271,7 +292,7 @@ def cleanup_failed_dataset(dataset_dir, name):
 
 def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
                     dataset_name: str = None, force: bool = False,
-                    gpu_id: int = -1) -> Tuple[bool, str, str]:
+                    gpu_id: int = -1, drop_terminal_frame: bool = False) -> Tuple[bool, str, str]:
     """
     Process a single H5 file → LeRobot format.
     Designed to run independently inside a ProcessPoolExecutor worker.
@@ -294,9 +315,13 @@ def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
 
         # Check completeness
         if not force:
-            is_complete, reason = check_dataset_complete(dataset_dir, h5_path)
+            is_complete, reason = check_dataset_complete(
+                dataset_dir, h5_path, fps=fps, drop_terminal_frame=drop_terminal_frame
+            )
             if is_complete:
                 return True, dataset_name, f"already processed: {reason}"
+            if check_dataset_complete(dataset_dir, h5_path)[0]:
+                return False, dataset_name, f"{reason}; choose a different output directory"
 
         # Clean up incomplete
         if dataset_dir.exists():
@@ -315,7 +340,7 @@ def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
                 return False, dataset_name, "no trajectory"
 
             # Build features
-            first_data = load_trajectory_data(h5_file, traj_names[0])
+            first_data = load_trajectory_data(h5_file, traj_names[0], drop_terminal_frame)
             first_data['processed_depth'] = process_depth_images(first_data['depth_data'])
             features = build_lerobot_features(first_data)
 
@@ -326,18 +351,24 @@ def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
                 features=features, use_videos=True, video_backend='torchcodec',
             )
 
+            dataset.meta.info["terminal_observation"] = (
+                "dropped" if drop_terminal_frame else "duplicate_last_action"
+            )
+
             # Process each trajectory
             for traj_idx, traj_name in enumerate(traj_names):
                 try:
                     if traj_idx == 0:
                         traj_data = first_data
                     else:
-                        traj_data = load_trajectory_data(h5_file, traj_name)
+                        traj_data = load_trajectory_data(h5_file, traj_name, drop_terminal_frame)
                         traj_data['processed_depth'] = process_depth_images(traj_data['depth_data'])
 
                     num_frames = traj_data['num_frames']
                     qpos_states = np.concatenate([traj_data['qpos_left'], traj_data['qpos_right']], axis=1)
-                    qpos_actions = np.vstack([traj_data['actions'], traj_data['actions'][-1:]])
+                    qpos_actions = traj_data['actions']
+                    if not drop_terminal_frame:
+                        qpos_actions = np.vstack([qpos_actions, qpos_actions[-1:]])
 
                     for i in range(num_frames):
                         frame = {"task": dataset_name}
@@ -372,6 +403,7 @@ def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
                 f.write(json.dumps({
                     "completed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                     "episodes": total_episodes, "gpu_id": gpu_id, "fps": fps,
+                    "drop_terminal_frame": drop_terminal_frame,
                 }, indent=2))
 
             print(f"  [{dataset_name}] [{tag}] ✅ {total_episodes} episodes")
@@ -457,9 +489,9 @@ def _query_nvidia_smi_quick():
 
 def _worker_fn(args_tuple):
     """ProcessPoolExecutor worker. Receives a tuple for map() compatibility."""
-    h5_path_str, output_dir_str, fps, force, gpu_id = args_tuple
+    h5_path_str, output_dir_str, fps, force, gpu_id, drop_terminal_frame = args_tuple
     return process_h5_file(h5_path_str, output_dir_str, fps=fps,
-                           dataset_name=None, force=force, gpu_id=gpu_id)
+                           dataset_name=None, force=force, gpu_id=gpu_id, drop_terminal_frame=drop_terminal_frame)
 
 
 class ConversionScheduler:
@@ -480,7 +512,10 @@ class ConversionScheduler:
         if not self.args.force:
             unprocessed = []
             for f in h5_files:
-                ok, reason = check_dataset_complete(output_dir / f.stem, f)
+                ok, reason = check_dataset_complete(
+                    output_dir / f.stem, f, fps=self.args.fps,
+                    drop_terminal_frame=self.args.drop_terminal_frame
+                )
                 if not ok:
                     unprocessed.append(f)
                 else:
@@ -525,7 +560,7 @@ class ConversionScheduler:
         for h5_file in h5_files:
             gpu_id = self.gpu_assigner.assign()
             task_args.append((str(h5_file), str(output_dir), self.args.fps,
-                              self.args.force, gpu_id))
+                              self.args.force, gpu_id, self.args.drop_terminal_frame))
 
         # Ctrl+C handling
         original_sigint = signal.getsignal(signal.SIGINT)
@@ -604,6 +639,8 @@ def main():
     parser.add_argument("--input", type=str, required=True, help="input H5 file or directory")
     parser.add_argument("--output-dir", type=str, required=True, help="output directory")
     parser.add_argument("--fps", type=int, default=30, help="frame rate (default 30)")
+    parser.add_argument("--drop-terminal-frame", action="store_true",
+                        help="Emit T training rows for T actions, omitting the terminal observation without an action. Default preserves T+1 rows and duplicates the final action.")
     parser.add_argument("--name", type=str, default=None, help="dataset name (single file)")
     parser.add_argument("--force", action="store_true", help="force reprocessing")
     parser.add_argument("--recursive", action="store_true", help="recursively search subdirectories")
@@ -686,7 +723,7 @@ def main():
             return
         gpu_id = gpu_assigner.assign()
         ok, name, msg = process_h5_file(str(input_path), str(output_dir),
-                                        args.fps, args.name, args.force, gpu_id)
+                                        args.fps, args.name, args.force, gpu_id, args.drop_terminal_frame)
         print(f"\nResult: {'✓' if ok else '✗'} {msg}")
         return
 
