@@ -78,7 +78,11 @@ def run_summary(report: Mapping[str, Any], report_path: Path) -> dict[str, Any]:
     official = _mapping(results.get('official'))
     success = official.get('final_success_before_horizon')
     count = _mapping(report.get('recording')).get('recorded_steps')
-    submitted = count > 0 if type(count) is int and count >= 0 else None
+    elapsed = report.get('total_environment_steps')
+    # A damaged/empty recording does not establish that nothing executed.
+    submitted = True if ((type(count) is int and count > 0)
+        or (type(elapsed) is int and elapsed > 0)) else (
+        False if type(elapsed) is int and elapsed == 0 else None)
     categories = execution.get('failure_categories')
     return {'status': report.get('status', 'unknown'),
         'official_success': success if type(success) is bool else None,
@@ -188,6 +192,12 @@ def self_test() -> dict[str, Any]:
     assert summary['failure_categories'] == ['planning_failure']
     assert json.dumps(report, sort_keys=True) == before
     assert run_summary({}, Path('/missing/report.json'))['actions_submitted_including_preparation'] is None
+    empty_record = {'recording': {'recorded_steps': 0}}
+    assert run_summary(empty_record, Path('/empty'))['actions_submitted_including_preparation'] is None
+    empty_record['total_environment_steps'] = 5
+    assert run_summary(empty_record, Path('/empty'))['actions_submitted_including_preparation'] is True
+    empty_record['total_environment_steps'] = 0
+    assert run_summary(empty_record, Path('/empty'))['actions_submitted_including_preparation'] is False
     with tempfile.TemporaryDirectory() as temporary:
         output = Path(temporary)/'new'
         def fake_runner(arguments: list[str]) -> int:
