@@ -409,7 +409,7 @@ def export_curobo_snapshot(env: Any, arm_index: int, *, sphere_pitch_m: float = 
     world_base = np.linalg.inv(base_world)
     coverage: dict[str, Any] = {"all_covered": False, "snapshot_only": True,
         "world_frame": "selected_panda_link0", "sphere_pitch_m": pitch,
-        "robot_sphere_policy": "conservative_convex_solid_grid_cell_with_tight_link5_v1",
+        "robot_sphere_policy": "conservative_convex_solid_grid_cell_with_tight_link5_link6_v1",
         "active_robot_shapes": [], "world_shapes": [], "skipped_visual_entities": [],
         "active_robot_exceptions": [], "peer_is_measured_snapshot": True,
         "paired_exact_collision_recheck_required": True,
@@ -430,7 +430,8 @@ def export_curobo_snapshot(env: Any, arm_index: int, *, sphere_pitch_m: float = 
                 "reason": "fixed table mount excluded only from selected-arm cuRobo active spheres; exact external checker and peer world retain it"})
             continue
         for index, shape in enumerate(shapes):
-            values, proof = _shape_spheres(shape, pitch, tight=name == "panda_link5")
+            values, proof = _shape_spheres(shape, pitch,
+                                          tight=name in ("panda_link5", "panda_link6"))
             spheres.setdefault(name, []).extend(values)
             coverage["active_robot_shapes"].append({"link": name, "shape_index": index,
                                                     "type": _kind(shape), **proof})
