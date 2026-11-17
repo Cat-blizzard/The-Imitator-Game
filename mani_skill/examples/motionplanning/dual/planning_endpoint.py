@@ -133,7 +133,7 @@ def checked_screw_plan(solver: Any, pose: Any, *,
     ik_mask = np.ones(len(start), dtype=bool)
     ik_mask[indices] = False
 
-    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v4",
+    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v5",
         "position_tolerance_m": position_tolerance_m,
         "rotation_tolerance_rad": rotation_tolerance_rad,
         "max_corrections": max_corrections,
@@ -176,11 +176,13 @@ def checked_screw_plan(solver: Any, pose: Any, *,
             full_qpos[indices] = combined_path[-1]
             count = len(captured_paths)
             # Native screw's rot2so3 treats np.isclose(trace(R), 3) as zero
-            # rotation. Its small-angle dead zone needs native IK/joint planning
-            # rather than more screw retries. Both routes expose a real native
+            # rotation. This can also leave position outside the FK bound while
+            # rotation already satisfies it: repeating screw then stagnates.
+            # Try at most one screw correction before using native IK within
+            # the existing correction budget. Both routes expose a real native
             # geometric path; no short-segment TOPP or fake trajectory is made.
-            use_ik = (error["rotation_rad"] > rotation_tolerance_rad
-                and np.isclose(1 + 2 * np.cos(error["rotation_rad"]), 3))
+            use_ik = (corrections > 0 or (error["rotation_rad"] > rotation_tolerance_rad
+                and np.isclose(1 + 2 * np.cos(error["rotation_rad"]), 3)))
             kind = "native_ik_joint_path_correction" if use_ik else "native_screw_correction"
             capture_geometry_only = True
             try:
@@ -188,7 +190,10 @@ def checked_screw_plan(solver: Any, pose: Any, *,
                     use_attach=bool(getattr(planner.planning_world, "use_attach", False)))
                 if use_ik:
                     ik_audit: dict[str, Any] = {
-                        "correction_index": corrections + 1, "candidates": []}
+                        "correction_index": corrections + 1,
+                        "trigger": "previous_native_correction_outside_fk_contract" if corrections
+                            else "native_screw_small_angle_dead_zone",
+                        "candidates": []}
                     audit["ik_attempts"].append(ik_audit)
                     status, goals = planner.IK(goal_base.copy(), full_qpos.copy(),
                         mask=ik_mask.tolist(), n_init_qpos=1, threshold=ik_threshold)
@@ -475,6 +480,47 @@ def self_test() -> dict[str, Any]:
             assert np.array_equal(fixture.state, initial)
         else:
             raise AssertionError(f"Expected rejection: {message}")
+
+    class StalledScrewFixture(SmallAngleFixture):
+        """Retreat failure: screw leaves 0.523mm with rotation already valid."""
+        def screw(self, goal: np.ndarray, full: np.ndarray, **kwargs: Any) -> Any:
+            self.calls += 1
+            end = full[self.indices].copy()
+            end[:3] = goal[:3] - [1., 2., 3.]
+            end[0] -= .0026 if self.calls == 1 else .000523
+            end[3] = .000716
+            raw = self.planner.TOPP(np.vstack((full[self.indices], end)), .05)
+            return {"status": "Success", **dict(zip(
+                ("time", "position", "velocity", "acceleration", "duration"), raw))}
+
+    stalled = StalledScrewFixture()
+    stalled_state = stalled.state.copy()
+    stalled_result = checked_screw_plan(stalled, goal)
+    stalled_audit = stalled_result["endpoint_audit"]
+    assert stalled.calls == 2 and len(stalled.ik_calls) == 1
+    assert stalled_audit["corrections"] == 2
+    assert [entry["kind"] for entry in stalled_audit["attempts"]] == [
+        "original_native_screw", "native_screw_correction", "native_ik_joint_path_correction"]
+    assert stalled_audit["attempts"][1]["position_m"] > POSITION_TOLERANCE_M
+    assert stalled_audit["attempts"][1]["rotation_rad"] < ROTATION_TOLERANCE_RAD
+    assert stalled_audit["ik_attempts"][0]["trigger"] == "previous_native_correction_outside_fk_contract"
+    assert stalled_audit["final_error"]["position_m"] < POSITION_TOLERANCE_M
+    assert stalled_audit["final_error"]["rotation_rad"] < ROTATION_TOLERANCE_RAD
+    assert np.array_equal(stalled.state, stalled_state) and stalled.planner.TOPP == stalled.topp
+    assert len(stalled.topp_calls) == 2 and stalled_audit["environment_steps"] == 0
+    # The fallback consumes an existing correction slot, never adds retries or
+    # bypasses native IK's refusal. A caller allowing only one correction fails.
+    for fixture, limit, expected_ik_calls in [
+            (StalledScrewFixture(), 1, 0), (StalledScrewFixture(native_failure=True), 3, 1)]:
+        try:
+            checked_screw_plan(fixture, goal, max_corrections=limit)
+        except ValueError:
+            assert fixture.last_endpoint_audit["status"] == "failed"
+            assert fixture.calls == 2 and len(fixture.ik_calls) == expected_ik_calls
+            assert not fixture.joint_calls and fixture.planner.TOPP == fixture.topp
+            assert np.array_equal(fixture.state, stalled_state)
+        else:
+            raise AssertionError("Bounded fallback must preserve insufficient-budget/native-refusal failure")
     assert pose_error(goal, np.r_[goal[:3], -goal[3:]])["rotation_rad"] == 0.
     return {"status": "passed", "environment_steps": 0, "gpu_used": False,
         "checks": ["actual FK rejects 14mm native Success", "same-backend correction",
@@ -487,6 +533,8 @@ def self_test() -> dict[str, Any]:
             "IK threshold boundary acceptance and rejection", "IK explicitly locks non-arm joints",
             "inaccurate IK candidates rejected before joint planning",
             "native IK refusal and changed-finger candidate remain rejected",
+            "stalled screw switches to native IK while rotation already satisfies FK bounds",
+            "IK fallback consumes existing correction budget and preserves native refusal",
             "quaternion sign invariance"]}
 
 
