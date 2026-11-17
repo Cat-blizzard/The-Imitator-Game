@@ -9,8 +9,8 @@ Each pair contains two instances of the selected robot.
 
 | Agent UID | Native action / physical qpos per arm | Basic control and RGB | Expert task | Recording and action replay | LeRobot conversion | ACT policy evaluation |
 | --- | ---: | --- | --- | --- | --- | --- |
-| `panda` | 8 / 9 | Verified | Verified | Verified | Verified | In progress |
-| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | In progress |
+| `panda` | 8 / 9 | Verified | Verified | Verified | Verified | Evaluated: 4/5 |
+| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | Evaluated: 4/5 |
 | `arx_x5` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
 | `ur5_wsg` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
 | `xarm6_robotiq` | 7 / 12 | Verified | Verified | Verified | Not tested | Not tested |
@@ -179,7 +179,7 @@ python -m examples.baselines.act.eval_act_single \
   --checkpoint path/to/checkpoint_epoch_XXXX.pt \
   --sub-config piper-datasets.json --env-id DualArmPickPlace-v1 --robot piper \
   --seeds-file outputs/piper-raw/episode_manifest.json --seed-split evaluation \
-  --max-episode-steps 400 --fps 20 --execute-steps 1 \
+  --max-episode-steps 400 --fps 20 --execute-steps 8 \
   --save-video --output-dir outputs/piper-policy-eval
 ```
 
@@ -194,6 +194,27 @@ reload. It renders with the expert's shader and source image resolution, then
 uses the same image resize as training. Only predicted native actions drive the
 robot; no expert planner or intermediate state restoration is used. Results
 separate task success, timeout, grasp/release observations and failure stage.
+Predictions are clipped to native controller bounds; clipped-step counts are
+reported separately from execution failures.
 For Panda, change the robot, dataset configuration and model dimensions to 18
 state values and 16 actions. This baseline does not imply that one policy's
 weights transfer between embodiments.
+
+The initial baseline used 20 training and 3 development episodes per embodiment,
+with five reserved evaluation seeds (3000–3004). Each separate ACT model used
+1,000 updates, the default ResNet18 and transformer configuration, a 16-action
+prediction horizon, and 8 predicted actions per query. Chunk execution was
+selected on development seeds; querying every control tick caused the Panda
+policy to stall. Independent evaluation was run after this choice was fixed.
+
+| Pair | Training / development rows | Independent final successes | Unsuccessful horizon runs | Failure stage |
+| --- | ---: | ---: | ---: | --- |
+| Panda | 4475 / 672 | 4/5 | 1/5 | Placement incomplete |
+| Piper | 4402 / 658 | 4/5 | 1/5 | Right grasp not observed |
+
+These are small-sample results on this integration task. They establish an
+actual generation-to-policy-control baseline, not general success rates or
+transfer to other TIG tasks. Both successful and failed policy runs were
+retained. Source H5 arrays, converted rows, frame timing and train-only
+normalization were checked independently; detailed runs, datasets and models
+remain outside the source repository.
