@@ -1,0 +1,660 @@
+{
+  "schema": "tig-panda-link56-cover-repair-acceptance-v1",
+  "date": "2026-11-17",
+  "status": "passed",
+  "status_meaning": "Repair acceptance: seven positive completed rollouts, one intentional release failure correctly detected, successful four-planner reset recovery, five strict normal replays. The negative and all historical failures retain their actual failed status.",
+  "runtime_commit": "87417a06d561c9553b3ca5b2f9c0242ab39eba11",
+  "runtime_source_files": 101,
+  "raw_root": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117",
+  "known_development_seeds_only": true,
+  "independent_unseen_seed_trials": 0,
+  "implementation": {
+    "files": [
+      "mani_skill/examples/motionplanning/dual/curobo_sphere_cover.py",
+      "mani_skill/examples/motionplanning/dual/curobo_scene.py",
+      "mani_skill/examples/motionplanning/dual/curobo_payload.py"
+    ],
+    "active_links": [
+      "panda_link5",
+      "panda_link6"
+    ],
+    "both_arms": true,
+    "all_existing_tasks": true,
+    "sphere_pitch_m": 0.025,
+    "sphere_counts": {
+      "link5": {
+        "coarse": 387,
+        "tight": 368
+      },
+      "link6": {
+        "coarse": 181,
+        "tight": 165
+      }
+    },
+    "complete_solid_coverage": true,
+    "planner_quality_horizon_permissions_changed": false,
+    "existing_payload_kernel_numerically_unchanged": true
+  },
+  "totals": {
+    "original_allocations": 8,
+    "original_completed_reports": 5,
+    "original_externally_interrupted_reports": 2,
+    "original_not_started_allocations": 1,
+    "additional_allocations": 3,
+    "resumed_completed_reports": 3,
+    "completed_reports_overall": 8,
+    "qualified_trajectories": 7,
+    "native_failed_reports": 1,
+    "failed_report_paths": [
+      "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resume-fruits/episodes/retained-right-s402/report.json"
+    ],
+    "reset_audits_passed": 8,
+    "source_audits_passed": 8,
+    "strict_replays_passed": 5,
+    "independent_unseen_seed_trials": 0
+  },
+  "completed_native_reports": [
+    {
+      "group": "fruits-warm",
+      "id": "s401",
+      "task": "TwoRobotPickFruitsToPlate-v1",
+      "seed": 401,
+      "status": "passed",
+      "steps": 196,
+      "official": true,
+      "physics": "passed",
+      "quality": "passed",
+      "recording": "passed",
+      "qualified_trajectory": true,
+      "error": null,
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/fruits-warm/episodes/s401/report.json",
+        "sha256": "7ec8da01a46a6baf4dc0815b03e91fa91a95fb8e6e074d9217efcfb29abd6c6c"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 135407446207008,
+          "right:approach": 135406065775680,
+          "left:transport": 135406035254496,
+          "right:transport": 135393690062336
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    },
+    {
+      "group": "fruits-warm",
+      "id": "s402",
+      "task": "TwoRobotPickFruitsToPlate-v1",
+      "seed": 402,
+      "status": "passed",
+      "steps": 194,
+      "official": true,
+      "physics": "passed",
+      "quality": "passed",
+      "recording": "passed",
+      "qualified_trajectory": true,
+      "error": null,
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/fruits-warm/episodes/s402/report.json",
+        "sha256": "2cd7b6f11864fba3998800bd6a1d7103ad3336954715c0002677f1d7e36c0a5b"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 135407446207008,
+          "right:approach": 135406065775680,
+          "left:transport": 135406035254496,
+          "right:transport": 135393690062336
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    },
+    {
+      "group": "fruits-warm",
+      "id": "s403",
+      "task": "TwoRobotPickFruitsToPlate-v1",
+      "seed": 403,
+      "status": "passed",
+      "steps": 199,
+      "official": true,
+      "physics": "passed",
+      "quality": "passed",
+      "recording": "passed",
+      "qualified_trajectory": true,
+      "error": null,
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/fruits-warm/episodes/s403/report.json",
+        "sha256": "0230500b6b95d0df5b0e9c708d1f9e1726c910cfc1121a2534eb1ef003e2f464"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 135407446207008,
+          "right:approach": 135406065775680,
+          "left:transport": 135406035254496,
+          "right:transport": 135393690062336
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    },
+    {
+      "group": "fruits-cold402",
+      "id": "s402",
+      "task": "TwoRobotPickFruitsToPlate-v1",
+      "seed": 402,
+      "status": "passed",
+      "steps": 194,
+      "official": true,
+      "physics": "passed",
+      "quality": "passed",
+      "recording": "passed",
+      "qualified_trajectory": true,
+      "error": null,
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/fruits-cold402/episodes/s402/report.json",
+        "sha256": "1a7725106dfe7711df4d28fd7457b0e38a3a75d78b8b8243ec9881009d3a6fe3"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 124206474864608,
+          "right:approach": 124205037918432,
+          "left:transport": 124204547767472,
+          "right:transport": 124182694584320
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    },
+    {
+      "group": "other-tasks",
+      "id": "apple-s401",
+      "task": "TwoRobotPickAppleBananaToBaskets-v1",
+      "seed": 401,
+      "status": "passed",
+      "steps": 198,
+      "official": true,
+      "physics": "passed",
+      "quality": "passed",
+      "recording": "passed",
+      "qualified_trajectory": true,
+      "error": null,
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/other-tasks/episodes/apple-s401/report.json",
+        "sha256": "4bd4d89f25ec949747382c99082a4b699a080e184cabf58ef449121ddf398c8b"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 129544934411104,
+          "right:approach": 129543506454256,
+          "left:transport": 129543494286224,
+          "right:transport": 129543480707696
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    },
+    {
+      "group": "resume-fruits",
+      "id": "retained-right-s402",
+      "task": "TwoRobotPickFruitsToPlate-v1",
+      "seed": 402,
+      "status": "failed",
+      "steps": 176,
+      "official": true,
+      "physics": "failed",
+      "quality": "failed",
+      "recording": "passed",
+      "qualified_trajectory": false,
+      "error": "release: release_timeout: both_hands_not_open_or_grasp_persists",
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resume-fruits/episodes/retained-right-s402/report.json",
+        "sha256": "09796bf94d044d53f981611e626980bc04c32b387facccb11ef21c378a8e4d06"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 136531978660384,
+          "right:approach": 136530579834976,
+          "left:transport": 136530549872576,
+          "right:transport": 136530552743904
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    },
+    {
+      "group": "resume-fruits",
+      "id": "after-failure-s402",
+      "task": "TwoRobotPickFruitsToPlate-v1",
+      "seed": 402,
+      "status": "passed",
+      "steps": 194,
+      "official": true,
+      "physics": "passed",
+      "quality": "passed",
+      "recording": "passed",
+      "qualified_trajectory": true,
+      "error": null,
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resume-fruits/episodes/after-failure-s402/report.json",
+        "sha256": "5fec3574f9e76cea944f883bcaef67cae9c8eca3804ce4c8b81cebc48c2a4f85"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 136531978660384,
+          "right:approach": 136530579834976,
+          "left:transport": 136530549872576,
+          "right:transport": 136530552743904
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    },
+    {
+      "group": "resume-pill",
+      "id": "pill-s401",
+      "task": "TwoRobotPickPillToRegions-v1",
+      "seed": 401,
+      "status": "passed",
+      "steps": 191,
+      "official": true,
+      "physics": "passed",
+      "quality": "passed",
+      "recording": "passed",
+      "qualified_trajectory": true,
+      "error": null,
+      "report": {
+        "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resume-pill/episodes/pill-s401/report.json",
+        "sha256": "e67122ba9fd30267b6f10a7428898f00600ad0d36ae98ed26fb764295776a62c"
+      },
+      "source_audit_status": "passed",
+      "reset_audit": {
+        "status": "passed",
+        "planner_ids": {
+          "left:approach": 128968240401920,
+          "right:approach": 128966847824000,
+          "left:transport": 128966849401568,
+          "right:transport": 128966830417936
+        },
+        "all_four_native_models_empty_and_measured_world_fingers_default_masks_checked": true,
+        "error": null
+      }
+    }
+  ],
+  "replays": [
+    {
+      "label": "fruit-s401",
+      "status": "passed",
+      "sha256": "ae60febd71ce35b9c3bddcf2f8f8747e839df1b5439f79ce38ce5438e481e1ed",
+      "actions": 196,
+      "states": 197,
+      "checks": {
+        "robot_and_target_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "result_statuses": {
+        "official": "passed",
+        "execution": "terminal",
+        "physics": "passed",
+        "quality": "passed",
+        "acceptance": "passed",
+        "recording": "passed"
+      },
+      "state_restore_frames": [
+        0
+      ],
+      "replanning_performed": false,
+      "per_tick_state_correction": false,
+      "input_evidence_unchanged": true,
+      "recording_mode": "normal",
+      "replay_mode": "strict"
+    },
+    {
+      "label": "fruit-s402",
+      "status": "passed",
+      "sha256": "0490c379a6030dc2b2d489282dd1623efa75f1ffe68149aeca995bd4facbdef6",
+      "actions": 194,
+      "states": 195,
+      "checks": {
+        "robot_and_target_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "result_statuses": {
+        "official": "passed",
+        "execution": "terminal",
+        "physics": "passed",
+        "quality": "passed",
+        "acceptance": "passed",
+        "recording": "passed"
+      },
+      "state_restore_frames": [
+        0
+      ],
+      "replanning_performed": false,
+      "per_tick_state_correction": false,
+      "input_evidence_unchanged": true,
+      "recording_mode": "normal",
+      "replay_mode": "strict"
+    },
+    {
+      "label": "fruit-s403",
+      "status": "passed",
+      "sha256": "577eb05a18d66538a852b9f06dad902e7f09f3afe4fe33a158d2d855da072997",
+      "actions": 199,
+      "states": 200,
+      "checks": {
+        "robot_and_target_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "result_statuses": {
+        "official": "passed",
+        "execution": "terminal",
+        "physics": "passed",
+        "quality": "passed",
+        "acceptance": "passed",
+        "recording": "passed"
+      },
+      "state_restore_frames": [
+        0
+      ],
+      "replanning_performed": false,
+      "per_tick_state_correction": false,
+      "input_evidence_unchanged": true,
+      "recording_mode": "normal",
+      "replay_mode": "strict"
+    },
+    {
+      "label": "apple-s401",
+      "status": "passed",
+      "sha256": "5938004328676a9941d0db477c880739869cdd1257f4308f9849f4756c108f8e",
+      "actions": 198,
+      "states": 199,
+      "checks": {
+        "robot_and_target_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "result_statuses": {
+        "official": "passed",
+        "execution": "terminal",
+        "physics": "passed",
+        "quality": "passed",
+        "acceptance": "passed",
+        "recording": "passed"
+      },
+      "state_restore_frames": [
+        0
+      ],
+      "replanning_performed": false,
+      "per_tick_state_correction": false,
+      "input_evidence_unchanged": true,
+      "recording_mode": "normal",
+      "replay_mode": "strict"
+    },
+    {
+      "label": "pill-s401",
+      "status": "passed",
+      "sha256": "496bf219bd3db085fbdde3ca2437303e771b8263b2519c15b3bfcd7cb8cb1571",
+      "actions": 191,
+      "states": 192,
+      "checks": {
+        "robot_and_target_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "result_statuses": {
+        "official": "passed",
+        "execution": "terminal",
+        "physics": "passed",
+        "quality": "passed",
+        "acceptance": "passed",
+        "recording": "passed"
+      },
+      "state_restore_frames": [
+        0
+      ],
+      "replanning_performed": false,
+      "per_tick_state_correction": false,
+      "input_evidence_unchanged": true,
+      "recording_mode": "normal",
+      "replay_mode": "strict"
+    }
+  ],
+  "cold_warm_s402": {
+    "parameters_equal": true,
+    "initial_state_exact_equal": true,
+    "actions": {
+      "left_shape": [
+        194,
+        16
+      ],
+      "right_shape": [
+        194,
+        16
+      ],
+      "same_shape": true,
+      "exact_equal": true,
+      "maximum_absolute_difference": 0.0,
+      "exact_equality_is_acceptance_gate": false
+    }
+  },
+  "negative_control": {
+    "status": "detected",
+    "actual_injection_verified": true,
+    "injection_steps": [
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160,
+      161,
+      162,
+      163,
+      164,
+      165,
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176
+    ],
+    "only_right_requested_release_plus1_to_actual_minus1": true,
+    "actual_failed_status_preserved": true
+  },
+  "recovery": {
+    "status": "passed",
+    "same_four_planners_after_failure": true,
+    "native_planner_ids": [
+      {
+        "left:approach": 136531978660384,
+        "right:approach": 136530579834976,
+        "left:transport": 136530549872576,
+        "right:transport": 136530552743904
+      },
+      {
+        "left:approach": 136531978660384,
+        "right:approach": 136530579834976,
+        "left:transport": 136530549872576,
+        "right:transport": 136530552743904
+      }
+    ],
+    "parameters_equal_to_pre_failure_positive": true,
+    "actions_equal_to_pre_failure_positive": true
+  },
+  "interruption": {
+    "original_reports_retained": true,
+    "original_receipts_unchanged_since_addendum": true,
+    "original_interrupted_reports": [
+      "fruits-warm/episodes/retained-right-s402",
+      "other-tasks/episodes/pill-s401"
+    ],
+    "original_not_started": "fruits-warm/episodes/after-failure-s402",
+    "missing_final_observer_identity_in_original_interrupted_batches": "unavailable, not inferred; completed per-report source/reset audits retained",
+    "completion_in_distinct_directories": [
+      "resume-fruits",
+      "resume-pill"
+    ]
+  },
+  "first_round_link5_only": {
+    "runtime_commit": "135cbabdfe10af2f8bda358cfe7f5014458594b5",
+    "failed_cases_retained": [
+      "fruits-warm/s402",
+      "fruits-warm/retained-right-s402",
+      "fruits-warm/after-failure-s402",
+      "fruits-cold402/s402"
+    ],
+    "retain_right_control": "unperformed because right-arm planning failed before release injection"
+  },
+  "timing_scope": "No speed or throughput claim: interrupted batches and concurrent shared host workloads.",
+  "artifacts": [
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/protocol.json",
+      "sha256": "cb7026a731a5590372128832b8b0a11155976a3d475a26f8b3c9e3e94b7c27d3"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/protocol-addendum.json",
+      "sha256": "d9461679533d799b2b615aee0238cf56a6d7f6563d856969ca9b88374642bc31"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resumed-analysis-v2.py",
+      "sha256": "c1893fa556569b62f709e1dceed4b5f2ce97cfe5cceedd0456bfd80c44a4b036"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resumed-comparison-v2.json",
+      "sha256": "b2d614964a0891b0a7165729a634daaf03d0ba9479a96a83dc7b098fb3128452"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/cpu/curobo_scene.stdout.log",
+      "sha256": "b85c2518d4d915179c503527b9d56656134b0f0f3f5111b48bd702fa2d5cf503"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/cpu/actual-native-link56-covers.json",
+      "sha256": "409fd09df5ab996c8bf0a138f98b654f648a4d1e56ecb9bb9f66eb93dd03da34"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/reviewer-source-review.json",
+      "sha256": "8353eba87109e659869639eebc4f4ca0b614828507c856283cf14366c196d2e9"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/fruit-replay-processes.json",
+      "sha256": "cdf396a435f3f84f9e4531de33f4bf1d3e4b408571661cc7febba27a024b5393"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/fruit-replay-audit.json",
+      "sha256": "d216cbed2f370cef383a0c9bd995b25d529d10b33a86c4aa1998200a07e035af"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resume-pill-processes.json",
+      "sha256": "afbf60891104999ef079085b0a9425672f0585c5c25207570f300c8d5122f58e"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resume-pill-validation-summary.json",
+      "sha256": "0997d311f72b2466647d2c83bfe5da227edf83579ffec0bc990bd931dbda2c53"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link56-cover-repair-20261117/resume-fruits-processes.json",
+      "sha256": "5df192c46af0600d7910adb5e0ccf55b7e6d08e3dcabab05ddce3d99cfec9987"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link5-cover-repair-20261117/protocol.json",
+      "sha256": "71d61e7f7377695ab8d8fdcd9eeb820b5e563c7ff5b54ea175cf34e991e2592f"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link5-cover-repair-20261117/cpu/kernel-tests.json",
+      "sha256": "32fc26e30060dbcb45a04825f9b468ed8e41708b14c847eba00c8f218b2671ce"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link5-cover-repair-20261117/cpu/root-tests.json",
+      "sha256": "99c1334293511bb89d8d2677ec9ffad5eb7602238cee0d89805d7e840f103aac"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link5-cover-repair-20261117/cpu/reviewer-tests.json",
+      "sha256": "8935d3b16ecf85719b9cd85f5f37b197e285dc6dfeb53036a3c3093b25256f2a"
+    },
+    {
+      "path": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/link5-cover-repair-20261117/right-arm-diagnosis/index.json",
+      "sha256": "518e1b3fec2ab2946ff7ae175a2cb1a442148e72121b26b9e8a2ac49ea953aae"
+    }
+  ]
+}
