@@ -16,7 +16,7 @@ import sys
 import tempfile
 from typing import Any, Callable, Mapping
 
-PRESET_VERSION = 'tig-dual-arm-task-presets-v1'
+PRESET_VERSION = 'tig-dual-arm-task-presets-v2'
 TASK_PRESETS = {
     'TwoRobotPickAppleBananaToBaskets-v1': {
         '--approach-recipe': 'compact-4cm',
@@ -52,10 +52,13 @@ def generation_arguments(arguments: list[str]) -> list[str]:
     parser.add_argument('--task', '--task-id', choices=tuple(TASK_PRESETS),
                         default=next(iter(TASK_PRESETS)))
     parser.add_argument('--quality-profile', default='task-default-v1')
+    parser.add_argument('--backend', choices=('mplib', 'curobo'), default='curobo')
     selected, _ = parser.parse_known_args(arguments)
     defaults = {'--quality-profile': 'task-default-v1', '--recording-mode': 'normal'}
     if selected.quality_profile != 'legacy-strict-v1':
         defaults.update(TASK_PRESETS[selected.task])
+        if selected.task == 'TwoRobotPickPillToRegions-v1' and selected.backend == 'curobo':
+            defaults['--approach-recipe'] = 'compact-5cm'
     return with_defaults(arguments, defaults)
 
 
@@ -153,9 +156,13 @@ def run_public(arguments: list[str], runner: Callable[[list[str]], int]) -> int:
 def self_test() -> dict[str, Any]:
     """Exercise public defaults, legacy escape, manifest identity and reporting."""
     for task, expected in TASK_PRESETS.items():
-        arguments = generation_arguments(['--task', task, '--backend', 'mplib'])
-        for flag, value in expected.items():
-            assert arguments[arguments.index(flag)+1] == value
+        for backend in ('mplib', 'curobo'):
+            arguments = generation_arguments(['--task', task, '--backend', backend])
+            for flag, value in expected.items():
+                if (task == 'TwoRobotPickPillToRegions-v1' and backend == 'curobo'
+                        and flag == '--approach-recipe'):
+                    value = 'compact-5cm'
+                assert arguments[arguments.index(flag)+1] == value
     explicit = generation_arguments(['--task-id=TwoRobotPickPillToRegions-v1',
         '--approach-recipe=compact-5cm', '--payload-refinement', 'baseline',
         '--recording-mode=diagnostic', '--transport-recipe', 'standard'])
