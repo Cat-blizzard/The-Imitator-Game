@@ -1426,7 +1426,7 @@ def stage4_self_test() -> dict[str, Any]:
             'physical_environment_steps':0}
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--self-test', action='store_true')
     parser.add_argument('--input-dir', type=Path)
@@ -1436,7 +1436,7 @@ def main() -> int:
                         help='strict requires source runtime identity; cross-version records source differences')
     parser.add_argument('--recording-mode', choices=('diagnostic','normal'), default='diagnostic',
                         help='output artifact selection; source mode is read from its recorded policy')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.self_test:
         print(json.dumps(self_test(), allow_nan=False)); return 0
     if args.input_dir is None or args.output_dir is None:
