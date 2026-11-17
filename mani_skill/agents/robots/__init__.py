@@ -9,3 +9,4 @@ from .xarm6 import *
 from .realman import *
 from .realman_inspire import *
 from .ur10e_shadow import *
+from .parallel_gripper import ARXX5, Piper, UR5WSG
