@@ -40,6 +40,10 @@
 
 同时修复原 `train_act_single.py` 的三处接线错误：导入能够接收dummy video的已有DETRVAE、使用已声明的 `obs_proj`、使条件输入维度与hidden维度一致。已有 `detr_video/detr_vae.py`增加可选padding mask，默认无mask调用保持兼容。未替换为其他策略，也未缩小默认模型。
 
+发布前另补齐四个下游子命令的输出路径保护：在写入输出或物理执行前，拒绝原始录制、观测导出、LeRobot数据目录本身及其子目录，路径解析包含符号链接。评测的数据目录读取checkpoint中保存的来源路径；源 `trajectory.json` 和 `trajectory.h5` 须先与导出manifest冻结的SHA256一致，再读取初态。相机参数和初始qpos继续严格核对，初始RGB差异继续如实记录。
+
+这些新增CLI保护通过CPU临时目录测试：14组目录／符号链接拒绝和2种源文件SHA变化拒绝；已有171行真实数据的CPU检查也通过，原始172个文件、观测及数据集均未变化。见[发布检查摘要](evidence/data-act-cli-publication-20261117.json)。上表训练、严格重载及200步模型执行证据仍对应 `a0f8503`，本次未重新训练或执行仿真，原证据及任务结果保持原样。
+
 ## 运行方式
 
 从此checkout根目录运行，使用已配置的TIG环境和资产。示例中的解释器、路径和GPU UUID需替换为实际值；输出目录应尚不存在。
@@ -88,7 +92,7 @@ python -m examples.baselines.act.dual_arm_downstream evaluate \
   --output-dir "$BRIDGE_OUTPUT/rollout" --device cuda
 ```
 
-三个新增入口均提供 `--self-test`；它们的CPU测试覆盖时序、真实LeRobot写读与batch，以及完整默认ACT前向、padding不变性和无mask兼容。图像与数据写入源目录、覆盖已有导出／checkpoint／rollout均被拒绝。
+三个新增入口均提供 `--self-test`；它们的CPU测试覆盖时序、真实LeRobot写读与batch，以及完整默认ACT前向、padding不变性和无mask兼容。下游入口另提供 `python -m examples.baselines.act.dual_arm_downstream --guard-self-test`，仅用临时目录检查合法同级输出、输入目录及其子目录／符号链接的拒绝、源文件SHA变化的拒绝，无需构造模型或启动仿真。图像、数据及下游报告写入输入目录、覆盖已有导出／checkpoint／rollout均被拒绝。
 
 输出中 `manifest.json`保存观测配置和来源；`meta/dataset-selection.json`为单episode转换划分配置；训练参数和归一化保存在checkpoint及 `training-report.json`；在线配置、任务结果和实际动作记录分别在 `rollout-report.json`及 `rollout.h5`。大型数据、权重、模型和本地运行环境不纳入Git。
 

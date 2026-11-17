@@ -1,0 +1,81 @@
+{
+  "schema": "tig-act-cli-publication-check-v1",
+  "date": "2026-11-17",
+  "scope": "CPU CLI input protection; previous native results remain at a0f8503",
+  "runtime_source_sha256": "4f16db6508a918c0847294a229872a384ddcdf84f2340e615926f50672155652",
+  "guard_test": {
+    "exit_code": 0,
+    "result": {
+      "status": "passed",
+      "legal_sibling_output": true,
+      "protected_output_paths_rejected": 14,
+      "modified_source_hashes_rejected": 2,
+      "cuda_initialized": false
+    }
+  },
+  "actual_dataset_check": {
+    "exit_code": 0,
+    "result": {
+      "status": "passed",
+      "camera": "zed2i",
+      "fps": 20,
+      "train_episodes": [
+        0
+      ],
+      "test_episodes": [],
+      "real_action_rows": 171,
+      "terminal_label_rows": 0,
+      "train_statistics_rows": 171,
+      "normalization": "shared ActionNormalizer bounds_q99",
+      "augmentation": false,
+      "source_rows": [
+        {
+          "index": 0,
+          "timestamp_s": 0.0,
+          "rgb_exact": true,
+          "qpos_exact": true,
+          "action_chunk_exact": true,
+          "valid_actions": 16,
+          "padding_mask_exact": true
+        },
+        {
+          "index": 85,
+          "timestamp_s": 4.25,
+          "rgb_exact": true,
+          "qpos_exact": true,
+          "action_chunk_exact": true,
+          "valid_actions": 16,
+          "padding_mask_exact": true
+        },
+        {
+          "index": 170,
+          "timestamp_s": 8.5,
+          "rgb_exact": true,
+          "qpos_exact": true,
+          "action_chunk_exact": true,
+          "valid_actions": 1,
+          "padding_mask_exact": true
+        }
+      ],
+      "state_layout": "physical left qpos[9], physical right qpos[9]",
+      "action_layout": "left arm[7], left gripper[1], right arm[7], right gripper[1]"
+    },
+    "input_file_counts": {
+      "original": 172,
+      "observations": 2,
+      "dataset": 9
+    },
+    "immutable_inputs_unchanged": {
+      "original": true,
+      "observations": true,
+      "dataset": true
+    }
+  },
+  "new_training_or_simulation_runs": 0,
+  "original_evidence_files": {
+    "cli-guards-cpu.json": "f920b2d3685210e149e01e175bc699f4d923562240436321996f5a452baead44",
+    "cli-guards-cpu.log": "b3553be5e103b8e87e373901ba628cb51e88be79b2a4c940967e7ca52c85e694",
+    "dataset-check-cpu.json": "af1426c3609c2ce05be06d13641aa6200a9a28005f5332bd3f8571b7e076c6f2",
+    "dataset-check-cpu.log": "2ebd20a59441ae91bbf45247f26ed576af0e698a23783caf564c8ec653ed2d2f"
+  }
+}

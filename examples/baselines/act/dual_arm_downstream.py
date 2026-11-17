@@ -15,6 +15,7 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import tempfile
 import time
 import traceback
 from typing import Any
@@ -37,6 +38,33 @@ def save_json(path: Path, value: Any) -> None:
         if isinstance(item, torch.Tensor): return item.detach().cpu().tolist()
         raise TypeError(type(item).__name__)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False, default=convert) + "\n")
+
+
+def guard_output_directory(output_dir: Path, export_dir: Path, *,
+                           dataset_dirs: tuple[Path, ...] = (),
+                           manifest: dict[str, Any] | None = None) -> Path:
+    """Reject writes beneath any immutable input, including symlink aliases."""
+    export_dir = export_dir.resolve()
+    if manifest is None:
+        manifest = json.loads((export_dir / "manifest.json").read_text())
+    protected = [("original recording", Path(manifest["source_dir"]).resolve()),
+                 ("observation export", export_dir)]
+    protected.extend(("LeRobot dataset", directory.resolve()) for directory in dataset_dirs)
+    output_dir = output_dir.resolve()
+    for label, directory in protected:
+        if output_dir == directory or directory in output_dir.parents:
+            raise ValueError(f"Output must be outside the immutable {label}: {directory}")
+    return output_dir
+
+
+def authenticated_source_metadata(manifest: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+    """Check frozen source identities before reading evaluation reset inputs."""
+    source_dir = Path(manifest["source_dir"]).resolve()
+    for filename, identity_key in (("trajectory.json", "source_metadata_sha256"),
+                                   ("trajectory.h5", "source_h5_sha256")):
+        if sha256_file(source_dir / filename) != manifest[identity_key]:
+            raise ValueError(f"Original recording {filename} differs from the observation export")
+    return source_dir, json.loads((source_dir / "trajectory.json").read_text())
 
 
 def source_code_identity() -> dict[str, str]:
@@ -160,6 +188,8 @@ def _model_digest(agent: Any) -> str:
 
 
 def check(args: argparse.Namespace) -> None:
+    args.output_dir = guard_output_directory(args.output_dir, args.export_dir,
+                                            dataset_dirs=(args.dataset_dir,))
     dataset = BridgeDataset(args.dataset_dir, args.export_dir)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     save_json(args.output_dir / "dataset-check.json", {**dataset.audit,
@@ -170,6 +200,8 @@ def check(args: argparse.Namespace) -> None:
 
 def train(args: argparse.Namespace) -> None:
     started = time.perf_counter()
+    args.output_dir = guard_output_directory(args.output_dir, args.export_dir,
+                                            dataset_dirs=(args.dataset_dir,))
     if (args.output_dir / "checkpoint_epoch_0001.pt").exists():
         raise FileExistsError("Training will not overwrite an existing checkpoint")
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -262,6 +294,8 @@ def load_checkpoint(path: Path, device: torch.device) -> tuple[Any, Any, dict[st
 
 
 def reload_check(args: argparse.Namespace) -> None:
+    args.output_dir = guard_output_directory(args.output_dir, args.export_dir,
+                                            dataset_dirs=(args.dataset_dir,))
     device = torch.device(args.device)
     agent, _, checkpoint = load_checkpoint(args.checkpoint, device)
     dataset = BridgeDataset(args.dataset_dir, args.export_dir, stats=checkpoint["bridge_normalizer"]["stats"])
@@ -288,6 +322,7 @@ def _write_tree(group: h5py.Group, state: dict[str, Any]) -> None:
 
 def evaluate(args: argparse.Namespace) -> None:
     """One initial restoration; every later observation comes from real physics."""
+    args.output_dir = guard_output_directory(args.output_dir, args.export_dir)
     import gymnasium as gym
     import mani_skill.envs  # noqa: F401 -- register task IDs
     from mani_skill.examples.motionplanning.dual.export_observations import (
@@ -296,18 +331,20 @@ def evaluate(args: argparse.Namespace) -> None:
     from mani_skill.examples.motionplanning.dual.trajectory_execution import bindings
     if (args.output_dir / "rollout.h5").exists():
         raise FileExistsError("Evaluation will not overwrite an existing physical rollout")
-    args.output_dir.mkdir(parents=True, exist_ok=True)
     device = torch.device(args.device)
     agent, _, checkpoint = load_checkpoint(args.checkpoint, device)
     manifest, arrays = load_export(args.export_dir)
     if manifest != checkpoint["source_manifest"]:
         raise ValueError("Evaluation source identity differs from checkpoint")
+    args.output_dir = guard_output_directory(args.output_dir, args.export_dir,
+        dataset_dirs=tuple(Path(entry["root"]) for entry in checkpoint["dataset_info"]),
+        manifest=manifest)
+    source_dir, metadata = authenticated_source_metadata(manifest)
     normalizer = make_normalizer(checkpoint["bridge_normalizer"]["stats"], checkpoint["bridge_normalizer"]["repo_id"])
-    source_dir = Path(manifest["source_dir"])
-    metadata = json.loads((source_dir / "trajectory.json").read_text())
     task = metadata["env_info"]["env_id"]
     kwargs = dict(manifest["config"]["environment_kwargs_export"])
     kwargs.update(obs_mode="rgb", max_episode_steps=200)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
     env = None
     report: dict[str, Any] = {"schema": "tig-dual-arm-act-rollout-v1", "status": "running",
         "task": task, "control_mode": "pd_joint_pos", "fps": FPS, "max_episode_steps": 200,
@@ -404,12 +441,72 @@ def evaluate(args: argparse.Namespace) -> None:
     print(json.dumps({key: report[key] for key in ("status", "chain_complete", "actual_steps", "official_success_final", "timed_out")}))
 
 
+def guard_self_test() -> dict[str, Any]:
+    """CPU temporary-directory checks; no model, simulator, or source-data writes."""
+    with tempfile.TemporaryDirectory(prefix="tig-act-guard-test-") as temporary:
+        root = Path(temporary)
+        source, export, dataset = (root / name for name in ("source", "export", "dataset"))
+        for directory in (source, export, dataset):
+            directory.mkdir()
+        metadata_bytes = b'{"env_info": {"env_id": "synthetic-only"}}\n'
+        h5_bytes = b"synthetic source identity only; no simulator"
+        (source / "trajectory.json").write_bytes(metadata_bytes)
+        (source / "trajectory.h5").write_bytes(h5_bytes)
+        manifest = {"source_dir": str(source),
+            "source_metadata_sha256": sha256_file(source / "trajectory.json"),
+            "source_h5_sha256": sha256_file(source / "trajectory.h5")}
+        save_json(export / "manifest.json", manifest)
+        legal_output = root / "new-output"
+        assert guard_output_directory(legal_output, export, dataset_dirs=(dataset,)) == legal_output
+        rejected = 0
+        for index, directory in enumerate((source, export, dataset)):
+            alias = root / f"input-alias-{index}"
+            alias.symlink_to(directory, target_is_directory=True)
+            for output in (directory, directory / "child", alias, alias / "child"):
+                try:
+                    guard_output_directory(output, export, dataset_dirs=(dataset,))
+                except ValueError:
+                    rejected += 1
+                else:
+                    raise AssertionError(f"Accepted writes beneath an immutable input: {output}")
+        # Resolve protected input aliases as well as output aliases.
+        for aliased_export, aliased_dataset, output in (
+                (root / "input-alias-1", dataset, export / "child"),
+                (export, root / "input-alias-2", dataset / "child")):
+            try:
+                guard_output_directory(output, aliased_export,
+                                       dataset_dirs=(aliased_dataset,))
+            except ValueError:
+                rejected += 1
+            else:
+                raise AssertionError("Accepted a protected input supplied through a symlink")
+        verified_source, metadata = authenticated_source_metadata(manifest)
+        assert verified_source == source and metadata["env_info"]["env_id"] == "synthetic-only"
+        rejected_hashes = 0
+        for filename, original in (("trajectory.json", metadata_bytes), ("trajectory.h5", h5_bytes)):
+            path = source / filename
+            path.write_bytes(original + b"changed")
+            try:
+                authenticated_source_metadata(manifest)
+            except ValueError:
+                rejected_hashes += 1
+            else:
+                raise AssertionError(f"Accepted a modified source file: {filename}")
+            finally:
+                path.write_bytes(original)
+        assert not legal_output.exists() and rejected == 14 and rejected_hashes == 2
+        return {"status": "passed", "legal_sibling_output": True,
+            "protected_output_paths_rejected": rejected, "modified_source_hashes_rejected": rejected_hashes,
+            "cuda_initialized": torch.cuda.is_initialized()}
+
+
 def self_test() -> None:
     """CPU-only default ACT masking/adapter test; use the frozen local vision cache."""
     from .dual_arm_adapter import self_test as adapter_test
     from .train_act_single import _ACTCfg, TrainingArgs
     from .act.detr_video.detr_vae import DETRVAE, build_encoder, build_transformer
     adapter_test()
+    guard_report = guard_self_test()
     torch.set_num_threads(1); torch.manual_seed(7)
     training = TrainingArgs()
     cfg = _ACTCfg(training, training.hidden_dim, HORIZON, 16, training.hidden_dim)
@@ -442,12 +539,14 @@ def self_test() -> None:
     print(json.dumps({"status": "passed", "decoder_shape": list(predicted.shape),
         "padding_invariant_posterior_prediction_loss": True, "no_mask_compatibility": True,
         "actual_resnet18_agent_forward_and_masked_loss": True,
+        "output_and_source_guards": guard_report,
         "cuda_initialized": torch.cuda.is_initialized()}))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--guard-self-test", action="store_true")
     sub = parser.add_subparsers(dest="command")
     for name in ("check", "train", "reload", "evaluate"):
         command = sub.add_parser(name)
@@ -459,9 +558,10 @@ def main() -> None:
         if name in ("reload", "evaluate"):
             command.add_argument("--checkpoint", type=Path, required=True)
     args = parser.parse_args()
-    if args.self_test: self_test()
+    if args.guard_self_test: print(json.dumps(guard_self_test()))
+    elif args.self_test: self_test()
     elif args.command: {"check": check, "train": train, "reload": reload_check, "evaluate": evaluate}[args.command](args)
-    else: parser.error("Choose a stage or --self-test")
+    else: parser.error("Choose a stage, --self-test, or --guard-self-test")
 
 
 if __name__ == "__main__":
