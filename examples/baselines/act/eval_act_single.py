@@ -1,547 +1,360 @@
-"""
-Single-Task ACT Evaluation (LeRobot)
-======================================
-Evaluates a checkpoint trained by train_act_single.py.
-No task encoder — obs + state only.
+"""Evaluate single-task ACT checkpoints on fixed, explicitly recorded seeds.
 
-Aligned with eval_act_imitator.py:
-  - Subprocess-safe L-level handling (set_l_level / clear_l_level)
-  - Correct L3 base-env-name extraction (TwoRobotCleanCupL3-v1 etc.)
-  - JSON-based skip / resume  (load_existing_results)
-  - Incremental result saving  (save after every env)
-
-Usage:
-  python eval_act_single.py \\
-    --checkpoint runs/single_task/act/L0_TwoRobotCleanCup-v1/checkpoint_0200000.pt \\
-    --sub-config  config/sub_configs/L0_TwoRobotCleanCup-v1.json \\
-    --sim-root   /data/sim \\
-    --output-dir eval_results/single_task/act/L0_TwoRobotCleanCup-v1
+The policy receives the same selected RGB camera and physical qpos as training.
+Only the policy's absolute joint/gripper targets control the environment.
 """
+from __future__ import annotations
 
 import argparse
-import json
-from collections import defaultdict
+from collections import deque
 from datetime import datetime
+import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any
 
+import gymnasium as gym
 import numpy as np
-import pandas as pd
 import torch
-from tqdm import tqdm
 
 from examples.baselines.act.act.single_task_eval_utils import (
-    extract_level,
-    extract_base_env_name,
-    set_l_level,
-    clear_l_level,
-    load_existing_results,
-    is_env_already_evaluated,
-    save_results_incremental,
-    print_summary,
+    clear_l_level, extract_base_env_name, extract_level, set_l_level,
 )
-
+from examples.baselines.act.single_task_io import live_observation, split_action
+from examples.baselines.act.train_act_single import ACTSingleTaskAgent, TrainingArgs
 from examples.baselines.lerobot_dataset.normalizer import ActionNormalizer
-from examples.baselines.lerobot_dataset.trajectory_metrics import (
-    TrajectoryMetrics,
-    GTTrajectoryProvider,
-    EpisodeActionBuffer,
-)
-from examples.baselines.act.act.make_env import make_eval_envs
-from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
-from mani_skill.envs.tasks.tabletop.utils import L0_L3_utils
-from mani_skill.utils import common
 
-from train_act_single import ACTSingleTaskAgent, TrainingArgs
-
-L0_L3_utils.set_lr_mirror_enabled(False)
-L0_L3_utils.set_lr_mirror_robot_pose_enabled(False)
-
-IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406])
-IMAGENET_STD  = torch.tensor([0.229, 0.224, 0.225])
-
-_EVAL_TAG = "act_single"
-
-
-# =============================================================================
-# Normalizer
-# =============================================================================
 
 class SingleTaskNormalizer:
-    """
-    Loads normalization statistics from disk via LeRobotDatasetMetadata —
-    identical to evaluate_processor._load_sim_normalizer().
+    """Use the exact training-row statistics embedded in the checkpoint."""
 
-    Args:
-        sub_config:  path to the sub-config JSON  [{repo_id, root, ...}, ...]
-        sim_root:    root directory for all sim datasets
-        state_type:  "qpos" | "eepos" | "mixpos"  (read from train_args)
-        single_arm:  bool (read from train_args)
-    """
-
-    _STATE_ACTION_KEYS = {
-        "qpos":   ("observation.qpos_gripper_states",  "action.qpos_gripper_actions"),
-        "eepos":  ("observation.eepos_gripper_states", "action.eepos_gripper_actions"),
-        "mixpos": ("observation.eepos_gripper_states", "action.qpos_gripper_actions"),
-    }
-
-    def __init__(
-        self,
-        sub_config: str,
-        sim_root: str,
-        state_type: str = "qpos",
-        single_arm: bool = False,
-        normalization_method: str = "bounds_q99",
-    ):
-        import json, os
-        from examples.baselines.lerobot_dataset.lerobot_dataset import LeRobotDatasetMetadata
-
+    def __init__(self, dataset_stats: list[dict[str, Any]], method: str = "bounds_q99"):
+        if not dataset_stats:
+            raise ValueError("Checkpoint has no saved training statistics; retrain with train_act_single.py")
         self.normalizer = ActionNormalizer()
-        self.method = normalization_method
-
-        state_key, action_key = self._STATE_ACTION_KEYS.get(
-            state_type,
-            ("observation.qpos_gripper_states", "action.qpos_gripper_actions"),
-        )
-
-        with open(sub_config) as f:
-            dataset_configs = json.load(f)
-
-        for idx, ds_cfg in enumerate(dataset_configs):
-            repo_id = ds_cfg.get("repo_id")
-            ds_root = os.path.join(sim_root, ds_cfg.get("root"))
-            meta    = LeRobotDatasetMetadata(repo_id=repo_id, root=ds_root)
+        self.method = method
+        self.repo_to_idx = {}
+        for record in dataset_stats:
+            idx = int(record["dataset_idx"])
             self.normalizer.add_dataset_stats(
-                dataset_idx=idx,
-                repo_id=repo_id,
-                stats=meta.stats,
-                state_key=state_key,
-                action_key=action_key,
-                single_arm=single_arm,
+                idx, record["repo_id"], record["stats"], record["state_key"],
+                record["action_key"], record.get("single_arm", False),
             )
-
-        # repo_id → dataset_idx (mirrors evaluate_processor.repo_id_to_dataset_idx)
-        self._repo_to_idx: dict = {
-            ds_cfg.get("repo_id"): idx
-            for idx, ds_cfg in enumerate(dataset_configs)
-        }
+            self.repo_to_idx[record["repo_id"]] = idx
 
     def resolve_idx(self, env_id: str) -> int:
-        """Return dataset_idx for *env_id*, stripping Lx_ prefix as fallback."""
-        if env_id in self._repo_to_idx:
-            return self._repo_to_idx[env_id]
-        if "_" in env_id:
-            base = env_id.split("_", 1)[1]
-            for repo_id, idx in self._repo_to_idx.items():
-                if repo_id == base or repo_id.endswith(base):
-                    return idx
-        return 0  # single-dataset fallback
+        if env_id in self.repo_to_idx:
+            return self.repo_to_idx[env_id]
+        matching = [idx for repo, idx in self.repo_to_idx.items()
+                    if extract_base_env_name(repo) == extract_base_env_name(env_id)]
+        if len(matching) == 1:
+            return matching[0]
+        raise ValueError(f"No unambiguous checkpoint normalizer for {env_id}")
 
     def normalize_state(self, state: torch.Tensor, dataset_idx: int = 0) -> torch.Tensor:
-        return self.normalizer.normalize_state(state, dataset_idx, method=self.method)
-
-    def normalize_rgb(self, rgb: torch.Tensor) -> torch.Tensor:
-        mean = IMAGENET_MEAN.to(rgb.device)[None, :, None, None]
-        std  = IMAGENET_STD.to(rgb.device)[None, :, None, None]
-        return (rgb - mean) / std
+        return self.normalizer.normalize_state(state, dataset_idx, self.method)
 
     def denormalize_action(self, action: torch.Tensor, dataset_idx: int = 0) -> torch.Tensor:
-        return self.normalizer.denormalize_action(action, dataset_idx, method=self.method)
+        return self.normalizer.denormalize_action(action, dataset_idx, self.method)
 
 
-# =============================================================================
-# Checkpoint loading
-# =============================================================================
-
-def load_checkpoint(ckpt_path: str, args_override, device: torch.device):
-    ckpt   = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    stored = ckpt.get("args", {})
-
-    ta = TrainingArgs()
-    for k, v in stored.items():
-        if hasattr(ta, k):
-            setattr(ta, k, v)
-    for k in ["state_type", "pred_horizon", "obs_horizon"]:
-        cli_val = getattr(args_override, k, None)
-        if cli_val is not None:
-            setattr(ta, k, cli_val)
-
-    agent = ACTSingleTaskAgent(ta, device)
-    agent.load_state_dict(ckpt["agent_state_dict"], strict=True)
+def load_checkpoint(ckpt_path: str, args_override: Any, device: torch.device):
+    checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    train_args = TrainingArgs()
+    for key, value in checkpoint.get("args", {}).items():
+        if hasattr(train_args, key):
+            setattr(train_args, key, value)
+    for key in ("state_type", "pred_horizon", "obs_horizon"):
+        value = getattr(args_override, key, None)
+        if value is not None and value != getattr(train_args, key):
+            raise ValueError(f"Evaluation {key} must match the checkpoint")
+    agent = ACTSingleTaskAgent(train_args, device)
+    agent.load_state_dict(checkpoint["agent_state_dict"], strict=True)
     agent.eval()
-    return agent, ta
+    return agent, train_args
 
 
-# =============================================================================
-# Core evaluation loop
-# =============================================================================
-
-def evaluate_episode(
-    n: int,
-    agent,
-    eval_envs,
-    normalizer: SingleTaskNormalizer,
-    args,
-    device: torch.device,
-    train_args: TrainingArgs,
-    dtw_provider: Optional[GTTrajectoryProvider] = None,
-    traj_metrics: Optional[TrajectoryMetrics]    = None,
-    env_id: str = "",
-) -> Dict[str, np.ndarray]:
-    """Run *n* episodes and return per-episode metric arrays."""
-    query_frequency = train_args.pred_horizon   # always from checkpoint
-    num_envs        = eval_envs.num_envs
-
-    compute_dtw = dtw_provider is not None
-    gt_traj     = None
-    if compute_dtw:
-        gt_traj = dtw_provider.sample_gt_trajectory(env_id, seed=None)
-        if gt_traj is None:
-            print(f"⚠️  No GT trajectory for {env_id}; DTW skipped.")
-            compute_dtw = False
-        else:
-            action_buf = EpisodeActionBuffer(num_envs=num_envs)
-        # Track first success step per env (-1 = not yet succeeded)
-        success_steps = torch.full((num_envs,), -1, dtype=torch.long, device=device)
-
-    agent.eval()
-    eval_metrics    = defaultdict(list)
-    obs, info       = eval_envs.reset()
-    ts, eps_count   = 0, 0
-    actions_to_take = None
-
-    pbar = tqdm(
-        total=n,
-        desc=f"Eval {env_id}{'[+DTW]' if compute_dtw else ''}",
-        unit="ep",
-    )
-
-    with torch.no_grad():
-        while eps_count < n:
-            obs   = {k: common.to_tensor(v, device) for k, v in obs.items()}
-
-            rgb_obs = obs.get("rgb", obs.get("view_1"))
-            if rgb_obs is None:
-                raise KeyError(f"obs has neither 'rgb' nor 'view_1'. Keys: {list(obs)}")
-            state_obs = obs.get("state", obs.get("states"))
-            if state_obs is None:
-                raise KeyError(f"obs has neither 'state' nor 'states'. Keys: {list(obs)}")
-
-            rgb   = normalizer.normalize_rgb(rgb_obs)
-            state = normalizer.normalize_state(state_obs)
-
-            if ts % query_frequency == 0:
-                actions_to_take = agent.get_action(rgb, state)
-
-            raw_action = actions_to_take[:, ts % query_frequency]
-            _action    = normalizer.denormalize_action(raw_action)
-
-            if args.sim_backend == "physx_cpu":
-                _action = _action.cpu().numpy()
-
-            if compute_dtw:
-                action_buf.append(_action)
-
-            action = {
-                "panda_wristcam-0": _action[:, :8],
-                "panda_wristcam-1": _action[:, 8:16],
-            }
-            obs, rew, terminated, truncated, info = eval_envs.step(action)
-            ts += 1
+def evaluation_seeds(args: Any) -> list[int]:
+    if args.seeds is not None and args.seeds_file is not None:
+        raise ValueError("Choose --seeds or --seeds-file")
+    if args.seeds_file:
+        payload = json.loads(Path(args.seeds_file).read_text())
+        if isinstance(payload, dict):
+            payload = payload.get("seed_splits", payload.get("splits", payload))
+            payload = payload[args.seed_split]
+        seeds = payload
+    elif args.seeds is not None:
+        seeds = args.seeds
+    else:
+        seeds = list(range(args.seed, args.seed + args.num_episodes))
+    if not isinstance(seeds, list) or not seeds or any(type(seed) is not int or seed < 0 for seed in seeds):
+        raise ValueError("Evaluation seeds must be a nonempty list of nonnegative integers")
+    if len(set(seeds)) != len(seeds):
+        raise ValueError("Evaluation seeds must be unique")
+    return seeds
 
 
-            # Track first success per env for TSS (valid while not truncated)
-            if compute_dtw and not truncated.any():
-                _cur_s = info.get("success")
-                if _cur_s is not None:
-                    _cur_s_t = torch.as_tensor(_cur_s, dtype=torch.bool, device=device)
-                    _new_s = (success_steps == -1) & _cur_s_t
-                    success_steps[_new_s] = ts
+def _bool(value: Any) -> bool:
+    return bool(torch.as_tensor(value).reshape(-1)[0].item())
 
-            if truncated.any():
-                if isinstance(info["final_info"], dict):
-                    for k, v in info["final_info"]["episode"].items():
-                        eval_metrics[k].append(v.float().cpu().numpy())
-                else:
-                    for fi in info["final_info"]:
-                        for k, v in fi["episode"].items():
-                            eval_metrics[k].append(v)
 
-                if compute_dtw:
-                    _fi = info.get("final_info", {})
-                    _ls = (_fi.get("success") if isinstance(_fi, dict) else None)
-                    if _ls is not None:
-                        _ls_t = torch.as_tensor(_ls, dtype=torch.bool, device=device)
-                        success_steps[(success_steps == -1) & _ls_t] = ts
-                    pred_trajs = action_buf.get_and_reset()
-                    ss_np      = success_steps.cpu().numpy()
-                    success_steps[:] = -1
-                    T_gt = len(gt_traj)
-                    for env_i, pred_traj in enumerate(pred_trajs):
-                        ss = int(ss_np[env_i])
-                        if ss >= 2:
-                            # Successful: trim to first-success step
-                            try:
-                                m = traj_metrics.compute(pred_traj[:ss], gt_traj)
-                                eval_metrics["tss_success"].append(np.array(m["tss"],  dtype=np.float32))
-                                eval_metrics["ndtw_success"].append(np.array(m["ndtw"], dtype=np.float32))
-                            except Exception as exc:
-                                print(f"⚠️  TSS(success) env {env_i}: {exc}")
-                        else:
-                            # Failed: trim to GT length for fair shape comparison
-                            pred_trimmed = pred_traj[:T_gt]
-                            if len(pred_trimmed) >= 2:
-                                try:
-                                    m = traj_metrics.compute(pred_trimmed, gt_traj)
-                                    eval_metrics["tss_fail"].append(np.array(m["tss"],  dtype=np.float32))
-                                    eval_metrics["ndtw_fail"].append(np.array(m["ndtw"], dtype=np.float32))
-                                except Exception as exc:
-                                    print(f"⚠️  TSS(fail) env {env_i}: {exc}")
-                    new_gt = dtw_provider.sample_gt_trajectory(env_id, seed=None)
-                    if new_gt is not None:
-                        gt_traj = new_gt
-
-                pbar.update(num_envs)
-                eps_count += num_envs
-                ts = 0
-                obs, info = eval_envs.reset()
-
-    pbar.close()
-    agent.train()
-    return {
-        k: np.concatenate(v) if isinstance(v[0], np.ndarray) else np.array(v)
-        for k, v in eval_metrics.items()
+def _task_events(raw: Any, info: dict[str, Any]) -> dict[str, Any]:
+    """Task facts for reporting only; these never alter policy actions or termination."""
+    result: dict[str, Any] = {}
+    if hasattr(raw, "targets"):
+        objects = list(raw.targets)
+        agents = raw.agent.agents
+        region_keys = ("left_in_region", "right_in_region")
+        for index, (agent, target) in enumerate(zip(agents, objects)):
+            result[("left_grasped", "right_grasped")[index]] = _bool(agent.is_grasping(target))
+            if region_keys[index] in info:
+                result[region_keys[index]] = _bool(info[region_keys[index]])
+        result["is_robot_static"] = all(_bool(agent.is_static(.05)) for agent in agents)
+        named = list(zip(("left_target", "right_target"), objects))
+    else:
+        aliases = {"pill_a_in_region": "left_in_region", "pill_b_in_region": "right_in_region",
+                   "is_pill_a_grasped": "left_grasped", "is_pill_b_grasped": "right_grasped",
+                   "is_robot_static": "is_robot_static"}
+        for name, alias in aliases.items():
+            if name in info:
+                result[alias] = _bool(info[name])
+        named = [(name, getattr(raw, name)) for name in ("pill_a", "pill_b") if hasattr(raw, name)]
+    result["objects"] = {
+        name: {"position_m": torch.as_tensor(actor.pose.p).detach().cpu().reshape(-1).tolist(),
+               "linear_speed_m_s": float(torch.linalg.vector_norm(torch.as_tensor(actor.get_linear_velocity()))),
+               "angular_speed_rad_s": float(torch.linalg.vector_norm(torch.as_tensor(actor.get_angular_velocity())))}
+        for name, actor in named
     }
-
-
-# =============================================================================
-# Single-env orchestration
-# =============================================================================
-
-def evaluate_single_env(
-    agent,
-    env_id: str,
-    args,
-    normalizer: SingleTaskNormalizer,
-    train_args: TrainingArgs,
-    output_dir: Path,
-    timestamp: str,
-    dtw_provider=None,
-    traj_metrics=None,
-    device: torch.device = torch.device("cuda"),
-) -> Dict:
-    level         = extract_level(env_id)
-    base_env_name = extract_base_env_name(env_id)
-
-    print(f"\n{'='*60}\n🎯 {env_id}  (base={base_env_name}, level={level})\n{'='*60}")
-
-    obs_mode = "rgbd" if args.include_depth else "rgb"
-    set_l_level(level)
-    try:
-        eval_envs = make_eval_envs_with_level(
-            base_env_name=base_env_name,
-            level=level,
-            num_envs=args.num_envs,
-            sim_backend=args.sim_backend,
-            env_kwargs=dict(
-                control_mode=args.control_mode,
-                reward_mode="dense",
-                obs_mode=obs_mode,
-                render_mode="rgb_array",
-                max_episode_steps=args.max_episode_steps, 
-                sensor_configs=dict(shader_pack="rt-fast"), 
-                human_render_camera_configs=dict(shader_pack="rt-fast"),
-            ),
-            other_kwargs=dict(obs_horizon=train_args.obs_horizon),
-            video_dir=str(output_dir / "videos" / env_id),
-            wrappers=[FlattenRGBDObservationWrapper],
-        )
-    except Exception as exc:
-        clear_l_level()
-        import traceback; traceback.print_exc()
-        return {
-            "env_id": env_id, "level": level,
-            "timestamp": timestamp, "status": "error", "error": str(exc),
-        }
-
-    try:
-        metrics = evaluate_episode(
-            n=args.num_episodes,
-            agent=agent,
-            eval_envs=eval_envs,
-            normalizer=normalizer,
-            args=args,
-            device=device,
-            train_args=train_args,
-            dtw_provider=dtw_provider,
-            traj_metrics=traj_metrics,
-            env_id=env_id,
-        )
-        result = {
-            "env_id":       env_id,
-            "level":        level,
-            "num_episodes": args.num_episodes,
-            "timestamp":    timestamp,
-            "status":       "success",
-        }
-        for k, v in metrics.items():
-            result[f"{k}_mean"] = float(v.mean())
-            result[f"{k}_std"]  = float(v.std())
-            result[f"{k}_min"]  = float(v.min())
-            result[f"{k}_max"]  = float(v.max())
-        # Ensure TSS fields always present; compute wTSS
-        for _k in ["tss_success", "ndtw_success", "tss_fail", "ndtw_fail"]:
-            if f"{_k}_mean" not in result:
-                result[f"{_k}_mean"] = None
-                result[f"{_k}_std"]  = None
-        _sr  = result.get("success_once_mean") or 0.0
-        _tss = result.get("tss_success_mean")
-        result["wtss_mean"] = round(_sr * _tss, 6) if _tss is not None else 0.0
-        succ = result.get("success_once_mean", float("nan"))
-        ndtw = result.get("ndtw_fail_mean", None)
-        print(f"✅ success={succ:.4f}" + (f" | nDTW={ndtw:.4f}" if ndtw else ""))
-
-    except Exception as exc:
-        import traceback; traceback.print_exc()
-        result = {
-            "env_id": env_id, "level": level,
-            "timestamp": timestamp, "status": "error", "error": str(exc),
-        }
-    finally:
-        eval_envs.close()
-        clear_l_level()
-
     return result
 
 
-# =============================================================================
-# Argument parsing
-# =============================================================================
-
-def parse_args():
-    p = argparse.ArgumentParser("eval_act_single")
-    p.add_argument("--checkpoint",   required=True)
-    p.add_argument("--sub-config",   required=True,
-                   help="Sub-config JSON with env list and GT trajectories")
-    p.add_argument("--sim-root",     default="./data/sim")
-    p.add_argument("--num-episodes", type=int, default=20)
-    p.add_argument("--num-envs",     type=int, default=4)
-    p.add_argument("--max-episode-steps", type=int, default=800)
-    p.add_argument("--control-mode", default="pd_joint_pos")
-    p.add_argument("--sim-backend",  default="physx_cuda",
-                   choices=["physx_cuda", "physx_cpu"])
-    p.add_argument("--state-type",   default=None,
-                   help="Override state_type from checkpoint")
-    p.add_argument("--pred-horizon", type=int, default=None,
-                   help="Override pred_horizon from checkpoint")
-    p.add_argument("--obs-horizon",  type=int, default=None,
-                   help="Override obs_horizon from checkpoint")
-    p.add_argument("--include-depth", action="store_true", default=False)
-    p.add_argument("--compute-dtw",   action="store_true", default=True)
-    p.add_argument("--dtw-band-ratio", type=float, default=0.15)
-    p.add_argument("--output-dir",   required=True)
-    p.add_argument("--device",       default="cuda")
-    return p.parse_args()
+def settling_measurements(events: list[dict[str, Any]], window_steps: int = 20) -> dict[str, Any]:
+    """Report the trailing motion window without adding a policy acceptance gate."""
+    window = events[-window_steps:]
+    objects = {}
+    names = set.intersection(*(set(row.get("objects", {})) for row in window)) if window else set()
+    for name in sorted(names):
+        positions = np.asarray([row["objects"][name]["position_m"] for row in window])
+        objects[name] = {
+            "max_displacement_from_window_start_m": float(np.linalg.norm(positions - positions[0], axis=-1).max()),
+            "max_linear_speed_m_s": max(row["objects"][name]["linear_speed_m_s"] for row in window),
+            "max_angular_speed_rad_s": max(row["objects"][name]["angular_speed_rad_s"] for row in window),
+        }
+    keys = ("left_in_region", "right_in_region", "left_grasped", "right_grasped")
+    placement_observed = bool(window) and all(all(key in row for key in keys) for row in window)
+    return {
+        "window_steps": len(window), "objects": objects,
+        "all_in_regions_and_not_grasped": (all(
+            row["left_in_region"] and row["right_in_region"]
+            and not row["left_grasped"] and not row["right_grasped"] for row in window
+        ) if placement_observed else None),
+        "robot_static_all": (all(row["is_robot_static"] for row in window)
+                             if window and all("is_robot_static" in row for row in window) else None),
+    }
 
 
-# =============================================================================
-# Main
-# =============================================================================
+@torch.no_grad()
+def evaluate_episode(agent: ACTSingleTaskAgent, env: Any, normalizer: SingleTaskNormalizer,
+                     args: Any, train_args: TrainingArgs, seed: int, env_id: str,
+                     device: torch.device) -> dict[str, Any]:
+    """Run a bounded, seeded rollout without expert actions or state forcing."""
+    observation, _ = env.reset(seed=seed)
+    raw = env.unwrapped
+    if raw.control_freq != args.fps:
+        raise ValueError(f"Environment is {raw.control_freq} Hz, checkpoint/evaluation require {args.fps} Hz")
+    if len(train_args.cameras) != 1 or train_args.state_type != "qpos" or train_args.single_arm:
+        raise ValueError("This evaluation path expects one RGB camera and dual-arm native qpos")
+    keys = list(raw.action_space.spaces)
+    action_order = getattr(args, "native_contract", {}).get("action_order")
+    sizes = [int(raw.action_space[key].shape[0]) for key in keys]
+    if sum(sizes) != train_args.action_dim:
+        raise ValueError("Live action dimensions differ from the checkpoint")
+    if action_order is not None and [item["size"] for item in action_order] != sizes:
+        raise ValueError("Live per-arm action widths differ from the checkpoint")
+    dataset_idx = normalizer.resolve_idx(env_id)
+    rgb_history: deque[torch.Tensor] = deque(maxlen=train_args.obs_horizon)
+    state_history: deque[torch.Tensor] = deque(maxlen=train_args.obs_horizon)
+    actions = None
+    success_once = False
+    first_success_step = None
+    clip_steps = 0
+    ever_grasped = [False, False]
+    events = []
+    terminated = truncated = False
+    final_info: dict[str, Any] = {}
+    for step in range(args.max_episode_steps):
+        sample = live_observation(raw, observation, train_args.cameras[0], normalizer,
+                                  dataset_idx, train_args.image_size, action_order)
+        rgb_history.append(sample["rgb"])
+        state_history.append(sample["state"])
+        while len(rgb_history) < train_args.obs_horizon:
+            rgb_history.appendleft(rgb_history[0])
+            state_history.appendleft(state_history[0])
+        if step % args.execute_steps == 0:
+            rgb = torch.stack(list(rgb_history)).unsqueeze(0).to(device)
+            state = torch.stack(list(state_history)).unsqueeze(0).to(device)
+            actions = agent.get_action(rgb, state)
+        prediction = normalizer.denormalize_action(actions[0, step % args.execute_steps], dataset_idx)
+        action = split_action(prediction, keys, sizes)
+        clipped = False
+        for key in keys:
+            bounded = np.clip(action[key], raw.action_space[key].low, raw.action_space[key].high)
+            clipped |= not np.array_equal(action[key], bounded)
+            action[key] = bounded.astype(np.float32)
+        clip_steps += int(clipped)
+        observation, _, term, trunc, final_info = env.step(action)
+        terminated, truncated = _bool(term), _bool(trunc)
+        success = _bool(final_info.get("success", False))
+        success_once |= success
+        if success and first_success_step is None:
+            first_success_step = step + 1
+        row = _task_events(raw, final_info)
+        row.update(step=step + 1, official_success=success)
+        events.append(row)
+        ever_grasped[0] |= row.get("left_grasped", False)
+        ever_grasped[1] |= row.get("right_grasped", False)
+        # Success may precede physical release; keep observing through the budget.
+        if truncated:
+            break
+    final = events[-1]
+    final_success = _bool(final_info.get("success", False))
+    grasp_keys = ("left_grasped", "right_grasped")
+    release_observed = (all(key in final for key in grasp_keys)
+                        and all(ever_grasped) and not any(final[key] for key in grasp_keys))
+    if final_success:
+        failure_stage = None
+    elif not all(ever_grasped):
+        failure_stage = "grasp_not_observed"
+    elif any(final.get(key, False) for key in grasp_keys):
+        failure_stage = "transport_or_release_incomplete"
+    else:
+        failure_stage = "placement_not_successful"
+    return {
+        "seed": seed, "steps": len(events), "official_success_once": success_once,
+        "official_success_at_end": final_success, "first_success_step": first_success_step,
+        "terminated": terminated, "truncated": truncated,
+        "timeout": len(events) >= args.max_episode_steps and not final_success,
+        "failure_stage": failure_stage, "action_clipped_steps": clip_steps,
+        "physical": {"ever_grasped": ever_grasped, "release_observed": release_observed,
+                     "final": final, "settling": settling_measurements(events)}, "events": events,
+    }
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--sub-config", required=True)
+    parser.add_argument("--env-id", help="Override dataset repo name when it is not a registered environment")
+    parser.add_argument("--robot", help="Shared pick/place robot profile; defaults to the recorded training robot")
+    parser.add_argument("--sim-root", default="./data/sim", help="Retained for existing command compatibility")
+    parser.add_argument("--seeds", type=int, nargs="+")
+    parser.add_argument("--seeds-file")
+    parser.add_argument("--seed-split", default="evaluation")
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--num-episodes", type=int, default=20)
+    parser.add_argument("--num-envs", type=int, default=1)
+    parser.add_argument("--max-episode-steps", type=int, default=200)
+    parser.add_argument("--fps", type=int, default=20)
+    parser.add_argument("--execute-steps", type=int, default=1,
+                        help="Actions executed per prediction before observing and predicting again")
+    parser.add_argument("--control-mode", default="pd_joint_pos")
+    parser.add_argument("--sim-backend", default="physx_cpu", choices=["physx_cpu"])
+    parser.add_argument("--state-type", default=None)
+    parser.add_argument("--pred-horizon", type=int, default=None)
+    parser.add_argument("--obs-horizon", type=int, default=None)
+    parser.add_argument("--save-video", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--save-trajectory", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    return parser.parse_args(argv)
+
 
 def main():
-    args      = parse_args()
-    device    = torch.device(args.device)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    print("\n" + "=" * 70)
-    print("🧪 SINGLE-TASK ACT EVALUATION")
-    print("=" * 70)
-
-    # ── checkpoint ────────────────────────────────────────────────────────────
-    print(f"\n📦 Loading checkpoint: {args.checkpoint}")
+    args = parse_args()
+    if args.num_envs != 1 or args.max_episode_steps < 1 or args.control_mode != "pd_joint_pos":
+        raise ValueError("This baseline uses one CPU environment, pd_joint_pos and a positive step budget")
+    seeds = evaluation_seeds(args)
+    output = Path(args.output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    device = torch.device(args.device)
+    checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     agent, train_args = load_checkpoint(args.checkpoint, args, device)
-    agent.to(device)
-    normalizer = SingleTaskNormalizer(
-        sub_config=args.sub_config,
-        sim_root=args.sim_root,
-        state_type=train_args.state_type,
-        single_arm=getattr(train_args, "single_arm", False),
-    )
-    print(f"   pred_horizon={train_args.pred_horizon}  state_type={train_args.state_type}")
-
-    # ── env list ──────────────────────────────────────────────────────────────
-    with open(args.sub_config) as f:
-        ds_cfgs = json.load(f)
-    env_ids = [c["repo_id"] for c in ds_cfgs]
-    print(f"   Environments: {env_ids}")
-
-    # ── skip / resume ─────────────────────────────────────────────────────────
-    existing_results = load_existing_results(output_dir, _EVAL_TAG)
-    print(f"   Existing results: {len(existing_results)} env(s)")
-    pending_env_ids = [
-        eid for eid in env_ids
-        if not is_env_already_evaluated(eid, existing_results, args.num_episodes)
-    ]
-    skipped = len(env_ids) - len(pending_env_ids)
-    print(f"   ⏭️  Skipping: {skipped}  |  🔜 Pending: {len(pending_env_ids)}")
-
-    if not pending_env_ids:
-        print("\n✅ All environments already evaluated.")
-        return
-
-    # ── DTW provider ──────────────────────────────────────────────────────────
-    dtw_provider = None
-    traj_metrics = None
-    if args.compute_dtw:
-        action_key = (
-            "action.qpos_gripper_actions"
-            if train_args.state_type in ("qpos", "mixpos")
-            else "action.eepos_gripper_actions"
-        )
+    contract = checkpoint.get("data_contract", {})
+    args.native_contract = contract.get("native") or {}
+    source_image_size = contract.get("source_image_size", train_args.image_size)
+    if contract.get("fps") != args.fps:
+        raise ValueError("Evaluation fps must equal the checkpoint's recorded training fps")
+    if not 1 <= args.execute_steps <= train_args.pred_horizon:
+        raise ValueError("execute_steps must be between 1 and the checkpoint prediction horizon")
+    normalizer = SingleTaskNormalizer(checkpoint.get("dataset_stats", []),
+                                      contract.get("normalization_method", train_args.normalization_method))
+    configs = json.loads(Path(args.sub_config).read_text())
+    results = []
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    result_path = output / f"act_single_{stamp}.json"
+    from mani_skill.utils.wrappers.record import RecordEpisode
+    from mani_skill.envs.tasks.tabletop.utils import L0_L3_utils
+    L0_L3_utils.set_lr_mirror_enabled(False)
+    L0_L3_utils.set_lr_mirror_robot_pose_enabled(False)
+    for config in configs:
+        repo_id = config["repo_id"]
+        env_id = args.env_id or config.get("env_id") or args.native_contract.get("env_id") or extract_base_env_name(repo_id)
+        set_l_level(extract_level(env_id))
+        env = None
         try:
-            dtw_provider = GTTrajectoryProvider(
-                sim_dataset_file=args.sub_config,
-                sim_root=args.sim_root,
-                action_key=action_key,
-            )
-            traj_metrics = TrajectoryMetrics(band_ratio=args.dtw_band_ratio)
-            print(f"   ✅ DTW provider ready ({len(dtw_provider._episodes)} tasks).")
-        except Exception as exc:
-            print(f"   ⚠️  DTW provider failed: {exc}")
-
-    # ── incremental result log ────────────────────────────────────────────────
-    results_json = output_dir / f"{_EVAL_TAG}_{timestamp}.json"
-    print(f"\n📝 Incremental log: {results_json}")
-
-    # carry over already-completed results so the JSON stays complete
-    all_results: List[Dict] = list(existing_results.values())
-
-    # ── evaluate ──────────────────────────────────────────────────────────────
-    for env_id in pending_env_ids:
-        result = evaluate_single_env(
-            agent=agent,
-            env_id=env_id,
-            args=args,
-            normalizer=normalizer,
-            train_args=train_args,
-            output_dir=output_dir,
-            timestamp=timestamp,
-            dtw_provider=dtw_provider,
-            traj_metrics=traj_metrics,
-            device=device,
-        )
-        all_results.append(result)
-        save_results_incremental(all_results, results_json)
-
-    # ── save CSV ──────────────────────────────────────────────────────────────
-    out_csv = output_dir / f"{_EVAL_TAG}_{timestamp}.csv"
-    pd.DataFrame(all_results).to_csv(out_csv, index=False)
-    print(f"\n💾 CSV → {out_csv}")
-
-    print_summary(all_results, _EVAL_TAG)
+            recorded_robots = args.native_contract.get("robot_uids")
+            robot_kwargs = {}
+            if args.robot:
+                requested = [args.robot, args.robot]
+                if recorded_robots is not None and requested != list(recorded_robots):
+                    raise ValueError("Evaluation robot must match the training recording")
+                robot_kwargs["robot_uids"] = tuple(requested)
+            elif recorded_robots:
+                robot_kwargs["robot_uids"] = tuple(recorded_robots)
+            if env_id == "DualArmPickPlace-v1" and args.max_episode_steps != 400:
+                raise ValueError("Shared pick/place evaluation uses its 400-step task budget")
+            rendering = args.native_contract.get("rendering", {})
+            sensor_configs = dict(rendering.get("sensor_configs", {}))
+            sensor_configs.update(width=source_image_size[1], height=source_image_size[0])
+            render_kwargs = {}
+            if rendering.get("shader_dir") is not None:
+                render_kwargs["shader_dir"] = rendering["shader_dir"]
+            env = gym.make(extract_base_env_name(env_id), num_envs=1, **robot_kwargs, **render_kwargs,
+                           sim_backend=args.sim_backend, obs_mode="rgb", control_mode=args.control_mode,
+                           reward_mode="none", render_mode="rgb_array", max_episode_steps=args.max_episode_steps,
+                           sensor_configs=sensor_configs)
+            if args.save_trajectory or args.save_video:
+                env = RecordEpisode(env, output_dir=str(output / "rollouts" / env_id),
+                                    trajectory_name=stamp, save_trajectory=args.save_trajectory,
+                                    save_video=args.save_video, video_fps=args.fps,
+                                    source_type="act", source_desc="single-task ACT seeded policy evaluation")
+            for seed in seeds:
+                result = evaluate_episode(agent, env, normalizer, args, train_args, seed, repo_id, device)
+                result.update(env_id=env_id, robot_uids=list(env.unwrapped.robot_uids), checkpoint=str(Path(args.checkpoint).resolve()),
+                              fps=args.fps, execute_steps=args.execute_steps)
+                if args.save_trajectory:
+                    env.flush_trajectory()
+                    env._h5_file.flush()
+                    result["trajectory_path"] = str(Path(env._h5_file.filename).resolve())
+                    result["episode_id"] = int(env._episode_id)
+                results.append(result)
+                result_path.write_text(json.dumps(results, indent=2) + "\n")
+                print(f"seed={seed} success={result['official_success_at_end']} "
+                      f"once={result['official_success_once']} timeout={result['timeout']} "
+                      f"stage={result['failure_stage']}")
+        finally:
+            if env is not None:
+                env.close()
+            clear_l_level()
+    summary = {
+        "episodes": len(results), "seeds": seeds,
+        "official_success_once": sum(result["official_success_once"] for result in results),
+        "official_success_at_end": sum(result["official_success_at_end"] for result in results),
+        "timeouts": sum(result["timeout"] for result in results),
+        "release_observed": sum(result["physical"]["release_observed"] for result in results),
+        "results": str(result_path.resolve()),
+    }
+    (output / f"summary_{stamp}.json").write_text(json.dumps(summary, indent=2) + "\n")
+    print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":

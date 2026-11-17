@@ -286,12 +286,12 @@ class VideoDecoderCache:
         tried_modes: list[str] = []
 
         def _try_path_source():
-            return VideoDecoder(video_path, seek_mode="approximate"), None
+            return VideoDecoder(video_path, seek_mode="exact"), None
 
         def _try_fsspec_handle():
             file_handle = fsspec.open(video_path).__enter__()
             try:
-                decoder = VideoDecoder(file_handle, seek_mode="approximate")
+                decoder = VideoDecoder(file_handle, seek_mode="exact")
             except Exception:
                 file_handle.close()
                 raise
