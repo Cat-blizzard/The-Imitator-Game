@@ -29,7 +29,7 @@ from .table_support_collision import (
 )
 
 MIN_SUPPORT_NORMAL_Z = .25
-SUPPORT_VERSION = "captured_source_measured_bounded_z_reference_v06"
+SUPPORT_VERSION = "captured_source_contact_interior_support_v08"
 
 
 def _one_entity(actor: Any) -> Any:
@@ -101,6 +101,106 @@ def upper_surface_at_xy(normals: np.ndarray, offsets: np.ndarray,
             "upper_face_indices": candidate.tolist()}
 
 
+def _xy_projection(vertices: np.ndarray) -> np.ndarray:
+    """CCW projection of actual convex vertices; no proxy or filled union."""
+    from scipy.spatial import ConvexHull, QhullError
+
+    vertices = np.asarray(vertices, dtype=np.float64)
+    if vertices.ndim != 2 or vertices.shape[1:] != (3,) or not np.isfinite(vertices).all():
+        raise RuntimeError("Finite actual world convex vertices required")
+    try:
+        return vertices[ConvexHull(vertices[:, :2]).vertices, :2].copy()
+    except QhullError as exc:
+        raise RuntimeError("Degenerate actual convex XY projection") from exc
+
+
+def _positive_xy_overlap(target: np.ndarray, source: np.ndarray) -> dict[str, Any]:
+    """Clip actual convex XY polygons; a line/corner is not top support.
+
+    Both inputs are CCW (N,2) metre coordinates. The area uncertainty uses
+    floating-point roundoff and the existing 1um geometry resolution. A cooked
+    nanometre sliver at a nominal outer corner is therefore not positive proof.
+    Clipping never expands a polygon or joins source pieces.
+    Other callers still prove actual top/bottom heights and contact depths.
+    """
+    target, source = np.asarray(target, float), np.asarray(source, float)
+    if any(p.ndim != 2 or p.shape[1:] != (2,) or len(p) < 3 or not np.isfinite(p).all()
+           for p in (target, source)):
+        raise RuntimeError("Finite convex CCW projected polygons required")
+    # Translate before cross products to avoid an origin-dependent area test.
+    origin = source[0].copy()
+    polygon = [point.copy() for point in target - origin]
+    clip = source - origin
+    cross = lambda a, b: float(a[0] * b[1] - a[1] * b[0])
+    for index, a in enumerate(clip):
+        b = clip[(index + 1) % len(clip)]
+        edge = b - a
+        previous = polygon[-1] if polygon else None
+        output = []
+        for current in polygon:
+            before, after = cross(edge, previous - a), cross(edge, current - a)
+            if (before >= 0.) != (after >= 0.):
+                fraction = before / (before - after)
+                output.append(previous + fraction * (current - previous))
+            if after >= 0.:
+                output.append(current)
+            previous = current
+        polygon = output
+        if not polygon:
+            break
+    result = np.asarray(polygon, dtype=np.float64).reshape(-1, 2)
+    area = 0.
+    if len(result) >= 3:
+        centered = result - result[0]
+        area = abs(sum(cross(a, b) for a, b in zip(centered, np.roll(centered, -1, axis=0)))) / 2
+    extent = float(np.ptp(np.vstack((target, source)), axis=0).max())
+    roundoff = 32 * np.finfo(np.float64).eps * (len(target) + len(source) + len(result)) * extent**2
+    perimeter = (float(np.linalg.norm(result - np.roll(result, -1, axis=0), axis=1).sum())
+                 if len(result) else 0.)
+    # Convex parallel-body area bound at the already-declared numerical
+    # resolution. This only rejects ambiguous overlap; it adds no geometry.
+    numerical_area_bound = perimeter * NUMERICAL_TOP_TOLERANCE_M + np.pi * NUMERICAL_TOP_TOLERANCE_M**2
+    receipt = {"proof": "positive_area_intersection_of_actual_target_and_source_convex_XY_projections",
+               "area_m2": float(area), "floating_point_area_bound_m2": float(roundoff),
+               "existing_geometry_resolution_m": NUMERICAL_TOP_TOLERANCE_M,
+               "numerical_area_bound_m2": float(numerical_area_bound),
+               "positive_area": bool(area > max(roundoff, numerical_area_bound)),
+               "intersection_xy_world_m": (result + origin).tolist(),
+               "source_union_filled_or_geometry_replaced": False}
+    if not receipt["positive_area"]:
+        raise RuntimeError("No positive-area actual target/source top-support projection")
+    return receipt
+
+
+def _source_contact_interior(point: Any, polygon: np.ndarray) -> dict[str, Any]:
+    """Prove this contact lies inside its actual source-piece projection.
+
+    A body's inward overhang does not turn a contact on the outside rim into
+    upper support. Unlike fixed-offset probes, this tests the supplied contact
+    against the actual projected halfspaces without requiring a physical
+    clearance margin. A boundary indistinguishable from floating-point
+    roundoff is conservatively unresolved. Other source pieces or their hull
+    never fill a gap or establish contact here.
+    """
+    point, polygon = np.asarray(point, float), np.asarray(polygon, float)
+    if point.shape != (2,) or not np.isfinite(point).all():
+        raise RuntimeError("Finite original source-contact XY required")
+    edges = np.roll(polygon, -1, axis=0) - polygon
+    lengths = np.linalg.norm(edges, axis=1)
+    delta = point - polygon
+    clearance = (edges[:, 0] * delta[:, 1] - edges[:, 1] * delta[:, 0]) / lengths
+    scale = max(float(np.abs(polygon).max()), float(np.abs(point).max()),
+                float(np.ptp(polygon, axis=0).max()))
+    roundoff = 32 * np.finfo(np.float64).eps * len(polygon) * scale
+    receipt = {"proof": "original_contact_strictly_inside_actual_source_convex_XY_projection",
+               "contact_xy_world_m": point.tolist(), "minimum_interior_distance_m": float(clearance.min()),
+               "floating_point_distance_bound_m": float(roundoff),
+               "physical_clearance_margin_added": False, "source_union_filled": False}
+    if not np.isfinite(clearance).all() or np.min(clearance) <= roundoff:
+        raise RuntimeError("Source contact lacks proven actual projected interior")
+    return receipt
+
+
 class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
     """One captured source actor, with a permanent measured-only release gate."""
 
@@ -153,6 +253,7 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
                                    for name in self._source_names}
         self._source_planes: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         self._target_local_planes: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self._source_xy_projections: dict[str, np.ndarray] = {}
         self._geometry_export: dict[str, Any] = {}
         for name, local in self._local_vertices.items():
             _, shape = self.live._shape_refs[name]
@@ -162,6 +263,7 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
             if name in self._source_names:
                 world = _vertices_at(local, self._source_transforms[name])
                 self._source_planes[name] = convex_planes(world, triangles)
+                self._source_xy_projections[name] = _xy_projection(world)
                 self._geometry_export[name]["captured_world_T"] = self._source_transforms[name].tolist()
                 normals, offsets = self._source_planes[name]
                 self._geometry_export[name].update(
@@ -258,18 +360,18 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
             receipt["reason"] = "LP_witness_not_in_actual_convex_profiles"
             return receipt
         gap = float(target_surface["bottom_z_m"] - surface["top_z_m"])
-        probes = []
-        for delta in ((-2e-6, 0), (2e-6, 0), (0, -2e-6), (0, 2e-6)):
-            probe = xy + np.asarray(delta)
-            containing = [name for name, planes in self._source_planes.items()
-                          if upper_surface_at_xy(*planes, probe) is not None]
-            probes.append({"xy_world_m": probe.tolist(), "source_pieces": sorted(containing)})
+        try:
+            overlap = _positive_xy_overlap(
+                _xy_projection(_vertices_at(self._local_vertices[target], shape_pose)),
+                self._source_xy_projections[source])
+        except RuntimeError as exc:
+            receipt["reason"] = str(exc)
+            return receipt
         receipt.update(witness_xy_world_m=xy.tolist(), minimum_vertical_gap_m=gap,
                        source_surface=surface, target_vertical_profile=target_surface,
-                       source_union_interior_probes=probes)
+                       actual_xy_support_overlap=overlap)
         if (gap < -self.support_penetration_m - NUMERICAL_TOP_TOLERANCE_M
-                or gap > self.support_band_m or surface["upper_face_normal_z"] < MIN_SUPPORT_NORMAL_Z
-                or any(not p["source_pieces"] for p in probes)):
+                or gap > self.support_band_m or surface["upper_face_normal_z"] < MIN_SUPPORT_NORMAL_Z):
             receipt["reason"] = "deep_side_rim_or_outside_original_support_band"
             return receipt
         receipt.update(status="bounded_upper_region", reason="independent_actual_convex_upper_region")
@@ -285,6 +387,7 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
         local_target_normals, local_target_offsets = self._target_local_planes[target]
         target_normals = local_target_normals @ shape_pose[:3, :3].T
         target_offsets = local_target_offsets + target_normals @ shape_pose[:3, 3]
+        overlap = _positive_xy_overlap(_xy_projection(world), self._source_xy_projections[source])
         profiles = []
         for vertex in world:
             surface = upper_surface_at_xy(normals, offsets, vertex[:2])
@@ -296,6 +399,7 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
         evidence = []
         for contact in contacts:
             depth, normal, position = _contact_values(contact)
+            interior = _source_contact_interior(position[:2], self._source_xy_projections[source])
             surface = upper_surface_at_xy(normals, offsets, position[:2])
             target_surface = upper_surface_at_xy(target_normals, target_offsets, position[:2])
             if (depth > depth_limit or surface is None
@@ -305,23 +409,14 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
                     or abs(position[2] - target_surface["bottom_z_m"]) > depth_limit + NUMERICAL_TOP_TOLERANCE_M
                     or abs(target_surface["bottom_z_m"] - surface["top_z_m"]) > depth_limit + NUMERICAL_TOP_TOLERANCE_M):
                 raise RuntimeError("Contact is deep, sideways, outside, or below source upper support")
-            # Require a tiny interior neighbourhood in the UNION of this
-            # actor's actual convex projections. Internal decomposition seams
-            # remain valid; a horizontal touch at the outside rim corner does
-            # not become top support merely because its height matches.
-            interior_probes = []
-            for delta in ((-2e-6, 0), (2e-6, 0), (0, -2e-6), (0, 2e-6)):
-                xy = position[:2] + np.asarray(delta)
-                containing = [name for name, planes in self._source_planes.items()
-                              if upper_surface_at_xy(*planes, xy) is not None]
-                if not containing:
-                    raise RuntimeError("Source outside rim/side contact lacks an interior upper-support neighbourhood")
-                interior_probes.append({"xy_world_m": xy.tolist(), "source_pieces": sorted(containing)})
+            # A fixed 2um neighbourhood confuses internal cooked seams with
+            # an outer side touch. Require positive-area ACTUAL pair overlap
+            # instead; pure outer corner/line contact still has zero area.
             # An unstable FCL normal is diagnostic only; the actual cooked
             # upper halfspaces above independently bound contact and vertices.
             evidence.append({"depth": depth, "normal": normal.tolist(), "position": position.tolist(),
                              "surface": surface, "target_vertical_profile": target_surface,
-                             "source_union_interior_probes": interior_probes})
+                             "actual_xy_support_overlap": overlap, "actual_contact_source_interior": interior})
         return {"target": target, "source": source, "source_actor": self.source_actor_name,
                 "max_contact_depth_m": max(c["depth"] for c in evidence), "depth_limit_m": depth_limit,
                 "raw_contacts": copy.deepcopy(contacts), "contact_geometry": evidence,
@@ -693,6 +788,55 @@ def _self_test() -> dict[str, Any]:
         tests.append("horizontal_outer_rim_corner_touch_not_misclassified_as_upper_support")
     else:
         raise AssertionError("Outer source rim corner was accepted as support")
+    # The contact can sit within 1um of a cooked decomposition seam while the
+    # two actual projected solids overlap over a substantial top-support area.
+    seam_contact = [{"depth": 1e-7, "normal": [0., 0, 0.], "position": [0., .1 - .9e-6, 0.]}]
+    seam_pose = checker._initial_object.copy(); seam_pose[1, 3] = .095
+    proof = checker._contact_geometry("fruit", "source", seam_contact, seam_pose, .0002)
+    overlap = proof["contact_geometry"][0]["actual_xy_support_overlap"]
+    assert overlap["positive_area"] and overlap["area_m2"] > 1e-4
+    assert not overlap["source_union_filled_or_geometry_replaced"]
+    tests.append("near_seam_contact_with_actual_positive_area_top_support_needs_no_fixed_2um_neighbourhood")
+    # A real FCL contact at an outer rim remains invalid even when an inward
+    # overhang gives the WHOLE body's XY projection a large positive area.
+    # This is a contact-location condition, not a contact-patch-area demand:
+    # ordinary fruit point contact strictly inside the source still qualifies.
+    rim_source = np.array([[x, y, z] for x in (-.1, .1) for y in (-.1, .1)
+                           for z in (-.02, 0.)], dtype=np.float64)
+    overhang = np.array([[.1, 0., 0.], [.05, -.03, .02],
+                        [.05, .03, .02], [.03, 0., .03]], dtype=np.float64)
+    source_faces = ConvexHull(rim_source).simplices.astype(np.int32)
+    target_faces = ConvexHull(overhang).simplices.astype(np.int32)
+    rim_source_object = _object_at(fcl.Convex(rim_source, source_faces, True), np.eye(4))
+    overhang_object = _object_at(fcl.Convex(overhang, target_faces, True), np.eye(4))
+    rim_hit, rim_contacts = _pair_result(overhang_object, rim_source_object)
+    assert rim_hit and rim_contacts
+    rim_check = SourceSurfaceSupportCollisionChecker()
+    rim_check.source_actor_name = "outer_rim_fixture"
+    rim_check._source_planes = {"source": convex_planes(rim_source, source_faces)}
+    rim_check._target_local_planes = {"overhang": convex_planes(overhang, target_faces)}
+    rim_check._source_xy_projections = {"source": _xy_projection(rim_source)}
+    rim_check._local_vertices = {"overhang": overhang}
+    rim_check._shape_local = {"overhang": np.eye(4)}
+    projected = _positive_xy_overlap(_xy_projection(overhang), _xy_projection(rim_source))
+    assert np.isclose(projected["area_m2"], .0021, rtol=0, atol=1e-15)
+    raw_rim_contacts = copy.deepcopy(rim_contacts)
+    try:
+        rim_check._contact_geometry("overhang", "source", rim_contacts, np.eye(4), .0002)
+    except RuntimeError as exc:
+        assert "actual projected interior" in str(exc)
+    else:
+        raise AssertionError("Outer rim point with inward body overhang was accepted")
+    assert rim_contacts == raw_rim_contacts
+    tests.append("native_FCL_outer_rim_tip_rejected_despite_positive_inward_overhang_projection")
+    polygon = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+    for shift, label in (([1., 0.], "line"), ([1., 1.], "corner"), ([2., 0.], "disjoint")):
+        try:
+            _positive_xy_overlap(polygon + shift, polygon)
+        except RuntimeError:
+            tests.append("actual_projection_" + label + "_has_no_positive_support_area")
+        else:
+            raise AssertionError("Degenerate projected support overlap was accepted")
     # A sloped support surface is evaluated in world coordinates, with actual
     # mesh scale and pose already applied to the captured vertices.
     rotation = euler2mat(0, .15, 0)

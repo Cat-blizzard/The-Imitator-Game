@@ -1,0 +1,679 @@
+{
+  "schema": "tig-convergence-repair-evidence-v1",
+  "date": "2026-11-17",
+  "runtime_identity": {
+    "integrated_runtime_commit": "d8b179b9ca4b446bf746a61f8241d042df32f39d",
+    "integrated_runtime_tree": "3d4dd9ff44c712d0242319fb81e45ad494e553b4",
+    "tested_final_support_commit": "dbfa481e8129e534a06b6d741e7438dd5a917e7e",
+    "tested_final_support_tree": "3d4dd9ff44c712d0242319fb81e45ad494e553b4",
+    "entire_tracked_tree_equal": true
+  },
+  "scope": "known-case engineering regression; not new unseen-seed success rate or backend ranking",
+  "cpu": {
+    "passed_modules": 13,
+    "initial_harness_error": "misspelled nonexistent module; original attempt retained; correct pill_support_collision actually passed",
+    "final_source_support_checks": 37
+  },
+  "initial_state_pairs": {
+    "scope": "entire recorded initial environment state, including background and both robots",
+    "rows": [
+      {
+        "id": "apple-mplib-s171101",
+        "status": "identical",
+        "state_leaves": 7,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "apple-mplib-s171102",
+        "status": "identical",
+        "state_leaves": 7,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "apple-mplib-s171103",
+        "status": "identical",
+        "state_leaves": 7,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "apple-mplib-s171104",
+        "status": "identical",
+        "state_leaves": 7,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "apple-mplib-s171105",
+        "status": "identical",
+        "state_leaves": 7,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "fruits-mplib-s171101",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "fruits-mplib-s171102",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "fruits-mplib-s171103",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "fruits-mplib-s171104",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "fruits-mplib-s171105",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "pill-mplib-s171101",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "pill-mplib-s401",
+        "status": "no baseline allocation",
+        "reason": "seed401 is an earlier engineering reference"
+      },
+      {
+        "id": "apple-curobo-s171102",
+        "status": "identical",
+        "state_leaves": 7,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "fruits-curobo-s171103",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      },
+      {
+        "id": "pill-curobo-s171101",
+        "status": "identical",
+        "state_leaves": 5,
+        "same_keys": true,
+        "differing_leaves": []
+      }
+    ],
+    "identical": 14,
+    "paired": 14
+  },
+  "policy_pairs": {
+    "status": "passed",
+    "paired": 14,
+    "rows": [
+      {
+        "id": "apple-mplib-s171101",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "apple-mplib-s171102",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "apple-mplib-s171103",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "apple-mplib-s171104",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "apple-mplib-s171105",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "fruits-mplib-s171101",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "fruits-mplib-s171102",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "fruits-mplib-s171103",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "fruits-mplib-s171104",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "fruits-mplib-s171105",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "pill-mplib-s171101",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "apple-curobo-s171102",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "fruits-curobo-s171103",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      },
+      {
+        "id": "pill-curobo-s171101",
+        "equal_frozen_numeric_policy_and_recipe": true,
+        "unequal_fields": []
+      }
+    ],
+    "native_planner_random_stream_fixed": "not established; recorded planner_seed is not proof of MPLib native RNG initialization"
+  },
+  "tranches": {
+    "final-regression": {
+      "frozen_commit": "c6ab5f9f981561cc4eff2ce5afeff5d0acee6fd8",
+      "completion_integrity": "old baseline report hashes and clean frozen runtime HEAD unchanged",
+      "render_gpu": "GPU0",
+      "timing_scope": "shared host; correctness regression; no performance isolation or speed claim",
+      "rows": [
+        {
+          "id": "apple-mplib-s171101",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 176,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "apple-mplib-s171102",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 176,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "apple-mplib-s171103",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "apple-mplib-s171104",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "apple-mplib-s171105",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-mplib-s171101",
+          "kind": "known-case generation",
+          "status": "failed",
+          "exit_code": 1,
+          "steps": 67,
+          "error": "lift_and_hold: aborted: measured_collision",
+          "official_success_before_horizon": false,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "failed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-mplib-s171102",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-mplib-s171103",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-mplib-s171104",
+          "kind": "known-case generation",
+          "status": "failed",
+          "exit_code": 1,
+          "steps": 199,
+          "error": "verify_placement: placement_timeout: both_placements_not_continuously_stable",
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "failed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-mplib-s171105",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "pill-mplib-s171101",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 170,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "pill-mplib-s401",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 171,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "apple-curobo-s171102",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 199,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-curobo-s171103",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 196,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "pill-curobo-s171101",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 194,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-apple-mplib",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 176,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-fruits-mplib",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-pill-mplib",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 170,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-apple-curobo",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 199,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-fruits-curobo",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 196,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-pill-curobo",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 194,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "old-pill-cross-version",
+          "kind": "public default cross-version replay of immutable baseline",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 170,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "public-pill-curobo-s401",
+          "kind": "public minimal CLI smoke with original default worker",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 198,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        }
+      ]
+    },
+    "support-final-regression": {
+      "frozen_commit": "dbfa481e8129e534a06b6d741e7438dd5a917e7e",
+      "completion_integrity": "old baseline report hashes and clean frozen runtime HEAD unchanged",
+      "render_gpu": "GPU3",
+      "timing_scope": "shared host; correctness regression; no performance isolation or speed claim",
+      "rows": [
+        {
+          "id": "fruits-mplib-s171101",
+          "kind": "known-case generation",
+          "status": "failed",
+          "exit_code": 1,
+          "steps": 67,
+          "error": "lift_and_hold: aborted: measured_collision",
+          "official_success_before_horizon": false,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "failed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-mplib-s171102",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-mplib-s171104",
+          "kind": "known-case generation",
+          "status": "failed",
+          "exit_code": 1,
+          "steps": 199,
+          "error": "verify_placement: placement_timeout: both_placements_not_continuously_stable",
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "failed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "fruits-curobo-s171103",
+          "kind": "known-case generation",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 196,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-fruits-mplib",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "replay-fruits-curobo",
+          "kind": "strict original-action replay",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 196,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        },
+        {
+          "id": "previous-fruits-cross-version",
+          "kind": "public default cross-version replay after targeted source fix",
+          "status": "passed",
+          "exit_code": 0,
+          "steps": 177,
+          "error": null,
+          "official_success_before_horizon": true,
+          "physics_status": "passed",
+          "physics_scope": "monitored executed prefix; not unexecuted suffix or continuous safety proof",
+          "quality_status": "passed",
+          "recording_status": "passed"
+        }
+      ]
+    }
+  },
+  "source_evidence": [
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/convergence-20261117/final-regression/summary.json",
+      "sha256": "32a7a5f943c4fe9b51c13b0b4d68589b988f01f06d8146240b93e71924c05313"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/convergence-20261117/support-final-regression/summary.json",
+      "sha256": "8bd827006f9553f25e268df1f3042239002215b735f1767359dd4aa30d4d4e05"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/convergence-20261117/cpu-final-corrected.json",
+      "sha256": "d38d4b91e85854003af155c2b6b32079978be87bc3f67d4f769cdd8cf6d48daa"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/convergence-20261117/source-v08-cpu.log",
+      "sha256": "ee0d3f65b6d1e134e17f8d93d3ffb181a09a18eaf863e5b7c998f3b9afada8f3"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/convergence-20261117/known-case-initial-state-audit.json",
+      "sha256": "1cd566305a23fc1048f8e5381084607f7869487c9a1d6fc225668c4fa7b91ffe"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/convergence-20261117/known-case-policy-audit.json",
+      "sha256": "df0ad91b8ab18ddd5b2dd306067d2094a599360768c373d5ca4b33700ac5ef5a"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/convergence-20261117/integration-identity.json",
+      "sha256": "31ad2f23e09d83ec101518024d4472f1aca030d64dbbe61b1a117178b335e5d7"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/support-contact-interior-20261117/manifest.json",
+      "sha256": "e8d85e0fad29159d391cff808700aa40006139758d2bb3976b0f4f511e3e5d71"
+    },
+    {
+      "workspace_relative_path": "infrastructure/validation/dual-arm/postrepair-baseline-20261117/BASELINE-REPORT.md",
+      "sha256": "8fdd31249459171157b72c9e0c10a1a4634ffada456b4bbc6d9aa10ce899731a"
+    }
+  ],
+  "old_baseline": {
+    "generations": 30,
+    "official_success": 17,
+    "qualified": 16,
+    "qualified_per_task": {
+      "apple": {
+        "mplib": 0,
+        "curobo": 3
+      },
+      "pill": {
+        "mplib": 5,
+        "curobo": 5
+      },
+      "fruits": {
+        "mplib": 0,
+        "curobo": 3
+      }
+    },
+    "denominator_per_task_backend": 5,
+    "timing_isolated": false,
+    "original_scores_rewritten": false
+  },
+  "limitations": [
+    "Native MPLib random stream was not explicitly frozen by recorded planner_seed alone.",
+    "Backend geometry/configuration and lifecycles differ; old benchmark compares complete implementations.",
+    "Support v08 may conservatively reject a contact exactly on a convex-piece boundary.",
+    "Normal recording reduces archive/video output; full in-memory audits remain.",
+    "Current production path uses separate arm plans and a shared executor, not 14D joint planning."
+  ]
+}

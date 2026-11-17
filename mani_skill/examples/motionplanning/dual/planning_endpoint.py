@@ -121,7 +121,19 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         return (error["position_m"] <= position_tolerance_m
                 and error["rotation_rad"] <= rotation_tolerance_rad)
 
-    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v3",
+    # Planner.IK accepts on ||dp|| + min(||q1-q2||, ||q1+q2||), whereas
+    # its native CLIK stops on a different six-dimensional residual. Reusing
+    # CLIK's 1e-5 stopping epsilon here can reject a converged candidate. For
+    # normalized quaternions, the sign-invariant chord is 2*sin(angle/4).
+    # Taking the smaller component bound makes this mixed-distance test a
+    # sufficient (conservative) condition for our unchanged separate FK bounds.
+    ik_threshold = float(min(position_tolerance_m,
+        2 * np.sin(min(rotation_tolerance_rad, np.pi) / 4)))
+    non_arm_indices = np.setdiff1d(np.arange(len(start)), indices)
+    ik_mask = np.ones(len(start), dtype=bool)
+    ik_mask[indices] = False
+
+    audit: dict[str, Any] = {"policy": "mplib-actual-fk-endpoint-v5",
         "position_tolerance_m": position_tolerance_m,
         "rotation_tolerance_rad": rotation_tolerance_rad,
         "max_corrections": max_corrections,
@@ -133,6 +145,12 @@ def checked_screw_plan(solver: Any, pose: Any, *,
         "preserved_non_arm_joint_positions": {
             name: float(start[i]) for i, name in enumerate(planner.user_joint_names)
             if i not in indices},
+        "ik_distance_threshold": ik_threshold,
+        "ik_distance_definition": "position norm + sign-invariant unit-quaternion chord",
+        "ik_threshold_derivation": "min(position_tolerance_m, 2*sin(min(rotation_tolerance_rad, pi)/4))",
+        "ik_initial_configurations": 1,
+        "ik_locked_joint_indices": non_arm_indices.tolist(),
+        "ik_attempts": [],
         "attempts": [], "environment_steps": 0,
         "collision_and_payload_checks_replaced": False}
     solver.last_endpoint_audit = audit
@@ -158,25 +176,41 @@ def checked_screw_plan(solver: Any, pose: Any, *,
             full_qpos[indices] = combined_path[-1]
             count = len(captured_paths)
             # Native screw's rot2so3 treats np.isclose(trace(R), 3) as zero
-            # rotation. Its small-angle dead zone needs native IK/joint planning
-            # rather than more screw retries. Both routes expose a real native
+            # rotation. This can also leave position outside the FK bound while
+            # rotation already satisfies it: repeating screw then stagnates.
+            # Try at most one screw correction before using native IK within
+            # the existing correction budget. Both routes expose a real native
             # geometric path; no short-segment TOPP or fake trajectory is made.
-            use_ik = (error["rotation_rad"] > rotation_tolerance_rad
-                and np.isclose(1 + 2 * np.cos(error["rotation_rad"]), 3))
+            use_ik = (corrections > 0 or (error["rotation_rad"] > rotation_tolerance_rad
+                and np.isclose(1 + 2 * np.cos(error["rotation_rad"]), 3)))
             kind = "native_ik_joint_path_correction" if use_ik else "native_screw_correction"
             capture_geometry_only = True
             try:
                 options = dict(time_step=timestep, use_point_cloud=bool(solver.use_point_cloud),
                     use_attach=bool(getattr(planner.planning_world, "use_attach", False)))
                 if use_ik:
+                    ik_audit: dict[str, Any] = {
+                        "correction_index": corrections + 1,
+                        "trigger": "previous_native_correction_outside_fk_contract" if corrections
+                            else "native_screw_small_angle_dead_zone",
+                        "candidates": []}
+                    audit["ik_attempts"].append(ik_audit)
                     status, goals = planner.IK(goal_base.copy(), full_qpos.copy(),
-                        n_init_qpos=1, threshold=1e-5)
+                        mask=ik_mask.tolist(), n_init_qpos=1, threshold=ik_threshold)
+                    ik_audit.update(native_status=str(status), returned_candidates=len(goals))
                     if status != "Success" or not goals:
                         raise ValueError(f"Native endpoint IK failed: {status}")
                     for goal in goals:
-                        if not np.array_equal(_array(goal)[np.setdiff1d(np.arange(len(start)), indices)],
-                                start[np.setdiff1d(np.arange(len(start)), indices)]):
+                        goal = _array(goal)
+                        if goal.shape != start.shape:
+                            raise ValueError("Native endpoint IK returned an invalid full joint configuration")
+                        if not np.array_equal(goal[non_arm_indices], start[non_arm_indices]):
                             raise ValueError("Native endpoint IK changed non-arm joints")
+                        candidate_error = pose_error(fk(goal[indices]), goal_base)
+                        ik_audit["candidates"].append({**candidate_error,
+                            "within_final_fk_contract": within(candidate_error)})
+                        if not within(candidate_error):
+                            raise ValueError(f"Native endpoint IK candidate exceeds FK contract: {candidate_error}")
                     planner.plan_qpos_to_qpos(goals, full_qpos.copy(),
                         fix_joint_limits=False, **options)
                 else:
@@ -340,6 +374,153 @@ def self_test() -> dict[str, Any]:
         assert bad.planner.TOPP == bad.topp
     else:
         raise AssertionError("Uncorrected endpoint must be rejected")
+
+    class SmallAngleFixture(Fixture):
+        """Model native IK's mixed-distance acceptance, not the CLIK epsilon."""
+        def __init__(self, *, position_residual: float = 8e-6,
+                     rotation_residual: float = 16e-6,
+                     force_candidate: bool = False, change_finger: bool = False,
+                     native_failure: bool = False) -> None:
+            super().__init__(.008)
+            self.position_residual = position_residual
+            self.rotation_residual = rotation_residual
+            self.force_candidate, self.change_finger = force_candidate, change_finger
+            self.native_failure = native_failure
+            self.ik_calls: list[dict[str, Any]] = []
+            self.joint_calls: list[np.ndarray] = []
+            self.planner.IK = self.ik
+
+        def fk(self, full: np.ndarray) -> None:
+            assert np.array_equal(full[7:], self.state[7:])
+            arm = full[self.indices]
+            self.actual = np.r_[arm[:3], np.cos(arm[3] / 2), 0., 0., np.sin(arm[3] / 2)]
+
+        def screw(self, goal: np.ndarray, full: np.ndarray, **kwargs: Any) -> Any:
+            self.calls += 1
+            end = full[self.indices].copy()
+            end[:3] = goal[:3] - [1., 2., 3.]
+            end[0] -= self.bias
+            end[3] = .002
+            raw = self.planner.TOPP(np.vstack((full[self.indices], end)), .05)
+            return {"status": "Success", **dict(zip(
+                ("time", "position", "velocity", "acceleration", "duration"), raw))}
+
+        def ik(self, target: np.ndarray, full: np.ndarray, *, mask: list[bool],
+               n_init_qpos: int, threshold: float) -> tuple[str, list[np.ndarray]]:
+            assert n_init_qpos == 1
+            assert mask == [False] * 7 + [True, True]
+            assert np.array_equal(full[7:], self.state[7:])
+            candidate = self.state.copy()
+            arm = candidate[self.indices].copy()
+            arm[:3] = target[:3]
+            arm[0] += self.position_residual
+            arm[3] = self.rotation_residual
+            candidate[self.indices] = arm
+            distance = self.position_residual + 2 * np.sin(self.rotation_residual / 4)
+            self.ik_calls.append({"threshold": threshold, "mixed_distance": float(distance),
+                                  "mask": mask.copy()})
+            if self.native_failure:
+                return "IK Failed! Cannot find valid solution.", []
+            if distance >= threshold and not self.force_candidate:
+                return "IK Failed! Distance is greater than threshold.", []
+            if self.change_finger:
+                candidate[7] += .001
+            return "Success", [candidate]
+
+        def joint_path(self, goals: Any, full: Any, **kwargs: Any) -> Any:
+            assert kwargs["use_point_cloud"] and kwargs["use_attach"]
+            assert kwargs["fix_joint_limits"] is False
+            assert np.array_equal(full[7:], self.state[7:])
+            assert np.array_equal(goals[0][7:], self.state[7:])
+            self.joint_calls.append(_array(full))
+            return self.planner.TOPP(np.vstack((full[self.indices], goals[0][self.indices])), .05)
+
+    # A converged small-angle candidate can have mixed residual 16e-6 even
+    # though both final FK errors are far inside 0.5mm / 0.001rad. The old
+    # 1e-5 outer acceptance threshold rejected it before joint planning.
+    small = SmallAngleFixture()
+    old_status, old_goals = small.ik(np.r_[goal[:3] - [1., 2., 3.], goal[3:]],
+        small.state.copy(), mask=[False] * 7 + [True, True], n_init_qpos=1, threshold=1e-5)
+    assert old_status != "Success" and not old_goals
+    small.ik_calls.clear()
+    small_state, small_topp = small.state.copy(), small.planner.TOPP
+    small_result = checked_screw_plan(small, goal)
+    small_audit = small_result["endpoint_audit"]
+    threshold = min(POSITION_TOLERANCE_M, 2 * np.sin(ROTATION_TOLERANCE_RAD / 4))
+    assert small_audit["ik_distance_threshold"] == threshold
+    assert len(small.ik_calls) == 1 and len(small.joint_calls) == 2
+    assert small_audit["attempts"][1]["kind"] == "native_ik_joint_path_correction"
+    assert small_audit["ik_attempts"][0]["candidates"][0]["within_final_fk_contract"]
+    assert small_audit["final_error"]["position_m"] < POSITION_TOLERANCE_M
+    assert small_audit["final_error"]["rotation_rad"] < ROTATION_TOLERANCE_RAD
+    assert np.array_equal(small.state, small_state) and small.planner.TOPP == small_topp
+    assert small_audit["environment_steps"] == 0 and small_audit["ik_locked_joint_indices"] == [7, 8]
+    boundary = SmallAngleFixture(position_residual=threshold * (1 - 1e-6), rotation_residual=0.)
+    checked_screw_plan(boundary, goal)
+
+    rejected = [
+        (SmallAngleFixture(position_residual=threshold * (1 + 1e-6), rotation_residual=0.),
+         "Native endpoint IK failed"),
+        (SmallAngleFixture(position_residual=.0006, force_candidate=True),
+         "Native endpoint IK candidate exceeds FK contract"),
+        (SmallAngleFixture(rotation_residual=.0011, force_candidate=True),
+         "Native endpoint IK candidate exceeds FK contract"),
+        (SmallAngleFixture(change_finger=True), "Native endpoint IK changed non-arm joints"),
+        (SmallAngleFixture(native_failure=True), "Native endpoint IK failed"),
+    ]
+    for fixture, message in rejected:
+        initial, topp = fixture.state.copy(), fixture.planner.TOPP
+        try:
+            checked_screw_plan(fixture, goal)
+        except ValueError as exc:
+            assert message in str(exc), str(exc)
+            assert fixture.last_endpoint_audit["status"] == "failed"
+            assert fixture.last_endpoint_audit["ik_attempts"][0]["native_status"]
+            assert not fixture.joint_calls and fixture.planner.TOPP == topp
+            assert np.array_equal(fixture.state, initial)
+        else:
+            raise AssertionError(f"Expected rejection: {message}")
+
+    class StalledScrewFixture(SmallAngleFixture):
+        """Retreat failure: screw leaves 0.523mm with rotation already valid."""
+        def screw(self, goal: np.ndarray, full: np.ndarray, **kwargs: Any) -> Any:
+            self.calls += 1
+            end = full[self.indices].copy()
+            end[:3] = goal[:3] - [1., 2., 3.]
+            end[0] -= .0026 if self.calls == 1 else .000523
+            end[3] = .000716
+            raw = self.planner.TOPP(np.vstack((full[self.indices], end)), .05)
+            return {"status": "Success", **dict(zip(
+                ("time", "position", "velocity", "acceleration", "duration"), raw))}
+
+    stalled = StalledScrewFixture()
+    stalled_state = stalled.state.copy()
+    stalled_result = checked_screw_plan(stalled, goal)
+    stalled_audit = stalled_result["endpoint_audit"]
+    assert stalled.calls == 2 and len(stalled.ik_calls) == 1
+    assert stalled_audit["corrections"] == 2
+    assert [entry["kind"] for entry in stalled_audit["attempts"]] == [
+        "original_native_screw", "native_screw_correction", "native_ik_joint_path_correction"]
+    assert stalled_audit["attempts"][1]["position_m"] > POSITION_TOLERANCE_M
+    assert stalled_audit["attempts"][1]["rotation_rad"] < ROTATION_TOLERANCE_RAD
+    assert stalled_audit["ik_attempts"][0]["trigger"] == "previous_native_correction_outside_fk_contract"
+    assert stalled_audit["final_error"]["position_m"] < POSITION_TOLERANCE_M
+    assert stalled_audit["final_error"]["rotation_rad"] < ROTATION_TOLERANCE_RAD
+    assert np.array_equal(stalled.state, stalled_state) and stalled.planner.TOPP == stalled.topp
+    assert len(stalled.topp_calls) == 2 and stalled_audit["environment_steps"] == 0
+    # The fallback consumes an existing correction slot, never adds retries or
+    # bypasses native IK's refusal. A caller allowing only one correction fails.
+    for fixture, limit, expected_ik_calls in [
+            (StalledScrewFixture(), 1, 0), (StalledScrewFixture(native_failure=True), 3, 1)]:
+        try:
+            checked_screw_plan(fixture, goal, max_corrections=limit)
+        except ValueError:
+            assert fixture.last_endpoint_audit["status"] == "failed"
+            assert fixture.calls == 2 and len(fixture.ik_calls) == expected_ik_calls
+            assert not fixture.joint_calls and fixture.planner.TOPP == fixture.topp
+            assert np.array_equal(fixture.state, stalled_state)
+        else:
+            raise AssertionError("Bounded fallback must preserve insufficient-budget/native-refusal failure")
     assert pose_error(goal, np.r_[goal[:3], -goal[3:]])["rotation_rad"] == 0.
     return {"status": "passed", "environment_steps": 0, "gpu_used": False,
         "checks": ["actual FK rejects 14mm native Success", "same-backend correction",
@@ -347,6 +528,13 @@ def self_test() -> dict[str, Any]:
             "full corrected native TOPP and audit cache", "nonsequential arm joint order",
             "nonzero base translation", "finger positions preserved", "original start preserved",
             "already accurate native result unchanged", "bounded failure and wrapper restoration",
+            "small-angle native IK branch accepts independently valid 16e-6 mixed residual",
+            "IK mixed-distance threshold derives from unchanged FK bounds",
+            "IK threshold boundary acceptance and rejection", "IK explicitly locks non-arm joints",
+            "inaccurate IK candidates rejected before joint planning",
+            "native IK refusal and changed-finger candidate remain rejected",
+            "stalled screw switches to native IK while rotation already satisfies FK bounds",
+            "IK fallback consumes existing correction budget and preserves native refusal",
             "quaternion sign invariance"]}
 
 
