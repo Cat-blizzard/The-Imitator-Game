@@ -42,7 +42,7 @@ from examples.baselines.lerobot_dataset.lerobot_dataloader import (
 )
 from examples.baselines.encoders.obs_encoder import ObservationEncoder, ObsEncoderConfig
 from examples.baselines.encoders.state_encoder import StateEncoder, StateEncoderConfig
-from examples.baselines.act.act.detr.detr_vae import (
+from examples.baselines.act.act.detr_video.detr_vae import (
     DETRVAE,
     build_encoder,
     build_transformer,
@@ -193,7 +193,7 @@ class ACTSingleTaskAgent(nn.Module):
             backbones=None,
             transformer=build_transformer(act_cfg),
             encoder=build_encoder(act_cfg),
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
             action_dim=args.action_dim,
             num_queries=args.pred_horizon,
             video_feature_dim=1,             # dummy 1-D task feature (always zero)
@@ -222,7 +222,7 @@ class ACTSingleTaskAgent(nn.Module):
 
         obs_feat,   _ = self.obs_encoder(obs_in)           # (B, obs_latent_dim)
         state_feat, _ = self.state_encoder(state[:, :T])   # (B, state_latent_dim)
-        return torch.cat([obs_feat, state_feat], dim=-1)
+        return self.obs_proj(torch.cat([obs_feat, state_feat], dim=-1))
 
     # ------------------------------------------------------------------
     def compute_loss(self, batch: Dict) -> torch.Tensor:
@@ -236,11 +236,16 @@ class ACTSingleTaskAgent(nn.Module):
         video_feature = torch.zeros(B, 1, device=self.device)
 
         a_hat, (mu, log_var) = self.model(
-            obs_for_model, actions=action, video_feature=video_feature
+            obs_for_model, actions=action, video_feature=video_feature,
+            is_pad=batch.get("is_pad", None),
         )
 
         # L1 reconstruction + KL
-        l1_loss = F.l1_loss(a_hat, action)
+        if "is_pad" in batch:
+            from examples.baselines.act.dual_arm_adapter import masked_l1
+            l1_loss = masked_l1(a_hat, action, batch["is_pad"].to(self.device))
+        else:
+            l1_loss = F.l1_loss(a_hat, action)
         kl_loss = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).mean()
         return l1_loss + self.kl_weight * kl_loss
 

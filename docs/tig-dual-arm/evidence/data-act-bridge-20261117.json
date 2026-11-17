@@ -1,0 +1,263 @@
+{
+  "schema": "tig-dual-arm-act-delivery-v1",
+  "status": "passed",
+  "scope": "single-task single-episode interface closure; task learning success not achieved",
+  "task": "TwoRobotPickPillToRegions-v1",
+  "source_seed": 401,
+  "source_runtime_commit": "f390fdf",
+  "runtime_commit": "a0f8503621d68c476f640be3e27f03726f1b55eb",
+  "source_h5_sha256": "358661687f6c7fec5d8f0a3fd2120ba2ced10b469608cabcf1bcf5af452a3324",
+  "original_source_files_unchanged": 172,
+  "observation_frames": 172,
+  "training_rows": 171,
+  "fps": 20,
+  "state_dim": 18,
+  "action_dim": 16,
+  "camera": "zed2i",
+  "image_shape": [
+    224,
+    224,
+    3
+  ],
+  "training": {
+    "epochs": 1,
+    "batch_size": 8,
+    "obs_horizon": 1,
+    "pred_horizon": 16,
+    "optimizer_updates": 22,
+    "actual_samples_seen": 171,
+    "changed_parameter_tensors": 182,
+    "optimizer_state_tensors_at_step22": 291,
+    "all_losses_and_gradients_finite": true,
+    "first_batch_loss": 3.3403313159942627,
+    "last_batch_loss": 0.6371867060661316,
+    "normalization_rows": 171,
+    "normalization_recomputed_exact": true,
+    "checkpoint_sha256": "87876a160619e0bc9e85b3439ff84a0d49e065b90b1c94995a4eb0a9c95f5a0a"
+  },
+  "reload": {
+    "strict": true,
+    "same_input_exact": true,
+    "max_abs_error": 0.0
+  },
+  "policy_rollout": {
+    "pipeline_complete": true,
+    "actual_steps": 200,
+    "official_success_any": false,
+    "official_success_final": false,
+    "timed_out": true,
+    "rgb_frames": 201,
+    "qpos_frames": 201,
+    "state_frames": 201,
+    "finite_state_leaves": 1005,
+    "initial_rgb_qpos_and_state_exact": true,
+    "camera_parameters_exact": true,
+    "expert_fallback": false,
+    "state_correction_frames": [
+      0
+    ],
+    "all_200_actions_match_denormalized_predictions": true,
+    "clipped_action_components": 0,
+    "quality_monitoring": "not evaluated as expert-trajectory quality; model rollout only"
+  },
+  "stage_processes": {
+    "act-cpu-self-test-01": {
+      "exit_code": 0,
+      "elapsed_s": 7.283792343921959,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "convert-01": {
+      "exit_code": 0,
+      "elapsed_s": 6.880409020930529,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "convert-cpu-self-test-01": {
+      "exit_code": 0,
+      "elapsed_s": 6.638386183883995,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "dataset-check-01": {
+      "exit_code": 0,
+      "elapsed_s": 6.837960612028837,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "export-01": {
+      "exit_code": 0,
+      "elapsed_s": 8.284667456056923,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "export-cpu-self-test-01": {
+      "exit_code": 0,
+      "elapsed_s": 4.381028578849509,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "policy-rollout-01": {
+      "exit_code": 0,
+      "elapsed_s": 16.17306485492736,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "reload-01": {
+      "exit_code": 0,
+      "elapsed_s": 12.469669473124668,
+      "source_unchanged": true,
+      "modified_code": []
+    },
+    "train-01": {
+      "exit_code": 0,
+      "elapsed_s": 12.310488849878311,
+      "source_unchanged": true,
+      "modified_code": []
+    }
+  },
+  "requirements": [
+    {
+      "requirement": "source_contract_and_immutable_original",
+      "status": "passed",
+      "evidence": "protocol.json"
+    },
+    {
+      "requirement": "172_policy_observations_zero_physics_steps",
+      "status": "passed",
+      "evidence": "observations-v1/manifest.json"
+    },
+    {
+      "requirement": "171_real_lerobot_training_rows_20hz",
+      "status": "passed",
+      "evidence": "lerobot-v1/meta/dual-arm-bridge.json"
+    },
+    {
+      "requirement": "real_reader_rgb_qpos_actions_and_padding",
+      "status": "passed",
+      "evidence": "dataset-check-v1/dataset-check.json"
+    },
+    {
+      "requirement": "actual_training_22_updates_171_rows",
+      "status": "passed",
+      "evidence": "train-v1/training-report.json"
+    },
+    {
+      "requirement": "checkpoint_and_train_only_normalization",
+      "status": "passed",
+      "evidence": "train-v1/checkpoint_epoch_0001.pt"
+    },
+    {
+      "requirement": "strict_reload_same_input_exact",
+      "status": "passed",
+      "evidence": "reload-v1/reload-report.json"
+    },
+    {
+      "requirement": "real_model_driven_200_step_rollout",
+      "status": "passed",
+      "evidence": "rollout-v1/rollout-report.json"
+    },
+    {
+      "requirement": "full_rollout_actions_and_201_states",
+      "status": "passed",
+      "evidence": "rollout-v1/rollout.h5"
+    },
+    {
+      "requirement": "usage_entrypoints",
+      "status": "passed",
+      "evidence": "repo:docs/tig-dual-arm/DATA-ACT-BRIDGE.md"
+    },
+    {
+      "requirement": "standalone_stage_configurations",
+      "status": "passed",
+      "evidence": "configs/"
+    }
+  ],
+  "artifacts": {
+    "protocol.json": {
+      "sha256": "728d28ccb94c346314473193a237e271afd5456fe371f4a5ad9ec5843a14104e",
+      "bytes": 38101
+    },
+    "observation-check.json": {
+      "sha256": "a76576596412eae7f06fe1965d02953f584f325b41105c735ae3e112bebc4e69",
+      "bytes": 434
+    },
+    "observations-v1/manifest.json": {
+      "sha256": "6005dccdcff1722960378bf7444f431fd56bec6e6cad013444a4e7bdfb1bd409",
+      "bytes": 125908
+    },
+    "observations-v1/observations.h5": {
+      "sha256": "aa6b7cb8338a184d258fb01d62ad76ad8de9d9286a9c23e2c718c952f991c269",
+      "bytes": 7328657
+    },
+    "lerobot-v1/meta/info.json": {
+      "sha256": "d7cec4724db72ce67a961442e2e6cee284ec8488bfa3968b3240f18ac30b1722",
+      "bytes": 2956
+    },
+    "lerobot-v1/meta/dual-arm-bridge.json": {
+      "sha256": "fe71f74c714e937d65234d28762737301ea85ef6a76e4c3bfe53c036efe71a51",
+      "bytes": 5309
+    },
+    "lerobot-v1/meta/dataset-selection.json": {
+      "sha256": "c3cceb56b7873cb3175ad4727c9d5468d1c67f93ed32e0a88615c5f4f5236ab9",
+      "bytes": 112
+    },
+    "lerobot-v1/meta/terminal-observation.npz": {
+      "sha256": "aacec1f1b7b547d58643938fd7978f7903315a5fa51cea2d0588a107fe73115b",
+      "bytes": 17841
+    },
+    "dataset-check-v1/dataset-check.json": {
+      "sha256": "d3a7580be3f83c516ab60bcfe5b64e2ae10dcd91a5a6bf862924c26983f3dfb3",
+      "bytes": 140417
+    },
+    "configs/conversion.json": {
+      "sha256": "20a07113e86bd723f72a08aa1686b390ae0eed117c1feea8e752f64d627f2b7a",
+      "bytes": 377
+    },
+    "configs/training.json": {
+      "sha256": "5bad98acebb357e955d2a2b0ebd3bd22f572f51775aa48ee5ad6a7c9e911668b",
+      "bytes": 1657
+    },
+    "configs/evaluation.json": {
+      "sha256": "4199a36a27e2d1d119ee24387fce81b74019ef2f91c8a88ddc7d023a48be7cb9",
+      "bytes": 785
+    },
+    "train-v1/training-report.json": {
+      "sha256": "7b4678c39df5d1d355cae8b2ed464887cf1827aa61462732c0189e6b9ef31b9e",
+      "bytes": 152842
+    },
+    "train-v1/checkpoint_epoch_0001.pt": {
+      "sha256": "87876a160619e0bc9e85b3439ff84a0d49e065b90b1c94995a4eb0a9c95f5a0a",
+      "bytes": 394441397
+    },
+    "reload-v1/reload-report.json": {
+      "sha256": "36e2d6f2a1280180be199775cf753b1b0d349642cca121d3eb4b204f8fead2f1",
+      "bytes": 1486
+    },
+    "rollout-v1/rollout-report.json": {
+      "sha256": "ff957c930f25c349a428cea6274a9bc25f2f20f3af0c05a8de5595c040b4c81f",
+      "bytes": 243015
+    },
+    "rollout-v1/rollout.h5": {
+      "sha256": "2c36c70c34a77117838646dad16c9471bbcaa3c4f0e8b54d702ad38d5aa5a1a6",
+      "bytes": 3175738
+    },
+    "configs/observation-contract.json": {
+      "sha256": "46d66bec1f2d1ab5c029ed89af1fd8b694f239cd91f242f01af3008762c63194",
+      "bytes": 3747
+    }
+  },
+  "limits": [
+    "Single training episode and one short epoch do not establish task learning, success rate or generalization.",
+    "State rendering derives observations; source native execution and strict replay retain physical success evidence.",
+    "Subsequent small-dataset and human-conditioned ACT work remain a later phase."
+  ],
+  "completion_audit": {
+    "status": "passed",
+    "source_files_rehashed": 172,
+    "full_checkpoint_optimizer_model_hash_checked": true,
+    "full_rollout_arrays_checked": true,
+    "cuda_initialized_by_readonly_audit": false,
+    "actual_joint_names_from_source_scene_checked": true
+  }
+}

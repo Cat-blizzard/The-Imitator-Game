@@ -65,7 +65,7 @@ class DETRVAE(nn.Module):
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim) # project latent sample to embedding
         self.additional_pos_embed = nn.Embedding(3, hidden_dim) # learned position embedding for video feature, state and proprio
 
-    def forward(self, obs, actions=None, video_feature=None):
+    def forward(self, obs, actions=None, video_feature=None, is_pad=None):
         is_training = actions is not None
         state = obs['state'] if self.backbones is not None else obs
         bs = state.shape[0]
@@ -76,17 +76,26 @@ class DETRVAE(nn.Module):
             cls_embed = torch.unsqueeze(cls_embed, axis=0).repeat(bs, 1, 1)  # (bs, 1, hidden_dim)
             state_embed = self.encoder_state_proj(state) # (bs, hidden_dim)
             state_embed = torch.unsqueeze(state_embed, axis=1)  # (bs, 1, hidden_dim)
+            if is_pad is not None:
+                is_pad = is_pad.to(device=state.device, dtype=torch.bool)
+                if is_pad.shape != actions.shape[:2]:
+                    raise ValueError("ACT action padding must have shape (batch, horizon)")
+                actions = actions.masked_fill(is_pad.unsqueeze(-1), 0)
             action_embed = self.encoder_action_proj(actions)  # (bs, seq, hidden_dim)
             # concat them together to form an input to the CVAE encoder
             encoder_input = torch.cat([cls_embed, state_embed, action_embed], axis=1) # (bs, seq+2, hidden_dim)
             encoder_input = encoder_input.permute(1, 0, 2) # (seq+2, bs, hidden_dim)
-            # no masking is applied to all parts of the CVAE encoder input
-            is_pad = torch.full((bs, encoder_input.shape[0]), False).to(state.device) # False: not a padding
+            # CLS and observation tokens are real; padded future actions cannot
+            # influence the CVAE posterior, even through their projected bias.
+            if is_pad is None:
+                encoder_is_pad = torch.zeros((bs, encoder_input.shape[0]), dtype=torch.bool, device=state.device)
+            else:
+                encoder_is_pad = torch.cat([torch.zeros((bs, 2), dtype=torch.bool, device=state.device), is_pad], dim=1)
             # obtain position embedding
             pos_embed = self.pos_table.clone().detach()
             pos_embed = pos_embed.permute(1, 0, 2)  # (seq+2, 1, hidden_dim)
             # query CVAE encoder
-            encoder_output = self.encoder(encoder_input, pos=pos_embed, src_key_padding_mask=is_pad)
+            encoder_output = self.encoder(encoder_input, pos=pos_embed, src_key_padding_mask=encoder_is_pad)
             encoder_output = encoder_output[0] # take cls output only
             latent_info = self.latent_proj(encoder_output)
             mu = latent_info[:, :self.latent_dim]

@@ -1,5 +1,7 @@
 # TIG 双臂执行与 cuRobo：成果保存快照
 
+新数据下游首轮闭环已完成：药瓶seed401的一条同步轨迹补录观测、转LeRobot、实际短训ACT并严格重载，模型随后实际执行200步。本次策略任务未完成、超时；接口链路通过。入口、配置和结果见[同步数据到ACT](DATA-ACT-BRIDGE.md)。
+
 水果同盘seed402的link5／link6球代理误拒已修复；三个水果种子、苹果、药瓶、失败后重置及五条严格回放的结果见[覆盖修复验收](FRUITS-COLLISION-COVER-REPAIR.md)。
 
 cuRobo 后续性能工作见[跨回合复用与配置诊断](CUROBO-EPISODE-REUSE.md)：保留四实例，显式 manifest 批次支持回合重置和常驻复用；单回合入口继续沿用原生命周期。三任务九组冷暖配对的合格结果一致，观察到整批吞吐提高 1.70–2.29 倍；25 回合连续运行、三个未释放负控及恢复、四次严格动作回放的结果与保留失败见[扩展证据索引](evidence/curobo-episode-reuse-extended-20261117.json)。
