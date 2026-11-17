@@ -2,7 +2,9 @@
 
 2026-11-17。运行源码冻结于 `edcb153`。本次保留左右臂各 approach／transport 共四个 planner，增加兼容回合间的复用和完整重置，减少重复构造与预热；求解参数、碰撞要求、任务质量配置及 normal 模式的必要实时监测保持原设置。单回合 `generate`／旧验证入口仍沿用原生命周期，只有显式 manifest 批次进入新流程。
 
-**验收完成：14／14 项 CPU 自测、7 个正例生成、1 个实际未释放负控及 2 次严格动作回放均得到预期结果。** 同 GPU 冷启动与连续 A→B→A 各 3／3 通过，批次耗时从 621.33 秒降至 273.01 秒，合格轨迹产量从 17.38 提升至 39.56 条／小时。以下实测只覆盖药瓶 seed401／402 开发案例，不代表全任务成功率。机器可读结果及原始文件哈希见[本次验收索引](evidence/curobo-episode-reuse-20261117.json)。
+**首轮验收完成：14／14 项 CPU 自测、7 个正例生成、1 个实际未释放负控及 2 次严格动作回放均得到预期结果。** 同 GPU 冷启动与连续 A→B→A 各 3／3 通过，批次耗时从 621.33 秒降至 273.01 秒，合格轨迹产量从 17.38 提升至 39.56 条／小时。首轮实测只覆盖药瓶 seed401／402 开发案例，不代表全任务成功率。机器可读结果及原始文件哈希见[首轮验收索引](evidence/curobo-episode-reuse-20261117.json)。
+
+**扩展回归已完成：三个任务各三个固定种子的冷启动／复用配对、三个未释放负控及恢复、25 回合连续运行和四次严格动作回放。** 九组配对的合格结果与动作均一致，观察到的整批吞吐提升为 1.70–2.29 倍；水果 seed402 的原生规划失败在两种生命周期下均保留。详见下文“三任务与 25 回合扩展回归”和[扩展证据索引](evidence/curobo-episode-reuse-extended-20261117.json)。
 
 ## 批次用法
 
@@ -87,7 +89,7 @@ export TIG_CUROBO_PROFILE_CONFIG=1
 
 后三次配置构造还观察到 20／20／10 秒线程等待；当前记录没有保留原始 caller edges，尚不能将其归因为 JIT 或某一种锁。下一步冷启动优化应针对不可变碰撞球对拓扑的构造，先核对可变掩码与持物更新的边界；不能直接复用整份带不同限位和动态状态的 RobotCfg。详细函数计数与分析见外置 `config-profile/analysis.json` 和 `config-profile/ANALYSIS.md`。
 
-## 验证证据
+## 首轮验证证据
 
 CPU 记录位于 `${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-episode-reuse-20261117/cpu-tests.json`：14 个模块入口均退出 0，源码前后哈希一致，未启动 GPU 仿真。覆盖四实例身份、三任务 A→B→A、源位姿刷新、部分重置失败后的全局失效及恢复、固定 planner seed／dt、回合请求切片、manifest 预检、两种生命周期及回放源码身份兼容。
 
@@ -108,3 +110,47 @@ A→B→A 三回合保持相同四个 planner，初始化 RPC 数为 `[4, 0, 0]`
 
 原始协议、各回合报告、初始化／重置读回及实验过程记录位于 `${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-episode-reuse-20261117`。`cold-aba/summary.json`、`continuous-aba/summary.json` 和 `failure-reset/summary.json` 保留各自原始计分；`comparison.json` 保存状态隔离、原生读回、动作比较和失败恢复分析；`replay-processes.json` 保存两次回放命令、退出码与哈希。仓库中的验收 JSON 是摘要和索引，大型 H5／NPZ 与环境资产仍在外置目录。
 
+## 三任务与 25 回合扩展回归
+
+扩展运行使用 `e7c519d` checkout，100 个运行源码文件与首轮冻结版本一致，未修改生产代码、规划参数、质量要求或官方 200 步时限。先冻结 `extended-regression/protocol.json`，再运行全部案例；每例只尝试一次，失败计入原始汇总。三个任务均使用环境 seed401／402／403、planner seed0、`task-default-v1` 和 `normal`，配方如下：
+
+| 任务 | approach | payload refinement | transport |
+| --- | --- | --- | --- |
+| `TwoRobotPickAppleBananaToBaskets-v1` | `compact-4cm` | `baseline` | `standard` |
+| `TwoRobotPickPillToRegions-v1` | `compact-5cm` | `fixed-task-v1` | `direct-release-v2` |
+| `TwoRobotPickFruitsToPlate-v1` | `standard-8cm` | `fixed-task-v4` | `standard` |
+
+每个任务的冷启动与复用批次在同一张 RTX 5880 Ada Generation 48 GB GPU 上顺序执行，profiling 关闭。不同任务及长序列在不同 GPU 上并行，共享宿主机 CPU 和缓存；下面的耗时用于描述本次运行，尚未隔离共享资源竞争。批次时间包含构造、重置、失败、录制和关闭。
+
+| 任务 | 冷启动／复用合格数 | 冷启动／复用秒数 | 冷启动／复用合格轨迹／小时 | 吞吐比 |
+| --- | --- | ---: | ---: | ---: |
+| 苹果／香蕉 | 3／3；3／3 | 590.30／309.55 | 18.30／34.89 | 1.91× |
+| 药瓶 | 3／3；3／3 | 588.57／257.48 | 18.35／41.94 | 2.29× |
+| 水果同盘 | 2／3；2／3 | 907.64／533.65 | 7.93／13.49 | 1.70× |
+
+九组冷暖配对的参数、初态及动作数组均一致，合格比例也相同。因此本轮支持复用提高生成效率，没有观察到轨迹质量提升。动作逐点相同仍只是一项观测，不新增为运行门槛。水果 seed402 在两种模式下都于第 137 步的 `carry_lower` 阶段报告 `CONSTRAINT_OR_POSE_FAILURE`；已有物理检查通过，质量结果未知，未计为合格轨迹，也未将规划失败解释为实际碰撞。
+
+### 连续运行、失败恢复与回放
+
+长序列为苹果 8 回合→药瓶 8 回合→水果 8 回合→返回苹果 1 回合。同一任务内复用四实例，切换任务时显式重建；worker generation 与协议一致，为 `[1×8, 2×8, 3×8, 4]`。25 回合中 23 条合格，用时 2297.41 秒，计 36.04 条／小时。两次失败均为水果 seed402 的同一规划错误，后续回合继续成功。原始批次保留 `failed` 状态和退出码 1。
+
+每个任务另运行一个实际未释放负控，再在同一四实例上重置并运行正例。负控只将右夹爪释放命令从 +1 改为 -1，分别实际注入 20／26／22 步；三个负控均在 176 步被 `release_timeout: both_hands_not_open_or_grasp_persists` 检出。它们的官方成功为 true，物理、质量及接受结果为 failed，均不计合格；三个重置后的正例分别在 198／191／196 步通过。
+
+三个任务的复用 seed401 及长序列返回苹果，共四条轨迹完成实际严格 normal 动作回放，各 14／14 项既有检查通过；动作／状态帧数分别为 198／199、191／192、196／197、198／199。均只恢复初态一次，没有重新规划或逐步状态修正，官方、物理、质量和录制结果均通过。
+
+扩展实验共 49 个原生回合：42 条合格、3 个预设未释放负例、4 次水果 seed402 规划失败；四次回放另计。49／49 个回合通过既有重置读回与源码归档身份核对，未发生 OOM、重置失败或 worker 通信错误。
+
+### 资源观测与证据位置
+
+长序列在每回合边界采集设备显存及 client／worker RSS。下表是设备已用显存，不是峰值：
+
+| worker generation／任务 | 回合数 | 设备显存范围（MiB） |
+| --- | ---: | ---: |
+| 1／苹果 | 8 | 39911–39919 |
+| 2／药瓶 | 8 | 43411–43419 |
+| 3／水果 | 8 | 45149–45211 |
+| 4／返回苹果 | 1 | 39911 |
+
+返回苹果后设备显存回到首次苹果观测值；各 worker 内 RSS 变化较小。client RSS 从首回合末的 1550260 KiB 增至末回合的 1961424 KiB，约增加 402 MiB，任务加载、缓存及其他保留内存的贡献尚未分离。本轮没有据此增加内存硬门槛；25 回合及边界采样不足以证明长期无泄漏。
+
+完整记录位于 `${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-episode-reuse-20261117/extended-regression`。`protocol.json` 保存冻结计划，`comparison.json` 保存全部结果与配对／重置／源码分析，`*/observations.json` 保存资源观测，各 `summary.json` 与 `report.json` 保留原始成败。外置 `trial_driver.py` 只连接既有批次入口、注入已声明的负控并采集观测，没有替换验收规则。[扩展证据索引](evidence/curobo-episode-reuse-extended-20261117.json) 保存汇总、资源范围及原始文件 SHA256；大型轨迹仍在外置目录。

@@ -1,0 +1,506 @@
+{
+  "schema": "tig-curobo-reuse-extended-acceptance-v1",
+  "date": "2026-11-17",
+  "status": "complete_with_retained_native_failures",
+  "runtime_commit": "e7c519d21125d9d0632f0a7667e77a16a657f902",
+  "production_code_changed": false,
+  "runtime_source_files_verified": 100,
+  "scope": "Three tasks, fixed seeds401/402/403, retained failures, release negatives and a 25-case long sequence; no broad benchmark claim",
+  "native_episodes": 49,
+  "qualified_native_episodes": 42,
+  "planned_release_negatives": 3,
+  "retained_planning_failures": 4,
+  "retries": 0,
+  "reset_audits_passed": 49,
+  "source_identity_audits_passed": 49,
+  "task_results": {
+    "apple": {
+      "performance": {
+        "cold": {
+          "allocated": 3,
+          "attempted": 3,
+          "qualified": 3,
+          "qualified_fraction_all_allocated": 1.0,
+          "official_successes": 3,
+          "official_observed": 3,
+          "official_unknown": 0,
+          "official_success_fraction_all_allocated": 1.0,
+          "official_success_fraction_observed": 1.0,
+          "physics_status_counts": {
+            "passed": 3
+          },
+          "quality_status_counts": {
+            "passed": 3
+          },
+          "outcome_categories": {
+            "qualified": 3
+          },
+          "wall_s": 590.3004444830585,
+          "qualified_per_hour": 18.29576802954611,
+          "throughput_scope": "whole measured batch including construction, resets, failures and shutdown"
+        },
+        "warm": {
+          "allocated": 3,
+          "attempted": 3,
+          "qualified": 3,
+          "qualified_fraction_all_allocated": 1.0,
+          "official_successes": 3,
+          "official_observed": 3,
+          "official_unknown": 0,
+          "official_success_fraction_all_allocated": 1.0,
+          "official_success_fraction_observed": 1.0,
+          "physics_status_counts": {
+            "passed": 3
+          },
+          "quality_status_counts": {
+            "passed": 3
+          },
+          "outcome_categories": {
+            "qualified": 3
+          },
+          "wall_s": 309.5451917590108,
+          "qualified_per_hour": 34.889897460943565,
+          "throughput_scope": "whole measured batch including construction, resets, failures and shutdown"
+        },
+        "whole_batch_wall_ratio": 1.906992775848456,
+        "qualified_throughput_ratio": 1.9069927758484555,
+        "limitation": "same GPU within each task; concurrent shared host workloads prevent strict causal timing attribution"
+      },
+      "matched_inputs": 3,
+      "matched_initial_states_parameters_actions_equal": true,
+      "negative_control": {
+        "detected": true,
+        "actual_injection_steps": 20,
+        "failure_steps": 176,
+        "failure_error": "release: release_timeout: both_hands_not_open_or_grasp_persists",
+        "official_success": true,
+        "qualified": false,
+        "recovery_steps": 198,
+        "recovery_qualified": true,
+        "same_four_planners": true
+      }
+    },
+    "pill": {
+      "performance": {
+        "cold": {
+          "allocated": 3,
+          "attempted": 3,
+          "qualified": 3,
+          "qualified_fraction_all_allocated": 1.0,
+          "official_successes": 3,
+          "official_observed": 3,
+          "official_unknown": 0,
+          "official_success_fraction_all_allocated": 1.0,
+          "official_success_fraction_observed": 1.0,
+          "physics_status_counts": {
+            "passed": 3
+          },
+          "quality_status_counts": {
+            "passed": 3
+          },
+          "outcome_categories": {
+            "qualified": 3
+          },
+          "wall_s": 588.5663784560747,
+          "qualified_per_hour": 18.349672008670495,
+          "throughput_scope": "whole measured batch including construction, resets, failures and shutdown"
+        },
+        "warm": {
+          "allocated": 3,
+          "attempted": 3,
+          "qualified": 3,
+          "qualified_fraction_all_allocated": 1.0,
+          "official_successes": 3,
+          "official_observed": 3,
+          "official_unknown": 0,
+          "official_success_fraction_all_allocated": 1.0,
+          "official_success_fraction_observed": 1.0,
+          "physics_status_counts": {
+            "passed": 3
+          },
+          "quality_status_counts": {
+            "passed": 3
+          },
+          "outcome_categories": {
+            "qualified": 3
+          },
+          "wall_s": 257.48033536295407,
+          "qualified_per_hour": 41.94495080479024,
+          "throughput_scope": "whole measured batch including construction, resets, failures and shutdown"
+        },
+        "whole_batch_wall_ratio": 2.2858692397864453,
+        "qualified_throughput_ratio": 2.2858692397864453,
+        "limitation": "same GPU within each task; concurrent shared host workloads prevent strict causal timing attribution"
+      },
+      "matched_inputs": 3,
+      "matched_initial_states_parameters_actions_equal": true,
+      "negative_control": {
+        "detected": true,
+        "actual_injection_steps": 26,
+        "failure_steps": 176,
+        "failure_error": "release: release_timeout: both_hands_not_open_or_grasp_persists",
+        "official_success": true,
+        "qualified": false,
+        "recovery_steps": 191,
+        "recovery_qualified": true,
+        "same_four_planners": true
+      }
+    },
+    "fruits": {
+      "performance": {
+        "cold": {
+          "allocated": 3,
+          "attempted": 3,
+          "qualified": 2,
+          "qualified_fraction_all_allocated": 0.6666666666666666,
+          "official_successes": 2,
+          "official_observed": 3,
+          "official_unknown": 0,
+          "official_success_fraction_all_allocated": 0.6666666666666666,
+          "official_success_fraction_observed": 0.6666666666666666,
+          "physics_status_counts": {
+            "passed": 3
+          },
+          "quality_status_counts": {
+            "passed": 2,
+            "unknown": 1
+          },
+          "outcome_categories": {
+            "qualified": 2,
+            "planning_or_geometry_rejection": 1
+          },
+          "wall_s": 907.6364276260138,
+          "qualified_per_hour": 7.932691748426295,
+          "throughput_scope": "whole measured batch including construction, resets, failures and shutdown"
+        },
+        "warm": {
+          "allocated": 3,
+          "attempted": 3,
+          "qualified": 2,
+          "qualified_fraction_all_allocated": 0.6666666666666666,
+          "official_successes": 2,
+          "official_observed": 3,
+          "official_unknown": 0,
+          "official_success_fraction_all_allocated": 0.6666666666666666,
+          "official_success_fraction_observed": 0.6666666666666666,
+          "physics_status_counts": {
+            "passed": 3
+          },
+          "quality_status_counts": {
+            "passed": 2,
+            "unknown": 1
+          },
+          "outcome_categories": {
+            "qualified": 2,
+            "planning_or_geometry_rejection": 1
+          },
+          "wall_s": 533.6457070561592,
+          "qualified_per_hour": 13.492097668542277,
+          "throughput_scope": "whole measured batch including construction, resets, failures and shutdown"
+        },
+        "whole_batch_wall_ratio": 1.700822129035692,
+        "qualified_throughput_ratio": 1.700822129035692,
+        "limitation": "same GPU within each task; concurrent shared host workloads prevent strict causal timing attribution"
+      },
+      "matched_inputs": 3,
+      "matched_initial_states_parameters_actions_equal": true,
+      "negative_control": {
+        "detected": true,
+        "actual_injection_steps": 22,
+        "failure_steps": 176,
+        "failure_error": "release: release_timeout: both_hands_not_open_or_grasp_persists",
+        "official_success": true,
+        "qualified": false,
+        "recovery_steps": 196,
+        "recovery_qualified": true,
+        "same_four_planners": true
+      }
+    }
+  },
+  "long_run": {
+    "metrics": {
+      "allocated": 25,
+      "attempted": 25,
+      "qualified": 23,
+      "qualified_fraction_all_allocated": 0.92,
+      "official_successes": 23,
+      "official_observed": 25,
+      "official_unknown": 0,
+      "official_success_fraction_all_allocated": 0.92,
+      "official_success_fraction_observed": 0.92,
+      "physics_status_counts": {
+        "passed": 25
+      },
+      "quality_status_counts": {
+        "passed": 23,
+        "unknown": 2
+      },
+      "outcome_categories": {
+        "qualified": 23,
+        "planning_or_geometry_rejection": 2
+      },
+      "wall_s": 2297.4115423569456,
+      "qualified_per_hour": 36.04056063680013,
+      "throughput_scope": "whole measured batch including construction, resets, failures and shutdown"
+    },
+    "worker_generations_match_protocol": true,
+    "worker_generations": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      4
+    ],
+    "retained_failure_ids": [
+      "18-fruits-s402",
+      "21-fruits-s402"
+    ],
+    "resource_scope": "episode-boundary samples, not peaks or proof of absence of long-run leakage",
+    "resource_ranges": [
+      {
+        "worker_generation": 1,
+        "tasks": [
+          "TwoRobotPickAppleBananaToBaskets-v1"
+        ],
+        "episode_ids": [
+          "01-apple-s401",
+          "02-apple-s402",
+          "03-apple-s403",
+          "04-apple-s401",
+          "05-apple-s402",
+          "06-apple-s403",
+          "07-apple-s401",
+          "08-apple-s401"
+        ],
+        "memory_after_episode": {
+          "device_used_mib": {
+            "samples": 8,
+            "first": 39911.0,
+            "last": 39911.0,
+            "minimum": 39911.0,
+            "maximum": 39919.0
+          },
+          "worker_rss_kib": {
+            "samples": 8,
+            "first": 2241912.0,
+            "last": 2245988.0,
+            "minimum": 2241912.0,
+            "maximum": 2245988.0
+          },
+          "client_rss_kib": {
+            "samples": 8,
+            "first": 1550260.0,
+            "last": 1798496.0,
+            "minimum": 1550260.0,
+            "maximum": 1817916.0
+          }
+        }
+      },
+      {
+        "worker_generation": 2,
+        "tasks": [
+          "TwoRobotPickPillToRegions-v1"
+        ],
+        "episode_ids": [
+          "09-pill-s401",
+          "10-pill-s402",
+          "11-pill-s403",
+          "12-pill-s401",
+          "13-pill-s402",
+          "14-pill-s403",
+          "15-pill-s401",
+          "16-pill-s401"
+        ],
+        "memory_after_episode": {
+          "device_used_mib": {
+            "samples": 8,
+            "first": 43411.0,
+            "last": 43419.0,
+            "minimum": 43411.0,
+            "maximum": 43419.0
+          },
+          "worker_rss_kib": {
+            "samples": 8,
+            "first": 2235208.0,
+            "last": 2234524.0,
+            "minimum": 2234524.0,
+            "maximum": 2235208.0
+          },
+          "client_rss_kib": {
+            "samples": 8,
+            "first": 1789920.0,
+            "last": 1818348.0,
+            "minimum": 1715168.0,
+            "maximum": 1818348.0
+          }
+        }
+      },
+      {
+        "worker_generation": 3,
+        "tasks": [
+          "TwoRobotPickFruitsToPlate-v1"
+        ],
+        "episode_ids": [
+          "17-fruits-s401",
+          "18-fruits-s402",
+          "19-fruits-s403",
+          "20-fruits-s401",
+          "21-fruits-s402",
+          "22-fruits-s403",
+          "23-fruits-s401",
+          "24-fruits-s401"
+        ],
+        "memory_after_episode": {
+          "device_used_mib": {
+            "samples": 8,
+            "first": 45149.0,
+            "last": 45211.0,
+            "minimum": 45149.0,
+            "maximum": 45211.0
+          },
+          "worker_rss_kib": {
+            "samples": 8,
+            "first": 2342024.0,
+            "last": 2350592.0,
+            "minimum": 2342024.0,
+            "maximum": 2350592.0
+          },
+          "client_rss_kib": {
+            "samples": 8,
+            "first": 2047200.0,
+            "last": 1984140.0,
+            "minimum": 1977988.0,
+            "maximum": 2047200.0
+          }
+        }
+      },
+      {
+        "worker_generation": 4,
+        "tasks": [
+          "TwoRobotPickAppleBananaToBaskets-v1"
+        ],
+        "episode_ids": [
+          "25-apple-return-s401"
+        ],
+        "memory_after_episode": {
+          "device_used_mib": {
+            "samples": 1,
+            "first": 39911.0,
+            "last": 39911.0,
+            "minimum": 39911.0,
+            "maximum": 39911.0
+          },
+          "worker_rss_kib": {
+            "samples": 1,
+            "first": 2244300.0,
+            "last": 2244300.0,
+            "minimum": 2244300.0,
+            "maximum": 2244300.0
+          },
+          "client_rss_kib": {
+            "samples": 1,
+            "first": 1961424.0,
+            "last": 1961424.0,
+            "minimum": 1961424.0,
+            "maximum": 1961424.0
+          }
+        }
+      }
+    ]
+  },
+  "replays": [
+    {
+      "path": "apple/replay-warm-s401/report.json",
+      "status": "passed",
+      "actions": 198,
+      "states": 199,
+      "checks_passed": 14,
+      "state_restore_frames": [
+        0
+      ],
+      "replanning": false,
+      "per_tick_state_correction": false
+    },
+    {
+      "path": "pill/replay-warm-s401/report.json",
+      "status": "passed",
+      "actions": 191,
+      "states": 192,
+      "checks_passed": 14,
+      "state_restore_frames": [
+        0
+      ],
+      "replanning": false,
+      "per_tick_state_correction": false
+    },
+    {
+      "path": "fruits/replay-warm-s401/report.json",
+      "status": "passed",
+      "actions": 196,
+      "states": 197,
+      "checks_passed": 14,
+      "state_restore_frames": [
+        0
+      ],
+      "replanning": false,
+      "per_tick_state_correction": false
+    },
+    {
+      "path": "long-replay-last/report.json",
+      "status": "passed",
+      "actions": 198,
+      "states": 199,
+      "checks_passed": 14,
+      "state_restore_frames": [
+        0
+      ],
+      "replanning": false,
+      "per_tick_state_correction": false
+    }
+  ],
+  "raw_evidence_root": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-episode-reuse-20261117/extended-regression",
+  "raw_evidence_sha256": {
+    "apple/cold/summary.json": "463a0f5db75ed46cdc1de711c383c4d9211ad73d0c80664830dfa91dc2b80615",
+    "apple/warm/summary.json": "fcd8674a1849349c76cb7ee65f24390208821244c762d4a7aba4a0ef9c13b048",
+    "apple/failure-reset/summary.json": "f4aa62430a5ef35018bf31886441266715571af83e27e3e04808079662bc25bc",
+    "pill/cold/summary.json": "bf735d7d34e2542a61f8d99ed66c286d0dbf1ec791ec5f0f0dd03fdd4d37d47a",
+    "pill/warm/summary.json": "2f10f188482e4d2d81ea60c03cfd89491426165920cd75416827a886ff7b158b",
+    "pill/failure-reset/summary.json": "fd574c9f697206b9a2217e824560e6672967fc99a141a1f962015fd1a0ce27fc",
+    "fruits/cold/summary.json": "288d2090da8a3bb091ecc0078e94bdcead9dd1b5224809508e2b38c6ab8ff3f8",
+    "fruits/warm/summary.json": "967f7a6cd7f5529c7241448bac150dbb57cb794dbff8e7e19a2ba64c8993ed1e",
+    "fruits/failure-reset/summary.json": "eb803c2752afffbca4f5827ef19147dd5dcca0ce27c24e7a8c44db3a025fa119",
+    "apple/replay-warm-s401/report.json": "e973e99f91204df98d781e385df76a2637f1cf61154a0b23c2f7e22378469c20",
+    "pill/replay-warm-s401/report.json": "860603eb4ee82e4d239902104dd735f7e21d00311a16b5812ed102f7643dc5ac",
+    "fruits/replay-warm-s401/report.json": "140f28d934054818d9fb45172da4b2080f273871b54b1c919a044a26e81fa3e7",
+    "long-replay-last/report.json": "0867fd82cc942699203de9b970358a0fe542027858129f7cddbb80b672073fbe",
+    "protocol.json": "6002a694a8cab51a4beb7b38a75570de0291af9a574ca7c7d12705a3a265c20e",
+    "trial_driver.py": "33c5d4e15d0a3a75700fa5e2271d53731a86732eccf264f513ee47ce1db833c5",
+    "analysis.py": "55d262b5a7d86436825de5e2d835cb8fb37031efcce4bc280aca5295eebafde6",
+    "comparison.json": "811c9b6961a0cdfa2e750be1ddc9bcff8cc35598dda0d37189c9593991cc2773",
+    "long-run/summary.json": "23389c6cd073fd9e35d7ed6b0d76a284d6d6b5e7fc3d54bbd143064029a5105c",
+    "build_index.py": "22953f500c34e75d82dc795425d018d0eed6320fb355b2e7f4bb80499f2d4e98"
+  },
+  "raw_trajectories_uploaded": false,
+  "timing_interpretation": "same GPU and full task recipe within each cold/warm pair; shared host workloads make timing descriptive",
+  "quality_interpretation": "same qualified fraction and exact actions on nine matched inputs; throughput gains do not establish improved trajectory quality"
+}
