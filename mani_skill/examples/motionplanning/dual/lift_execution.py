@@ -57,7 +57,14 @@ def _rotation_distance(first: np.ndarray, second: np.ndarray) -> float:
     return float(np.arctan2(sine, cosine))
 
 
-def _observe(arms: Any, actor: Any, reference: np.ndarray, initial_z: float) -> dict[str, Any]:
+def _observe(arms: Any, actor: Any, reference: np.ndarray, initial_z: float, *,
+             measurements: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Measure one object, optionally sharing joints from this same observation.
+
+    Single-arm callers retain their own joint read. A caller measuring both
+    targets may supply the joints it just read; it must not reuse them after a
+    physics step. The supplied mapping is returned without modification.
+    """
     agent = arms[0].agent
     tcp = _transform(agent.tcp.pose.to_transformation_matrix())
     obj = _transform(actor.pose.to_transformation_matrix())
@@ -77,7 +84,8 @@ def _observe(arms: Any, actor: Any, reference: np.ndarray, initial_z: float) -> 
                 raise ValueError("Expected a single finite finger-object contact force")
             forces[name] = force[0].tolist()
     linear, angular = _velocity(actor, "linear"), _velocity(actor, "angular")
-    return {"measurements": _measure(arms), "object_T_world": obj.tolist(),
+    return {"measurements": _measure(arms) if measurements is None else measurements,
+            "object_T_world": obj.tolist(),
             "tcp_T_world": tcp.tolist(), "T_tcp_object": relative.tolist(),
             "position_slip_m": float(np.linalg.norm(relative[:3, 3] - reference[:3, 3])),
             "rotation_slip_rad": float(np.arccos(np.clip(angle_cos, -1.0, 1.0))),

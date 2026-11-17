@@ -118,18 +118,22 @@ class _Phase:
         self.started = time.monotonic()
 
     def observe(self) -> dict[str, Any]:
+        # Share only within this call. Object reads do not advance physics;
+        # the next observe() obtains fresh joints, including after every tick.
+        measurements = _measure(self.arms)
         objects = []
         for index, (arm, target) in enumerate(zip(self.arms, self.targets)):
             if target is None:
                 objects.append({"target_present": False, "is_grasping": None,
                                 "tcp_T_world": _transform(arm.agent.tcp.pose.to_transformation_matrix()).tolist()})
                 continue
-            value = _observe((arm, self.arms[1 - index]), target, self.references[index], self.initial_z[index])
+            value = _observe((arm, self.arms[1 - index]), target, self.references[index], self.initial_z[index],
+                             measurements=measurements)
             value.pop("measurements")
             value["rotation_slip_rad"] = _rotation_distance(self.references[index][:3, :3], np.asarray(value["T_tcp_object"])[:3, :3])
             value.update(target_present=True, action_key=arm.key, object_index=index)
             objects.append(value)
-        return {"measurements": _measure(self.arms), "objects": objects}
+        return {"measurements": measurements, "objects": objects}
 
     def opened(self, arm: Any, row: dict[str, Any]) -> bool:
         fingers = [index for index in range(9) if index not in arm.indices]
@@ -540,8 +544,13 @@ def self_test() -> dict[str, Any]:
     class Robot:
         def __init__(self, holding: bool):
             self.q = np.array([[0.] * 7 + [.024 if holding else .04] * 2]); self.v = np.zeros((1, 9)); self.pose = Pose()
-        def get_qpos(self) -> np.ndarray: return self.q.copy()
-        def get_qvel(self) -> np.ndarray: return self.v.copy()
+            self.qpos_reads = self.qvel_reads = 0
+        def get_qpos(self) -> np.ndarray:
+            self.qpos_reads += 1
+            return self.q.copy()
+        def get_qvel(self) -> np.ndarray:
+            self.qvel_reads += 1
+            return self.v.copy()
         def get_qlimits(self) -> np.ndarray: return np.array([[[-3., 3.]] * 7 + [[0., .04]] * 2])
         def get_active_joints(self) -> list[Any]: return [NS(get_name=lambda name=name: name) for name in (*names, "f1", "f2")]
 
@@ -688,6 +697,32 @@ def self_test() -> dict[str, Any]:
         raise AssertionError("Invalid input was accepted")
 
     checks = []
+    env = Env(); phase = _Phase(env, Checker(env), "observation", targets=env.targets, held=True)
+    robots = [agent.robot for agent in env.agent.agents]
+    for robot in robots:
+        robot.qpos_reads = robot.qvel_reads = 0
+    observed = phase.observe()
+    assert all((robot.qpos_reads, robot.qvel_reads) == (1, 1) for robot in robots)
+    # Reconstruct the previous three-read path at the same physical state,
+    # including each object's old single-arm default. Its output is identical.
+    previous_objects = []
+    for index, (arm, target) in enumerate(zip(phase.arms, phase.targets)):
+        value = _observe((arm, phase.arms[1-index]), target, phase.references[index], phase.initial_z[index])
+        value.pop("measurements")
+        value["rotation_slip_rad"] = _rotation_distance(phase.references[index][:3, :3], np.asarray(value["T_tcp_object"])[:3, :3])
+        value.update(target_present=True, action_key=arm.key, object_index=index)
+        previous_objects.append(value)
+    previous = {"measurements": _measure(phase.arms), "objects": previous_objects}
+    assert observed == previous and all((robot.qpos_reads, robot.qvel_reads) == (4, 4) for robot in robots)
+    action = phase.hold(-1)
+    for value in action.values():
+        value[0] += .01
+    env.step(action)
+    fresh = phase.observe()
+    assert env.elapsed_steps.tolist() == [1] and all((robot.qpos_reads, robot.qvel_reads) == (5, 5) for robot in robots)
+    assert all(observed["measurements"][arm.key]["qpos_rad"][0] == 0.
+               and fresh["measurements"][arm.key]["qpos_rad"][0] == .01 for arm in phase.arms)
+    checks.append("same-observation joint reads reduced from three to one with identical values and fresh reads after stepping")
     env = Env(False); solvers = (Solver(env, 0), Solver(env, 1)); planned = plan_dual_pose(*solvers, (target_pose(env, 0, [.04]), target_pose(env, 1, [.08])))
     assert not env.actions and all(solver.calls == 1 for solver in solvers)
     assert all(solver.topp_calls == 1 and solver.last_endpoint_audit["status"] == "passed"
