@@ -39,6 +39,12 @@ PROFILES = {
                              grasp_height_offset=.012, base_height=.16,
                              grasp_quaternion=(0., 0., 1., 0.)),
     "panda": PickPlaceProfile(-.60, .60, -.08, .12),
+    "arx_x5": PickPlaceProfile(-.40, .60, -.04, .08,
+                              grasp_height_offset=.022, base_height=.16,
+                              grasp_quaternion=(0., 0., 1., 0.)),
+    "ur5_wsg": PickPlaceProfile(-.55, .75, -.05, .10,
+                               grasp_height_offset=.028),
+    "xarm6_robotiq": PickPlaceProfile(-.55, .70, -.05, .10),
 }
 
 
@@ -148,7 +154,7 @@ class DualArmPickPlaceEnv(BaseEnv):
 
 
 if __name__ == "__main__":
-    assert set(PROFILES) == {"piper", "panda"}
+    assert set(PROFILES) == {"piper", "panda", "arx_x5", "ur5_wsg", "xarm6_robotiq"}
     for profile in PROFILES.values():
         assert profile.source_x > profile.base_x
         assert np.isclose(np.linalg.norm(profile.grasp_quaternion), 1)

@@ -17,9 +17,9 @@ import numpy as np
 from mani_skill.trajectory.utils import index_dict
 from .arm_planner import ArmMotionPlanner
 from .dual_arm_execution import (ARM_SPEED, OBJECT_SPEED, OBJECT_ANGULAR_SPEED,
-                                 OPEN_TOL, WINDOW_POSITION, WINDOW_ROTATION)
+                                 WINDOW_POSITION, WINDOW_ROTATION)
 from .dual_payload_collision import DualPayloadCollisionChecker
-from .measurements import _rotation_distance, _transform
+from .measurements import _rotation_distance, _transform, gripper_is_open, gripper_open_settings
 from .runtime_policy import RuntimePolicy
 from .trajectory_execution import as_numpy, bindings
 
@@ -205,7 +205,8 @@ def replay(path: Path, output: Path, *, save_video: bool = False) -> dict[str, A
         stable_count, stable_max, stability_reference = 0, 0, None
         requirements = {"min_lift_m": max(.08, policy.min_lift_m),
                         "minimum_retreat_m": max(.08, policy.minimum_retreat_m),
-                        "final_stable_steps": max(20, policy.final_stable_steps)}
+                        "final_stable_steps": max(20, policy.final_stable_steps),
+                        "gripper_open": {arm.key: gripper_open_settings(arm) for arm in arms}}
         result["requirements"] = requirements
         if save_video:
             import imageio.v2 as imageio
@@ -272,12 +273,7 @@ def replay(path: Path, output: Path, *, save_video: bool = False) -> dict[str, A
                     gain = float(pose[2, 3]-initial_height[index])
                     max_lift[index] = max(max_lift[index], gain)
                     lifted[index] |= gain >= requirements["min_lift_m"]
-            opened = []
-            for arm in arms:
-                fingers = arm.full_qpos()[arm.finger_indices]
-                upper = as_numpy(arm.agent.robot.get_qlimits())[0, arm.finger_indices, 1]
-                expected = np.broadcast_to(getattr(arm.agent, "gripper_open_qpos", upper), upper.shape)
-                opened.append(bool(np.allclose(fingers, expected, rtol=0, atol=OPEN_TOL)))
+            opened = [gripper_is_open(arm) for arm in arms]
             row["fingers_open"] = opened
             release_count = release_count+1 if phase in ("release", "retreat", "settle") and not any(row["grasping"]) and all(opened) else 0
             release_max = max(release_max, release_count)

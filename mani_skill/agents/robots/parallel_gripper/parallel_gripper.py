@@ -146,6 +146,8 @@ class ARXX5(ParallelGripperArm):
 @register_agent()
 class UR5WSG(ParallelGripperArm):
     uid = "ur5_wsg"
+    # The URDF has a massless world root above its actual mounting body.
+    robot_root_link_name = "base_link"
     urdf_path = "{ASSET_DIR}/robots/ur5_wsg/robot.urdf"
     arm_joint_names = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
     gripper_joint_names = ["base_joint_gripper_left", "base_joint_gripper_right"]

@@ -14,13 +14,15 @@ from mani_skill.examples.motionplanning.dual.sync.combined_collision import (
 )
 from mani_skill.examples.motionplanning.dual.sync.dual_arm_execution import _Phase, execute_dual_reach
 from mani_skill.examples.motionplanning.dual.sync.dual_payload_collision import DualPayloadCollisionChecker
-from mani_skill.examples.motionplanning.dual.sync.measurements import _actions_valid, _measure
+from mani_skill.examples.motionplanning.dual.sync.measurements import (
+    _actions_valid, _measure, gripper_is_open, gripper_open_settings,
+)
 from mani_skill.examples.motionplanning.dual.sync.planning_endpoint import checked_screw_plan
 from mani_skill.examples.motionplanning.dual.sync.table_support_collision import (
     NumericalTableSupportCollisionChecker, TABLE_NAME, _scaled_vertices,
 )
 from mani_skill.examples.motionplanning.dual.sync.held_collision import _object_at, _pair_result
-from mani_skill.examples.motionplanning.dual.sync.trajectory_execution import bind_arm
+from mani_skill.examples.motionplanning.dual.sync.trajectory_execution import bind_arm, native_arm_action
 from mani_skill.examples.motionplanning.dual.sync.trajectory_schedule import ArmTrajectory, build_hold_schedule
 
 
@@ -156,6 +158,79 @@ def test_shared_executor_steps_both_sized_actions_once_per_tick():
     assert np.allclose(env.actions[1]["left"], env.actions[-1]["left"])
     assert np.allclose(env.left_agent.robot.q[0, [6, 5, 4, 3, 2, 1]], .02)
     assert env.elapsed_steps.tolist() == [4]
+
+
+def test_native_gripper_mapping_keeps_passive_joints_and_native_recorded_actions():
+    env = MixedEnv()
+    for key, agent in env.agent.agents_dict.items():
+        robot = agent.robot
+        passive = tuple(f"passive_{i}" for i in range(4))
+        robot.names = (*robot.names, *passive)
+        robot.q = np.column_stack((robot.q, np.zeros((1, 4))))
+        agent.gripper_joint_names = ("finger_a", "finger_b", *passive)
+        agent.gripper_open_action, agent.gripper_closed_action = 0., .81
+        env.agent.single_action_space.spaces[key] = spaces.Box(
+            np.array([-3.] * len(robot.arm_names) + [0.], dtype=np.float32),
+            np.array([3.] * len(robot.arm_names) + [.81], dtype=np.float32))
+    phase = _Phase(env, NS(refresh=lambda: None, check=lambda *_: [],
+                          set_target_contacts_allowed=lambda _: None), "native-controller")
+    assert all(len(arm.finger_indices) == 6 for arm in phase.arms)
+    for arm in phase.arms:
+        command = np.r_[arm.arm_qpos(), 1.]
+        native = native_arm_action(arm, command)
+        assert native[-1] == 0. and command[-1] == 1.
+        command[-1] = -1.
+        assert np.isclose(native_arm_action(arm, command)[-1], .81)
+    phase.tick(phase.hold(1), "opening")
+    phase.tick(phase.hold(-1), "closing")
+    assert all(value[-1] == 0. for value in env.actions[0].values())
+    assert all(np.isclose(value[-1], .81) for value in env.actions[1].values())
+    assert env.elapsed_steps.tolist() == [2]
+    assert len(phase.report["trace"][0]["measurements"]["left"]["finger_qpos_m"]) == 6
+
+
+def test_rotary_finger_stability_is_measured_in_tcp_metres():
+    env = MixedEnv()
+    agent = env.left_agent
+    agent.gripper_coordinate_unit = "rad"
+    tcp = np.eye(4)
+    tcp[:3, :3] = [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]]
+    tcp[:3, 3] = [.4, -.2, .3]
+    local = np.array([[0., -.02, .01], [0., .02, .01]])
+    agent.tcp.pose.to_transformation_matrix = lambda: tcp[None].copy()
+    agent.finger1_link, agent.finger2_link = [
+        NS(pose=NS(p=(point @ tcp[:3, :3].T + tcp[:3, 3])[None])) for point in local]
+    arms = tuple(bind_arm(key, robot) for key, robot in env.agent.agents_dict.items())
+    observed = _measure(arms)
+    assert np.allclose(observed["left"]["finger_positions_tcp_m"], local)
+    assert observed["left"]["gripper_coordinate_unit"] == "rad"
+    assert observed["left"]["gripper_velocity_unit"] == "rad/s"
+    assert "finger_qpos_m" not in observed["left"]
+    assert "finger_qvel_m_s" not in observed["left"]
+    # Correctly measured prismatic joints retain their original metre contract.
+    assert "finger_positions_tcp_m" not in observed["right"]
+    # Rigid arm movement does not look like finger opening or rotary motion.
+    translation = np.array([.1, .2, .3])
+    tcp[:3, 3] += translation
+    agent.finger1_link.pose.p += translation
+    agent.finger2_link.pose.p += translation
+    assert np.allclose(_measure(arms)["left"]["finger_positions_tcp_m"], local)
+
+
+def test_rotary_open_uses_explicit_coordinate_tolerance_without_metre_labels():
+    env = MixedEnv()
+    agent = env.left_agent
+    agent.gripper_coordinate_unit = "rad"
+    agent.gripper_open_qpos = 0.
+    agent.gripper_open_tolerance = .002
+    arm = bind_arm("left", agent)
+    assert gripper_open_settings(arm) == {"coordinate_unit": "rad", "tolerance": .002}
+    assert gripper_is_open(arm, [.0015, -.0015])
+    assert not gripper_is_open(arm, [.0025, -.0015])
+    phase = _Phase(env, NS(refresh=lambda: None, check=lambda *_: [],
+                          set_target_contacts_allowed=lambda _: None), "rotary-open")
+    assert "finger_open_m" not in phase.report["thresholds"]
+    assert phase.report["thresholds"]["gripper_open"]["left"]["coordinate_unit"] == "rad"
 
 
 def test_open_detection_uses_declared_controller_target_with_panda_fallback():

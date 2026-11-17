@@ -1,21 +1,25 @@
 # Fixed-base robot integration
 
 This example adds Piper, ARX X5 and UR5 with WSG to the existing ManiSkill
-agent interface. A shared pick/place task runs on dual Piper and dual Panda
+agent interface. A shared pick/place task runs on five homogeneous robot pairs
 with the same MPLib planning adapter, synchronous executor and recording format.
+Each pair contains two instances of the selected robot.
 
 ## Current capabilities
 
-| Agent UID | Arm joints | Native action size | Loading, reset, motion, gripper, TCP and RGB | Shared pick/place and action replay |
-| --- | ---: | ---: | --- | --- |
-| `piper` | 6 | 7 | Verified | Verified with two instances |
-| `arx_x5` | 6 | 7 | Verified | Pending |
-| `ur5_wsg` | 6 | 7 | Verified | Pending |
-| `xarm6_robotiq` | 6 | 7 | Verified using the existing agent | Pending |
-| `panda` | 7 | 8 | Existing agent | Verified with two instances |
+| Agent UID | Native action / physical qpos per arm | Basic control and RGB | Expert task | Recording and action replay | LeRobot conversion | ACT policy evaluation |
+| --- | ---: | --- | --- | --- | --- | --- |
+| `panda` | 8 / 9 | Verified | Verified | Verified | Verified | In progress |
+| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | In progress |
+| `arx_x5` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
+| `ur5_wsg` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
+| `xarm6_robotiq` | 7 / 12 | Verified | Verified | Verified | Not tested | Not tested |
 
-These checks establish loading, control and representative task execution.
-Broader task compatibility, training and policy evaluation remain separate work.
+Task verification refers to `DualArmPickPlace-v1`, a shared cube pick/place
+integration task. It does not establish compatibility with all TIG tasks. The
+original pill task continues to support its Panda wrist-camera pair through the
+original entry; other robot pairs have not been adapted to that task. Realman
+and mixed-model pairs are outside this integration's current scope.
 
 ## Prepare assets
 
@@ -56,13 +60,14 @@ holding and reset after motion. They do not require a motion planner.
 
 ```bash
 python -m mani_skill.examples.motionplanning.dual.sync.pick_place \
-  --robot piper --seed 401 --output-dir outputs/piper-401
+  --task DualArmPickPlace-v1 --robot piper --seed 401 --output-dir outputs/piper-401
 
 python -m mani_skill.examples.motionplanning.dual.sync.pick_place \
   --replay outputs/piper-401/trajectory.h5 --output-dir outputs/piper-401-replay
 ```
 
-Use `--robot panda` to run the same task logic on Panda. `--reach-only` stops
+Choose `--robot panda`, `piper`, `arx_x5`, `ur5_wsg` or `xarm6_robotiq` to
+replan the same task on that pair. `--reach-only` stops
 after synchronized reaching; such an archive does not satisfy full-task replay
 acceptance. Output directories must be new so earlier attempts are preserved.
 
@@ -75,7 +80,11 @@ Combined checks include both robots, the measured scene and carried objects.
 
 The robot profiles in `mani_skill/envs/tasks/tabletop/dual_pick_place.py` specify
 mounting, reachable object positions, grasp orientation and approach distances.
-Piper uses raised mounts and a grasp-height offset for its finger geometry.
+Piper and ARX use raised mounts; robot-specific grasp-height offsets account
+for actual finger geometry. Piper's equivalent top-down grasp avoids placing
+its finite-range wrist near the +/-pi branch boundary. xArm opts into choosing
+limit-valid 2*pi-equivalent revolute goals, verified by FK before a fresh native
+path is planned and retimed. Other agents retain their existing planner behavior.
 The task's object definitions, success conditions and expert phases are shared.
 Its integration horizon is **400 steps**. Existing TIG tasks keep their own
 horizons; the original pill task remains at 200 steps.
@@ -84,6 +93,15 @@ horizons; the original pill task remains at 200 steps.
 T+1 observations and states, with images and video at the actual 20 Hz rate.
 Joint names and per-robot action widths are recorded explicitly. `result.json`
 keeps task success, execution completion and recording status separate.
+Planning refusals do not establish physical infeasibility. Inspect the failed
+phase and reason separately from the environment result. Unsupported task or
+robot selections are rejected at the entrypoint, before planning.
+
+The executor maps its canonical open/close command to each native controller.
+xArm retains its original 0=open, 0.81=closed action and all six physical gripper
+joints, including four passive joints. Its angular gripper coordinates are
+labelled in radians; grasp stability uses measured finger-link translation in
+the TCP frame. Saved native actions are replayed directly without remapping.
 
 Replay restores the recorded initial state once and executes exactly the saved
 actions. It checks real grasps, lift, release, retreat, final stability and measured

@@ -19,11 +19,13 @@ import numpy as np
 from .combined_collision import validate_schedule
 from .measurements import _actions_valid, _budget, _error, _measure, _positive
 from .measurements import _observe, _rotation_distance, _transform
+from .measurements import (GRIPPER_OPEN_TOLERANCE as OPEN_TOL, gripper_coordinates,
+                           gripper_is_open, gripper_open_settings)
 from .runtime_policy import DEFAULT_POLICY, RuntimePolicy
-from .trajectory_execution import as_numpy, bindings, snapshot
+from .trajectory_execution import as_numpy, bindings, snapshot, native_arm_action
 from .trajectory_schedule import ArmTrajectory, DualArmSchedule, build_hold_schedule, plan_pose
 
-JOINT_STEP, TRACK, ENDPOINT, ARM_SPEED, OPEN_TOL = .02, .2, .03, .05, .002
+JOINT_STEP, TRACK, ENDPOINT, ARM_SPEED = .02, .2, .03, .05
 DROP = .01
 OBJECT_SPEED, OBJECT_ANGULAR_SPEED = .03, .2
 WINDOW_POSITION, WINDOW_ROTATION, WINDOW_JOINT = .003, .03, .003
@@ -105,7 +107,8 @@ class _Phase:
             "raw_velocity_telemetry": "retained without alteration",
             "continuous_collision_detection": False,
             "thresholds": {"joint_sample_rad": JOINT_STEP, "tracking_rad": TRACK, "endpoint_rad": ENDPOINT,
-                           "arm_speed_rad_s": ARM_SPEED, "finger_open_m": OPEN_TOL,
+                           "arm_speed_rad_s": ARM_SPEED,
+                           "gripper_open": {arm.key: gripper_open_settings(arm) for arm in self.arms},
                            "position_slip_m": self.policy.position_slip_m, "rotation_slip_rad": self.policy.rotation_slip_rad,
                            "drop_below_attachment_m": DROP, "grasp_loss_ticks": 2,
                            "object_speed_m_s": OBJECT_SPEED, "object_angular_speed_rad_s": OBJECT_ANGULAR_SPEED,
@@ -113,6 +116,8 @@ class _Phase:
                            "window_joint_rad": WINDOW_JOINT},
             "abort_semantics": "stop both arms; no automatic release, retreat, reset or next phase",
         }
+        if all(gripper_open_settings(arm)["coordinate_unit"] == "m" for arm in self.arms):
+            self.report["thresholds"]["finger_open_m"] = OPEN_TOL
         self.started = time.monotonic()
 
     def observe(self) -> dict[str, Any]:
@@ -134,10 +139,7 @@ class _Phase:
         return {"measurements": measurements, "objects": objects}
 
     def opened(self, arm: Any, row: dict[str, Any]) -> bool:
-        fingers = arm.finger_indices
-        upper = as_numpy(arm.agent.robot.get_qlimits())[0, fingers, 1]
-        expected = np.broadcast_to(getattr(arm.agent, "gripper_open_qpos", upper), upper.shape)
-        return bool(np.allclose(row["measurements"][arm.key]["finger_qpos_m"], expected, rtol=0, atol=OPEN_TOL))
+        return gripper_is_open(arm, gripper_coordinates(row["measurements"][arm.key]))
 
     def hold(self, grip: int) -> dict[str, np.ndarray]:
         return {arm.key: np.r_[self.report["initial_measurements"][arm.key]["qpos_rad"], grip] for arm in self.arms}
@@ -162,7 +164,7 @@ class _Phase:
 
     def tick(self, action: dict[str, Any], label: str) -> dict[str, Any] | None:
         _actions_valid(self.env, self.arms, action)
-        actual = {arm.key: np.asarray(action[arm.key], dtype=np.float32).copy() for arm in self.arms}
+        actual = {arm.key: native_arm_action(arm, action[arm.key]) for arm in self.arms}
         before = as_numpy(self.env.unwrapped.elapsed_steps).copy()
         row: dict[str, Any] = {"phase": label, "step": self.report["environment_steps"] + 1,
                                "action": {key: value.tolist() for key, value in actual.items()},
@@ -383,9 +385,21 @@ def close_dual_and_confirm(env: Any, checker: Any, targets: tuple[Any, Any], *,
     if budget < required: raise ValueError("Grasp budget cannot be smaller than the required stable interval")
     phase = _Phase(env, checker, "dual_close", targets=targets, policy=policy)
     action = phase.hold(-1); _actions_valid(env, phase.arms, action)
-    previous = [np.asarray(phase.report["initial_measurements"][arm.key]["finger_qpos_m"]) for arm in phase.arms]
+    def finger_positions(measurements: dict[str, Any], arm: Any) -> np.ndarray:
+        row = measurements[arm.key]
+        if "finger_positions_tcp_m" in row:
+            return np.asarray(row["finger_positions_tcp_m"])
+        if gripper_open_settings(arm)["coordinate_unit"] != "m":
+            raise ValueError("Rotary grasp stability requires measured TCP-local finger positions")
+        return gripper_coordinates(row)
+
+    previous = [finger_positions(phase.report["initial_measurements"], arm) for arm in phase.arms]
     counts = [0, 0]
     phase.report.update(max_steps=budget, stable_steps_required=required)
+    phase.report["finger_stability_measurement"] = [
+        "TCP-local physical finger-link translation (m)" if "finger_positions_tcp_m" in
+        phase.report["initial_measurements"][arm.key] else "prismatic finger joint translation (m)"
+        for arm in phase.arms]
     checker.set_target_contacts_allowed((True, True))
     try:
         if not phase.preflight(): return phase.finish()
@@ -395,8 +409,9 @@ def close_dual_and_confirm(env: Any, checker: Any, targets: tuple[Any, Any], *,
             if row["tracking_error_rad"] > ENDPOINT:
                 phase.report.update(status="aborted", reason="arm_hold_error"); break
             for index, arm in enumerate(phase.arms):
-                fingers = np.asarray(row["measurements"][arm.key]["finger_qpos_m"])
-                change = float(np.max(np.abs(fingers - previous[index])))
+                fingers = finger_positions(row["measurements"], arm)
+                delta = fingers - previous[index]
+                change = float(np.max(np.linalg.norm(delta, axis=-1) if delta.ndim == 2 else np.abs(delta)))
                 previous[index] = fingers.copy()
                 counts[index] = counts[index] + 1 if row["objects"][index]["is_grasping"] and change <= .0002 else 0
                 row["objects"][index].update(finger_change_m=change, stable_steps=counts[index])

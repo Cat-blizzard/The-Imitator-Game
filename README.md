@@ -81,7 +81,7 @@ solution is available for `TwoRobotPickPillToRegions-v1`; see
 [synchronous dual-arm generation](docs/dual-arm-sync.md) for generation,
 recording, configuration, replay, and 20 Hz dataset conversion.
 
-For additional fixed-base robots and a Panda/Piper task using the same
+For five fixed-base robot pairs and a shared pick/place task using the same
 synchronous executor, see [multi-embodiment integration](docs/multi-embodiment.md).
 
 ## Benchmark

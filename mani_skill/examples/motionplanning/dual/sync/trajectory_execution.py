@@ -33,6 +33,25 @@ class ArmBinding:
         return self.full_qpos()[self.indices]
 
 
+def native_arm_action(arm: ArmBinding, command: Any) -> np.ndarray:
+    """Map canonical open/close to this robot's native scalar gripper action.
+
+    Planning schedules use +1 open and -1 closed. The environment and recorder
+    receive native controller values, so saved actions replay without remapping.
+    """
+    result = np.asarray(command, dtype=np.float32).copy()
+    if (result.shape != (len(arm.names) + 1,) or not np.isfinite(result).all()
+            or abs(float(result[-1])) > 1):
+        raise ValueError("Expected named arm radians and one canonical gripper command")
+    opened = float(getattr(arm.agent, "gripper_open_action", 1.))
+    closed = float(getattr(arm.agent, "gripper_closed_action", -1.))
+    if not np.isfinite([opened, closed]).all() or opened == closed:
+        raise ValueError("Native gripper endpoints must be finite and different")
+    fraction = (float(result[-1]) + 1.) / 2.
+    result[-1] = closed + fraction * (opened - closed)
+    return result
+
+
 def bind_arm(key: str, agent: Any) -> ArmBinding:
     if agent.control_mode != "pd_joint_pos":
         raise ValueError("Absolute pd_joint_pos control is required")

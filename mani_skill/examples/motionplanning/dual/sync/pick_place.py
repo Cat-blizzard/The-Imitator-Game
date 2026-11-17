@@ -25,7 +25,7 @@ from .dual_arm_execution import (plan_dual_pose, execute_dual_reach,
     verify_dual_placement)
 from .dual_payload_collision import DualPayloadCollisionChecker
 from .runtime_policy import RuntimePolicy
-from .trajectory_execution import as_numpy, bindings
+from .trajectory_execution import as_numpy, bindings, native_arm_action
 
 
 TASK_ID = "DualArmPickPlace-v1"
@@ -100,11 +100,16 @@ def solve(env: Any, *, reach_only: bool = False) -> dict:
     """Use one task and the existing shared executor for both robot profiles."""
     raw, started = env.unwrapped, time.monotonic()
     capture = ObservedEpisode(env)
+    operation = "execution"
     arms = bindings(raw, tuple(raw.agent.agents_dict))
     report = {"schema": "multi-embodiment-sync-v1", "task": TASK_ID,
         "robot": raw.robot_uids[0], "control_freq": 1/raw.control_timestep,
         "action_order": [{"key": arm.key, "size": len(arm.names)+1,
             "arm_joint_names": list(arm.names),
+            **({"gripper_coordinate_unit": "rad",
+                "gripper_open_action": float(arm.agent.gripper_open_action),
+                "gripper_closed_action": float(arm.agent.gripper_closed_action)}
+               if getattr(arm.agent, "gripper_coordinate_unit", "m") == "rad" else {}),
             "state_joint_names": [j.name for j in arm.agent.robot.get_active_joints()]}
             for arm in arms], "policy": POLICY.to_dict(), "stages": [],
         "planning": [], "execution": {"status": "running"}}
@@ -119,18 +124,24 @@ def solve(env: Any, *, reach_only: bool = False) -> dict:
                 and result["status"] != "passed" else {})})
         print(f'{name}: {result["status"]} at step {scalar(raw.elapsed_steps)}', flush=True)
         if result["status"] != "passed":
+            report["execution"].update(phase=capture.phase,
+                reason=result.get("reason"),
+                operation="planning_or_geometry_rejection" if result["status"] == "rejected" else "execution")
             raise RuntimeError(f'{name}: {result.get("reason", result["status"])}')
 
     try:
         for _ in range(8):
-            capture.step({arm.key: np.r_[arm.arm_qpos(), 1.] for arm in arms})
+            capture.step({arm.key: native_arm_action(arm, np.r_[arm.arm_qpos(), 1.])
+                          for arm in arms})
         report["stages"].append({"name": "preparation", "status": "passed", "environment_steps": 8})
         solvers = [ArmMotionPlanner(capture, a.agent) for a in arms]
         checker = DualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=raw.targets)
         checker.set_measured_attachment_prediction(True)
 
         def move(name: str, poses: tuple, *, held: bool = False, contacts: bool = False):
+            nonlocal operation
             capture.phase = name
+            operation = "planning"
             tick, call = int(scalar(raw.elapsed_steps)), time.monotonic()
             try:
                 schedule = plan_dual_pose(*solvers, poses,
@@ -145,8 +156,10 @@ def solve(env: Any, *, reach_only: bool = False) -> dict:
             report["planning"][-1]["scheduled_steps"] = schedule.num_steps
             remaining = POLICY.last_completion_step-tick-schedule.num_steps
             if remaining < 0:
+                operation = "budget"
                 raise RuntimeError(f"{name}: motion exceeds the task's remaining control ticks")
             settling = min(POLICY.max_settle_steps, remaining)
+            operation = "execution"
             if held:
                 result = execute_dual_held_move(capture, schedule, checker, raw.targets,
                     min_height_gain_m=(.08, .08) if name == "lift" else (None, None),
@@ -195,7 +208,8 @@ def solve(env: Any, *, reach_only: bool = False) -> dict:
         report["execution"]["status"] = "passed"
         report["scope"] = "grasp_lift_carry_release_retreat_and_settle"
     except Exception as exc:
-        report["execution"] = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+        report["execution"] = {"phase": capture.phase, "operation": operation,
+            **report["execution"], "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
     finally:
         report.update(_facts(raw))
         report["events"] = capture.rows
@@ -211,6 +225,8 @@ def replay(path: Path, output: Path) -> dict:
 
 def main(args=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--task", choices=(TASK_ID,), default=TASK_ID,
+                        help="Compatible shared task; other TIG tasks keep their existing entrypoints")
     parser.add_argument("--robot", choices=tuple(PROFILES), default="piper")
     parser.add_argument("--seed", type=int, default=401)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -227,7 +243,7 @@ def main(args=None) -> None:
     env = None
     result = {"execution": {"status": "not_started"}, "recording": {"status": "not_started"}}
     try:
-        env = gym.make(TASK_ID, robot_uids=(options.robot, options.robot),
+        env = gym.make(options.task, robot_uids=(options.robot, options.robot),
             obs_mode="rgb", control_mode="pd_joint_pos", sim_backend="physx_cpu",
             render_mode="rgb_array", num_envs=1, shader_dir="default")
         env = RecordEpisode(env, str(options.output_dir), trajectory_name="trajectory",

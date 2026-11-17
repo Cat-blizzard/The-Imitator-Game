@@ -90,6 +90,21 @@ class XArm6Robotiq(BaseAgent):
         "joint5",
         "joint6",
     ]
+    # All physical gripper coordinates participate in measured collision state,
+    # including the four joints moved passively by the existing closed linkage.
+    gripper_joint_names = [
+        "left_outer_knuckle_joint", "left_inner_knuckle_joint",
+        "right_outer_knuckle_joint", "right_inner_knuckle_joint",
+        "left_inner_finger_joint", "right_inner_finger_joint",
+    ]
+    finger_link_names = ("left_inner_finger_pad", "right_inner_finger_pad")
+    gripper_open_action = 0.0
+    gripper_closed_action = 0.81
+    gripper_open_qpos = 0.0
+    gripper_coordinate_unit = "rad"
+    gripper_open_tolerance = 0.002
+    robot_root_link_name = "link_base"
+    prefer_nearby_revolute_goals = True
 
     arm_stiffness = 1e4
     arm_damping = 1e3

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
+import xml.etree.ElementTree as ET
 
 import numpy as np
 
@@ -55,6 +56,33 @@ def pose_error(actual: Any, expected: Any) -> dict[str, float]:
     dot = abs(float(np.dot(actual[3:], expected[3:])))
     return {"position_m": float(np.linalg.norm(actual[:3] - expected[:3])),
             "rotation_rad": float(2 * np.arccos(np.clip(dot, 0., 1.)))}
+
+
+def nearest_revolute_goal(goal: Any, start: Any, joint_types: tuple[str, ...],
+                          limits: Any) -> np.ndarray:
+    """Choose only limit-valid 2*pi equivalents for actual revolute joints.
+
+    This selects a new goal, never rewrites a trajectory. A native full replan
+    and FK validation are required before any such goal can be executed.
+    """
+    goal, start, limits = _array(goal), _array(start), _array(limits)
+    if (goal.ndim != 1 or start.shape != goal.shape or len(joint_types) != len(goal)
+            or limits.shape != (len(goal), 2) or np.any(limits[:, 0] >= limits[:, 1])):
+        raise ValueError("Revolute goal selection requires named joints and matching finite limits")
+    result = goal.copy()
+    period = 2 * np.pi
+    for i, kind in enumerate(joint_types):
+        lower, upper = limits[i]
+        if kind == "revolute":
+            first = int(np.ceil((lower - goal[i]) / period))
+            last = int(np.floor((upper - goal[i]) / period))
+            if first > last:
+                raise ValueError("No equivalent revolute goal lies inside joint limits")
+            shift = int(np.clip(np.rint((start[i] - goal[i]) / period), first, last))
+            result[i] += period * shift
+        if result[i] < lower or result[i] > upper:
+            raise ValueError("Selected goal exceeds actual joint limits")
+    return result
 
 
 def checked_screw_plan(solver: Any, pose: Any, *,
@@ -241,12 +269,38 @@ def checked_screw_plan(solver: Any, pose: Any, *,
                 "correction_index": corrections, **error})
         if not within(error):
             raise ValueError(f"Actual FK endpoint exceeds contract after {corrections} corrections: {error}")
-        if corrections:
+        goal_qpos = start.copy()
+        goal_qpos[indices] = combined_path[-1]
+        equivalent_goal_changed = False
+        if getattr(getattr(solver, "env_agent", None), "prefer_nearby_revolute_goals", False):
+            # Some imported arms allow multiple revolutions. Native IK can
+            # return -2*pi instead of an equivalent nearby zero. Verify the
+            # actual URDF type and measured limits, then replan the WHOLE path.
+            descriptions = {joint.get("name"): joint.get("type")
+                            for joint in ET.parse(planner.urdf).getroot().findall("joint")}
+            names = tuple(planner.user_joint_names[i] for i in indices)
+            if not all(name in descriptions for name in names):
+                raise ValueError("Robot description lacks named arm joints")
+            active_names = tuple(joint.get_name() for joint in solver.robot.get_active_joints())
+            measured_limits = _array(solver.robot.get_qlimits())[0]
+            limits = measured_limits[[active_names.index(name) for name in names]]
+            original_goal = goal_qpos[indices].copy()
+            selected = nearest_revolute_goal(original_goal, start[indices],
+                tuple(descriptions[name] for name in names), limits)
+            selected_error = pose_error(fk(selected), goal_base)
+            if not within(selected_error):
+                raise ValueError(f"Equivalent revolute goal exceeds FK contract: {selected_error}")
+            equivalent_goal_changed = not np.array_equal(selected, original_goal)
+            audit["periodic_goal_selection"] = {"enabled": True,
+                "changes": [{"joint": name, "original_rad": float(old), "selected_rad": float(new)}
+                            for name, old, new in zip(names, original_goal, selected) if old != new],
+                "selected_goal_fk_error": selected_error,
+                "actual_urdf_types_and_limits_checked": True}
+            goal_qpos[indices] = selected
+        if corrections or equivalent_goal_changed:
             # The old approximate endpoint is diagnostic only. Replan the whole
             # path from the measured start to the FK-verified goal with native
             # joint planning, rather than executing the old path plus a tail.
-            goal_qpos = start.copy()
-            goal_qpos[indices] = combined_path[-1]
             count = len(captured_paths)
             capture_geometry_only = True
             try:
@@ -289,8 +343,8 @@ def checked_screw_plan(solver: Any, pose: Any, *,
             geometric_path_captures=len(captured_paths),
             correction_geometry_only=True, native_topp_calls=native_topp_calls,
             original_bad_endpoint_executed=False,
-            fresh_native_joint_replan=bool(corrections),
-            parameterization="native TOPP over fresh measured-start-to-verified-goal joint path" if corrections
+            fresh_native_joint_replan=bool(corrections or equivalent_goal_changed),
+            parameterization="native TOPP over fresh measured-start-to-verified-goal joint path" if corrections or equivalent_goal_changed
                 else "original native TOPP unchanged")
         result["endpoint_audit"] = audit
         if hasattr(solver, "last_native_result"):
