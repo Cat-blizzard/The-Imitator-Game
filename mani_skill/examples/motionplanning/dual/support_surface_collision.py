@@ -29,7 +29,7 @@ from .table_support_collision import (
 )
 
 MIN_SUPPORT_NORMAL_Z = .25
-SUPPORT_VERSION = "captured_source_positive_area_upper_support_v07"
+SUPPORT_VERSION = "captured_source_contact_interior_support_v08"
 
 
 def _one_entity(actor: Any) -> Any:
@@ -169,6 +169,35 @@ def _positive_xy_overlap(target: np.ndarray, source: np.ndarray) -> dict[str, An
                "source_union_filled_or_geometry_replaced": False}
     if not receipt["positive_area"]:
         raise RuntimeError("No positive-area actual target/source top-support projection")
+    return receipt
+
+
+def _source_contact_interior(point: Any, polygon: np.ndarray) -> dict[str, Any]:
+    """Prove this contact lies inside its actual source-piece projection.
+
+    A body's inward overhang does not turn a contact on the outside rim into
+    upper support. Unlike fixed-offset probes, this tests the supplied contact
+    against the actual projected halfspaces without requiring a physical
+    clearance margin. A boundary indistinguishable from floating-point
+    roundoff is conservatively unresolved. Other source pieces or their hull
+    never fill a gap or establish contact here.
+    """
+    point, polygon = np.asarray(point, float), np.asarray(polygon, float)
+    if point.shape != (2,) or not np.isfinite(point).all():
+        raise RuntimeError("Finite original source-contact XY required")
+    edges = np.roll(polygon, -1, axis=0) - polygon
+    lengths = np.linalg.norm(edges, axis=1)
+    delta = point - polygon
+    clearance = (edges[:, 0] * delta[:, 1] - edges[:, 1] * delta[:, 0]) / lengths
+    scale = max(float(np.abs(polygon).max()), float(np.abs(point).max()),
+                float(np.ptp(polygon, axis=0).max()))
+    roundoff = 32 * np.finfo(np.float64).eps * len(polygon) * scale
+    receipt = {"proof": "original_contact_strictly_inside_actual_source_convex_XY_projection",
+               "contact_xy_world_m": point.tolist(), "minimum_interior_distance_m": float(clearance.min()),
+               "floating_point_distance_bound_m": float(roundoff),
+               "physical_clearance_margin_added": False, "source_union_filled": False}
+    if not np.isfinite(clearance).all() or np.min(clearance) <= roundoff:
+        raise RuntimeError("Source contact lacks proven actual projected interior")
     return receipt
 
 
@@ -370,6 +399,7 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
         evidence = []
         for contact in contacts:
             depth, normal, position = _contact_values(contact)
+            interior = _source_contact_interior(position[:2], self._source_xy_projections[source])
             surface = upper_surface_at_xy(normals, offsets, position[:2])
             target_surface = upper_surface_at_xy(target_normals, target_offsets, position[:2])
             if (depth > depth_limit or surface is None
@@ -386,7 +416,7 @@ class SourceSurfaceSupportCollisionChecker(AttachedObjectCollisionChecker):
             # upper halfspaces above independently bound contact and vertices.
             evidence.append({"depth": depth, "normal": normal.tolist(), "position": position.tolist(),
                              "surface": surface, "target_vertical_profile": target_surface,
-                             "actual_xy_support_overlap": overlap})
+                             "actual_xy_support_overlap": overlap, "actual_contact_source_interior": interior})
         return {"target": target, "source": source, "source_actor": self.source_actor_name,
                 "max_contact_depth_m": max(c["depth"] for c in evidence), "depth_limit_m": depth_limit,
                 "raw_contacts": copy.deepcopy(contacts), "contact_geometry": evidence,
@@ -767,6 +797,38 @@ def _self_test() -> dict[str, Any]:
     assert overlap["positive_area"] and overlap["area_m2"] > 1e-4
     assert not overlap["source_union_filled_or_geometry_replaced"]
     tests.append("near_seam_contact_with_actual_positive_area_top_support_needs_no_fixed_2um_neighbourhood")
+    # A real FCL contact at an outer rim remains invalid even when an inward
+    # overhang gives the WHOLE body's XY projection a large positive area.
+    # This is a contact-location condition, not a contact-patch-area demand:
+    # ordinary fruit point contact strictly inside the source still qualifies.
+    rim_source = np.array([[x, y, z] for x in (-.1, .1) for y in (-.1, .1)
+                           for z in (-.02, 0.)], dtype=np.float64)
+    overhang = np.array([[.1, 0., 0.], [.05, -.03, .02],
+                        [.05, .03, .02], [.03, 0., .03]], dtype=np.float64)
+    source_faces = ConvexHull(rim_source).simplices.astype(np.int32)
+    target_faces = ConvexHull(overhang).simplices.astype(np.int32)
+    rim_source_object = _object_at(fcl.Convex(rim_source, source_faces, True), np.eye(4))
+    overhang_object = _object_at(fcl.Convex(overhang, target_faces, True), np.eye(4))
+    rim_hit, rim_contacts = _pair_result(overhang_object, rim_source_object)
+    assert rim_hit and rim_contacts
+    rim_check = SourceSurfaceSupportCollisionChecker()
+    rim_check.source_actor_name = "outer_rim_fixture"
+    rim_check._source_planes = {"source": convex_planes(rim_source, source_faces)}
+    rim_check._target_local_planes = {"overhang": convex_planes(overhang, target_faces)}
+    rim_check._source_xy_projections = {"source": _xy_projection(rim_source)}
+    rim_check._local_vertices = {"overhang": overhang}
+    rim_check._shape_local = {"overhang": np.eye(4)}
+    projected = _positive_xy_overlap(_xy_projection(overhang), _xy_projection(rim_source))
+    assert np.isclose(projected["area_m2"], .0021, rtol=0, atol=1e-15)
+    raw_rim_contacts = copy.deepcopy(rim_contacts)
+    try:
+        rim_check._contact_geometry("overhang", "source", rim_contacts, np.eye(4), .0002)
+    except RuntimeError as exc:
+        assert "actual projected interior" in str(exc)
+    else:
+        raise AssertionError("Outer rim point with inward body overhang was accepted")
+    assert rim_contacts == raw_rim_contacts
+    tests.append("native_FCL_outer_rim_tip_rejected_despite_positive_inward_overhang_projection")
     polygon = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
     for shift, label in (([1., 0.], "line"), ([1., 1.], "corner"), ([2., 0.], "disjoint")):
         try:
