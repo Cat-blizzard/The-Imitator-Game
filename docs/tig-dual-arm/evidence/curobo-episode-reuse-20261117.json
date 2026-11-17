@@ -1,0 +1,212 @@
+{
+  "schema": "tig-curobo-episode-reuse-acceptance-v1",
+  "date": "2026-11-17",
+  "runtime_commit": "edcb153689f5b86434bb930cc3a1c002a8bf6827",
+  "status": "passed_in_bounded_development_scope",
+  "scope": "One fixed pill task, one GPU, three cold and three continuous matched cases plus a two-case negative-control/reset sequence; no broad success-rate or backend-ranking claim.",
+  "planner_instances": 4,
+  "planner_parameters_and_quality_policy_unchanged": true,
+  "cpu_tests_passed": 14,
+  "cpu_tests_total": 14,
+  "performance": {
+    "cold_batch_wall_s": 621.3317049909383,
+    "continuous_batch_wall_s": 273.0112521608826,
+    "batch_wall_speedup": 2.275846508424474,
+    "cold_qualified_per_hour": 17.38201980238158,
+    "continuous_episode_wall_s": [
+      206.98532412108034,
+      28.41589528718032,
+      34.693594770971686
+    ],
+    "cold_episode_wall_s": [
+      217.9930432799738,
+      206.20376608800143,
+      196.90662336791866
+    ],
+    "continuous_qualified_per_hour": 39.55880907661519,
+    "qualified_throughput_ratio": 2.275846508424474,
+    "timing_scope": "Whole recorded batch, including initialization, resets, failures and final worker shutdown; profiling is off."
+  },
+  "checks": {
+    "continuous_four_planner_ids_unchanged": true,
+    "continuous_only_first_four_initializations": true,
+    "every_continuous_episode_begins_once": true,
+    "cold_initializes_four_per_case": true,
+    "every_case_explicitly_begins_once": true,
+    "A_initial_state_restored": true,
+    "B_initial_state_different": true,
+    "cold_and_continuous_positive_cases_all_qualified": true,
+    "all_recorded_resets_passed": true,
+    "exactly_one_external_negative_control": true,
+    "actual_negative_actions_verified": true,
+    "physical_release_failure_observed": true,
+    "recovery_same_four_planners": true,
+    "recovery_passed": true
+  },
+  "groups": {
+    "cold-aba": {
+      "status": "passed",
+      "worker_lifetime": "episode",
+      "contains_preregistered_negative_control": false,
+      "metrics": {
+        "allocated_episodes": 3,
+        "attempted_episodes": 3,
+        "passed_episodes": 3,
+        "failed_episodes": 0,
+        "qualified_trajectories": 3,
+        "qualified_trajectories_per_hour": 17.38201980238158,
+        "official_successes": 3,
+        "official_observed_episodes": 3,
+        "official_unknown_episodes": 0,
+        "official_success_rate_all_allocated": 1.0,
+        "official_success_rate_observed": 1.0,
+        "wall_s": 621.3317049909383,
+        "throughput_denominator": "whole batch including cold initialization, episode resets, failures and final worker shutdown"
+      }
+    },
+    "continuous-aba": {
+      "status": "passed",
+      "worker_lifetime": "batch",
+      "contains_preregistered_negative_control": false,
+      "metrics": {
+        "allocated_episodes": 3,
+        "attempted_episodes": 3,
+        "passed_episodes": 3,
+        "failed_episodes": 0,
+        "qualified_trajectories": 3,
+        "qualified_trajectories_per_hour": 39.55880907661519,
+        "official_successes": 3,
+        "official_observed_episodes": 3,
+        "official_unknown_episodes": 0,
+        "official_success_rate_all_allocated": 1.0,
+        "official_success_rate_observed": 1.0,
+        "wall_s": 273.0112521608826,
+        "throughput_denominator": "whole batch including cold initialization, episode resets, failures and final worker shutdown"
+      }
+    },
+    "failure-reset": {
+      "status": "failed",
+      "worker_lifetime": "batch",
+      "contains_preregistered_negative_control": true,
+      "metrics": {
+        "allocated_episodes": 2,
+        "attempted_episodes": 2,
+        "passed_episodes": 1,
+        "failed_episodes": 1,
+        "qualified_trajectories": 1,
+        "qualified_trajectories_per_hour": 15.001240597025115,
+        "official_successes": 2,
+        "official_observed_episodes": 2,
+        "official_unknown_episodes": 0,
+        "official_success_rate_all_allocated": 1.0,
+        "official_success_rate_observed": 1.0,
+        "wall_s": 239.98015208914876,
+        "throughput_denominator": "whole batch including cold initialization, episode resets, failures and final worker shutdown"
+      }
+    }
+  },
+  "negative_control": {
+    "right_release_commands_changed": 26,
+    "steps": 176,
+    "error": "release_timeout: both_hands_not_open_or_grasp_persists",
+    "official_success": true,
+    "selected_acceptance": "failed",
+    "qualified": false,
+    "failure_batch_exit_code": 1,
+    "recovery_steps": 191,
+    "recovery_wall_s": 31.732274811016396,
+    "same_four_planners": true
+  },
+  "replays": [
+    {
+      "name": "replay-A-after-B",
+      "exit_code": 0,
+      "process_wall_s": 18.530790597898886,
+      "status": "passed",
+      "applied_action_steps": 191,
+      "observed_state_frames": 192,
+      "state_restore_frames": [
+        0
+      ],
+      "replanning_performed": false,
+      "per_tick_state_correction": false,
+      "checks": {
+        "robot_and_target_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "source_unchanged": true,
+      "input_unchanged": true
+    },
+    {
+      "name": "replay-A-after-failure",
+      "exit_code": 0,
+      "process_wall_s": 16.1856555971317,
+      "status": "passed",
+      "applied_action_steps": 191,
+      "observed_state_frames": 192,
+      "state_restore_frames": [
+        0
+      ],
+      "replanning_performed": false,
+      "per_tick_state_correction": false,
+      "checks": {
+        "robot_and_target_state_errors_within_existing_action_limits": true,
+        "all_frames_observed": true,
+        "one_initial_restore_only": true,
+        "one_control_step_per_original_action": true,
+        "actions_applied_exactly": true,
+        "outcome_reproduced": true,
+        "held_slip_within_existing_limits": true,
+        "all100Hz_observations_recorded": true,
+        "no_forbidden100Hz_contacts": true,
+        "target0_object_pose_within_existing_limits": true,
+        "target0_tcp_pose_within_existing_limits": true,
+        "target1_object_pose_within_existing_limits": true,
+        "target1_tcp_pose_within_existing_limits": true,
+        "native_flags_match_source": true
+      },
+      "source_unchanged": true,
+      "input_unchanged": true
+    }
+  ],
+  "config_diagnostic": {
+    "performance_baseline_valid": false,
+    "cfg_create_total_s": 113.45652915374376,
+    "planner_construct_total_s": 1.3820235568564385,
+    "warmup_total_s": 40.05474669998512,
+    "hotspot": "robot collision-model preparation; exact sphere-pair enumeration",
+    "collision_model_fraction_range": [
+      0.9849,
+      0.9967
+    ],
+    "sphere_counts": [
+      2891,
+      2627
+    ],
+    "urdf_parse_approx_s_each": 0.002,
+    "unresolved": "10/20 second threading waits; raw caller edges were not retained; cause not attributed"
+  },
+  "raw_evidence_root": "${TIG_WORKSPACE}/infrastructure/validation/dual-arm/curobo-episode-reuse-20261117",
+  "raw_evidence_sha256": {
+    "comparison.json": "b53250e80f2becf3dcceccb8b855bb103e02bea59de84a6bf1fc555690f75044",
+    "cpu-tests.json": "92d3e497414a17f031207ecdf34ea39b35e920ee52c9531c3190a71cc0ee118a",
+    "experiment-processes.json": "8106d41d0d5438fa4dc69c61a916edfd3e8e746609322c7e243102c674407a76",
+    "replay-processes.json": "40df0cbb3be57fcde640f4213b2ee46870ab6087a5837fdfbb2f42f3fb9312a2",
+    "config-profile/analysis.json": "64b611484221c3a97c139e41ce3efdac9e4361547e0c14d49d7e10943aadc908",
+    "config-profile/wait-source-audit.json": "3e17cc9288635186d98c60a7ea8b2315723f3051595da0166caaca2a2d2806f5"
+  },
+  "evidence_pack_uploaded": false,
+  "exact_action_equality_is_acceptance_gate": false
+}

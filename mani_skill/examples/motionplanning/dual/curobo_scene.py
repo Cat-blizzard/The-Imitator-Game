@@ -24,10 +24,12 @@ from scipy.spatial import ConvexHull
 from scipy.spatial.transform import Rotation
 import trimesh
 
+from .curobo_sphere_cover import coarse_convex_spheres as _cover_convex, tight_convex_spheres
+
 
 ARM_NAMES = tuple(f"panda_joint{i}" for i in range(1, 8))
 FINGER_NAMES = ("panda_finger_joint1", "panda_finger_joint2")
-EXPORT_VERSION = "tig-v3-actual-physx-curobo-v2-independent-fingers-snapshot-v2"
+EXPORT_VERSION = "tig-v3-actual-physx-curobo-v2-independent-fingers-snapshot-v3"
 
 
 def _array(value: Any) -> np.ndarray:
@@ -156,44 +158,9 @@ def _shape_mesh(shape: Any) -> tuple[np.ndarray, np.ndarray, str]:
     return vertices, faces, policy
 
 
-def _cover_convex(vertices: Any, pitch_m: float) -> tuple[np.ndarray, float]:
-    """Cover the convex solid with grid-cell circumspheres, never just vertices.
-
-    Every cell intersecting the convex solid passes the expanded-halfspace
-    predicate. Retained centers include extra cells but cannot omit an occupied
-    cell: any point in a cell is at most sqrt(3)*pitch/2 from its center.
-    """
-    pitch = float(pitch_m)
-    if not math.isfinite(pitch) or pitch <= 0:
-        raise ValueError("Sphere grid pitch must be positive and finite")
-    vertices = _array(vertices)
-    if vertices.ndim != 2 or vertices.shape[1] != 3 or len(vertices) < 4 or not np.isfinite(vertices).all():
-        raise ValueError("Nondegenerate convex vertices[N>=4,3] required")
-    lower, upper = vertices.min(axis=0), vertices.max(axis=0)
-    if np.any(upper <= lower):
-        raise ValueError("Sphere coverage requires a three-dimensional solid")
-    counts = np.maximum(1, np.ceil((upper - lower) / pitch).astype(np.int64))
-    if np.prod(counts.astype(object)) > 2_000_000:
-        raise ValueError("Sphere coverage exceeds the explicit 2 million cell budget")
-    axes = [lower[i] + (np.arange(int(counts[i])) + .5) * pitch for i in range(3)]
-    centers = np.stack(np.meshgrid(*axes, indexing="ij"), axis=-1).reshape(-1, 3)
-    radius = math.sqrt(3) * pitch / 2
-    planes = ConvexHull(vertices).equations
-    # A circumsphere/halfspace test is a conservative superset of intersecting
-    # cells, including at the floating-point boundary.
-    limit = radius * np.linalg.norm(planes[:, :3], axis=1) + 1e-12
-    keep = np.ones(len(centers), dtype=bool)
-    for start in range(0, len(centers), 8192):
-        values = centers[start:start + 8192] @ planes[:, :3].T + planes[:, 3]
-        keep[start:start + 8192] = np.all(values <= limit, axis=1)
-    centers = centers[keep]
-    if not len(centers):
-        raise ValueError("No collision sphere generated for a nonempty shape")
-    assert centers.ndim == 2 and centers.shape[1] == 3 and np.isfinite(centers).all()
-    return centers, radius
-
-
-def _shape_spheres(shape: Any, pitch_m: float) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def _shape_spheres(shape: Any, pitch_m: float, *,
+                   tight: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Cover the full solid in link coordinates; tight fits occupied cells."""
     local = _matrix(shape.get_local_pose())
     if _kind(shape) == "PhysxCollisionShapeSphere":
         centers = local[None, :3, 3]
@@ -201,6 +168,11 @@ def _shape_spheres(shape: Any, pitch_m: float) -> tuple[list[dict[str, Any]], di
         policy = "exact_single_sphere"
     else:
         vertices, _, mesh_policy = _shape_mesh(shape)
+        if tight:
+            values, proof = tight_convex_spheres(vertices, pitch_m)
+            values[:, :3] = _transform_vertices(values[:, :3], local)
+            return [{"center": row[:3].tolist(), "radius": float(row[3])} for row in values], {
+                **proof, "geometry_policy": mesh_policy, "shape_local_pose_wxyz": _pose(local)}
         centers, radius = _cover_convex(vertices, pitch_m)
         centers = _transform_vertices(centers, local)
         policy = "convex_solid_grid_cell_circumspheres;" + mesh_policy
@@ -437,7 +409,7 @@ def export_curobo_snapshot(env: Any, arm_index: int, *, sphere_pitch_m: float = 
     world_base = np.linalg.inv(base_world)
     coverage: dict[str, Any] = {"all_covered": False, "snapshot_only": True,
         "world_frame": "selected_panda_link0", "sphere_pitch_m": pitch,
-        "robot_sphere_policy": "conservative_convex_solid_grid_cell_circumspheres",
+        "robot_sphere_policy": "conservative_convex_solid_grid_cell_with_tight_link5_link6_v1",
         "active_robot_shapes": [], "world_shapes": [], "skipped_visual_entities": [],
         "active_robot_exceptions": [], "peer_is_measured_snapshot": True,
         "paired_exact_collision_recheck_required": True,
@@ -458,7 +430,8 @@ def export_curobo_snapshot(env: Any, arm_index: int, *, sphere_pitch_m: float = 
                 "reason": "fixed table mount excluded only from selected-arm cuRobo active spheres; exact external checker and peer world retain it"})
             continue
         for index, shape in enumerate(shapes):
-            values, proof = _shape_spheres(shape, pitch)
+            values, proof = _shape_spheres(shape, pitch,
+                                          tight=name in ("panda_link5", "panda_link6"))
             spheres.setdefault(name, []).extend(values)
             coverage["active_robot_shapes"].append({"link": name, "shape_index": index,
                                                     "type": _kind(shape), **proof})
@@ -468,7 +441,8 @@ def export_curobo_snapshot(env: Any, arm_index: int, *, sphere_pitch_m: float = 
     ignores, disabled_pairs = _srdf_ignores(srdf, collision_links)
     velocities, source_hashes = _urdf_metadata(path, cspace_names)
     source_hashes[str(srdf)] = hashlib.sha256(srdf.read_bytes()).hexdigest()
-    source_hashes[str(Path(__file__).resolve())] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    for source in (Path(__file__), Path(__file__).with_name("curobo_sphere_cover.py")):
+        source_hashes[str(source.resolve())] = hashlib.sha256(source.read_bytes()).hexdigest()
     world: dict[str, Any] = {"cuboid": {}, "mesh": {}}
     # scene_entities enumerates registered actors and raw physics entities and
     # rejects batched/GPU physics. External articulations were checked above.
@@ -551,13 +525,26 @@ def self_test() -> dict[str, Any]:
                    get_triangles=lambda: tetra_faces, get_local_pose=lambda: identity)
     scaled, _, _ = _shape_mesh(mesh)
     assert np.array_equal(scaled, tetra_vertices * [2., 1., .5])
-    covered, _ = _shape_spheres(mesh, .025)
+    covered, coarse_mesh_proof = _shape_spheres(mesh, .025)
     covered_centers = np.asarray([value["center"] for value in covered])
     rng = np.random.default_rng(412)
     weights = rng.dirichlet(np.ones(4), 1000)
     interior = weights @ scaled
     assert np.all(np.linalg.norm(interior[:, None] - covered_centers[None], axis=2).min(axis=1) <= covered[0]["radius"] + 1e-12)
     checks.append("scaled convex mesh interior sphere coverage")
+    tight_values, tight_proof = _shape_spheres(mesh, .025, tight=True)
+    tight_array = np.array([[*row["center"], row["radius"]] for row in tight_values])
+    tight_gaps = np.linalg.norm(interior[:, None] - tight_array[None, :, :3], axis=2) - tight_array[None, :, 3]
+    assert tight_proof["complete_solid_coverage"] and np.max(tight_gaps.min(axis=1)) <= 1e-8
+    assert _shape_spheres(mesh, .025) == (covered, coarse_mesh_proof)
+    # Cached covers are shape-local; every export owns its transformed array.
+    moved = fixture("PhysxCollisionShapeConvexMesh", vertices=tetra_vertices, scale=np.array([2., 1., .5]),
+                    get_triangles=lambda: tetra_faces, get_local_pose=lambda: translated)
+    moved_values, _ = _shape_spheres(moved, .025, tight=True)
+    assert np.allclose([r["center"] for r in moved_values],
+        _transform_vertices(tight_array[:, :3], _matrix(translated)), rtol=0, atol=1e-12)
+    assert np.array_equal([r["radius"] for r in moved_values], tight_array[:, 3])
+    checks.append("tight complete-solid shape cover preserves rotated local frames and cached geometry")
     sphere = fixture("PhysxCollisionShapeSphere", radius=.032, get_local_pose=lambda: translated)
     exact, _ = _shape_spheres(sphere, .025)
     assert len(exact) == 1 and exact[0]["radius"] == .032 and np.allclose(exact[0]["center"], translated.p)

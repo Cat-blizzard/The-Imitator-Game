@@ -160,6 +160,20 @@ def validation_view(request: dict[str, Any], task_id: str) -> dict[str, Any]:
     return result
 
 
+def episode_model_topology(model: dict[str, Any]) -> dict[str, Any]:
+    """Return immutable payload/source content, allowing only source poses to move.
+
+    Callers must still validate the complete new source manifest against the
+    measured world; its pose-inclusive geometry hash is not a compatibility key.
+    """
+    result = deepcopy(model)
+    result.pop("source_geometry_sha256")
+    result["source_world_shapes"] = {
+        obstacle: {key: item for key, item in shape.items() if key != "pose"}
+        for obstacle, shape in result["source_world_shapes"].items()}
+    return result
+
+
 def validate_task_request(request: Any, task_id: str) -> dict[str, Any]:
     _finite_json(request)
     if not isinstance(request, dict):
@@ -168,6 +182,13 @@ def validate_task_request(request: Any, task_id: str) -> dict[str, Any]:
     if operation in {"init_session", "update_session"}:
         validate_task_profile(request["session_id"], request["robot_cfg"], task_id,
                               init_contract=operation == "init_session")
+    if operation == "begin_episode":
+        for row in request.get("sessions", []):
+            # Ordinary update rules remain unchanged within each episode.
+            name = row["session_id"]
+            validate_task_profile(name, row["robot_cfg"], task_id, init_contract=True)
+            arm = 0 if name.startswith("left:") else 1
+            validate_source(row["payload_model"], row["world"], task_id, arm)
     if operation == "init_session":
         arm = 0 if request["session_id"].startswith("left:") else 1
         validate_source(request["payload_model"], request["world"], task_id, arm)
@@ -244,6 +265,18 @@ class TaskSessionManager(PayloadSessionManager):
                              "source_support_obstacle_names": [], "attachment": None}
         return SessionManager.init_session(self, request)
 
+    def _validate_episode_session(self, row: dict[str, Any]) -> None:
+        # Only source poses may change in the immutable manifest at an explicit
+        # episode boundary. Geometry/capacity/limits/ownership remain exact.
+        SessionManager._validate_episode_session(self, row)
+        name, model = row["session_id"], row["payload_model"]
+        arm = 0 if name.startswith("left:") else 1
+        validate_source(model, row["world"], self.task_id, arm)
+        validate_model(model, row["robot_cfg"], row["world"], extra_fields=frozenset(SOURCE_FIELDS))
+
+        if episode_model_topology(model) != episode_model_topology(self.models[name]):
+            raise ValueError("episode payload/source geometry, ownership or policy changed")
+
     def update_session(self, request: dict[str, Any]) -> dict[str, Any]:
         session = self._session(request, require_valid=False)
         name, side = request["session_id"], request["session_id"].split(":")[0]
@@ -297,7 +330,9 @@ def dispatch_task(request: Any, manager: TaskSessionManager) -> dict[str, Any]:
         _finite_json(response)
         return response
     except Exception as error:
-        if isinstance(request, dict) and request.get("op") == "update_session":
+        if isinstance(request, dict) and request.get("op") == "begin_episode":
+            manager.invalidate_all(f"{type(error).__name__}: {error}")
+        elif isinstance(request, dict) and request.get("op") == "update_session":
             manager.invalidate(request.get("session_id"), f"{type(error).__name__}: {error}")
         raise
 
@@ -326,6 +361,7 @@ def self_test() -> None:
     legacy_self_test()
     assert "torch" not in sys.modules and "curobo" not in sys.modules
     rejected = 0
+    episode_fixtures: dict[str, dict[int, tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]] = {}
     with tempfile.TemporaryDirectory(prefix="tig-task-payload-cpu-") as directory:
         path = Path(directory)/"panda.urdf"
         path.write_text('<robot name="test">'+''.join(f'<joint name="{name}"><limit velocity="2"/></joint>' for name in ARM_JOINT_NAMES)+'</robot>')
@@ -373,11 +409,105 @@ def self_test() -> None:
                 view = validation_view({"op": "init_session", "session_id": session, "robot_cfg": robot, "payload_model": model}, task)
                 assert view["robot_cfg"]["kinematics"]["cspace"]["velocity_scale"][:7] == [.45]*7
                 assert robot["kinematics"]["cspace"]["velocity_scale"][:7] == [velocity/2.]*7
+                fixture_robot = {"load_dynamics": False, "kinematics": {
+                    "urdf_path": str(path), "lock_joints": dict(zip(FINGER_JOINT_NAMES, [.03, .031])),
+                    "collision_link_names": ["panda_hand", *FINGER_LINKS, PAYLOAD_LINK],
+                    "collision_spheres": {"panda_hand": [{"center": [0., 0., 0.], "radius": .01}]},
+                    "extra_collision_spheres": {PAYLOAD_LINK: 2},
+                    "extra_links": {PAYLOAD_LINK: {"link_name": PAYLOAD_LINK, "joint_name": "payload_fixed",
+                        "joint_type": "FIXED", "parent_link_name": "panda_hand_tcp",
+                        "fixed_transform": [0., 0., 0., 1., 0., 0., 0.],
+                        "link_mass": 0., "link_com": [0., 0., 0.], "link_inertia": [0.]*6}},
+                    "self_collision_ignore": {PAYLOAD_LINK: FINGER_LINKS},
+                    "cspace": {**deepcopy(robot["kinematics"]["cspace"]),
+                               "default_joint_position": [0.]*7+[.03, .031]}}}
+                fixture_model = {**deepcopy(model), "link_name": PAYLOAD_LINK,
+                                 "capacity": 2, "finger_links": FINGER_LINKS}
+                episode_fixtures.setdefault(task, {})[arm] = fixture_robot, deepcopy(world), fixture_model
+        class FakeEpisodeBackend:
+            def __init__(self) -> None:
+                self.planner: Any = None
+                self.lock_joints: dict[str, float] = {}
+                self.configure_count = 0
+
+            def configure(self, request: dict[str, Any]) -> dict[str, Any]:
+                self.planner, self.configure_count = object(), self.configure_count+1
+                self.lock_joints = deepcopy(request["robot_cfg"]["kinematics"]["lock_joints"])
+                return {"warmup_success": True}
+
+            def update(self, robot: dict[str, Any], world: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
+                self.lock_joints = deepcopy(robot["kinematics"]["lock_joints"])
+                self.world, self.state = deepcopy(world), deepcopy(state)
+                if world["cuboid"]["scene::foreign::shape_0"]["pose"][0] == 999:
+                    raise RuntimeError("synthetic failure after native state mutation")
+                return {"payload": deepcopy(state)}
+
+            def begin_episode(self, robot: dict[str, Any], world: dict[str, Any], seed: int,
+                              model: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
+                self.payload_model = deepcopy(model)
+                return self.update(robot, world, state)
+
+            def shutdown(self) -> dict[str, bool]:
+                self.planner = None
+                return {"shutdown": True}
+
+        free = {"contact_allowed": False, "source_support_allowed": False,
+                "source_support_obstacle_names": [], "attachment": None}
+        for task, fixtures in episode_fixtures.items():
+            manager = TaskSessionManager(task, FakeEpisodeBackend)
+            rows = []
+            for side, arm in (("left", 0), ("right", 1)):
+                for profile in ("approach", "transport"):
+                    robot, world, model = deepcopy(fixtures[arm])
+                    if profile == "transport":
+                        robot["kinematics"]["cspace"].update(
+                            velocity_scale=[.75]*7+[1., 1.], max_acceleration=[2.6]*7+[.9, .9])
+                    name = f"{side}:{profile}"
+                    dispatch_task({"id": 100, "op": "init_session", "session_id": name,
+                                   "robot_cfg": robot, "world": world, "payload_model": model,
+                                   "seed": 0, "interpolation_dt": .02, "warmup": True}, manager)
+                    rows.append({"session_id": name, "robot_cfg": robot, "world": world,
+                                 "payload_model": model, "payload_state": deepcopy(free)})
+            reset = {"id": 101, "op": "begin_episode", "episode_id": "A", "seed": 0,
+                     "interpolation_dt": .02, "sessions": rows}
+            identities = {name: id(session.backend.planner) for name, session in manager.sessions.items()}
+            for label, offset in (("A", .1), ("B", .3), ("A-again", .1)):
+                request = deepcopy(reset)
+                request["episode_id"] = label
+                for row in request["sessions"]:
+                    model = row["payload_model"]
+                    for obstacle in model["source_all_obstacle_names"]:
+                        row["world"]["cuboid"][obstacle]["pose"][0] = offset
+                        model["source_world_shapes"][obstacle]["pose"][0] = offset
+                    model["source_geometry_sha256"] = canonical_hash(model["source_world_shapes"])
+                dispatch_task(request, manager)
+                for row in request["sessions"]:
+                    name = row["session_id"]
+                    assert manager.models[name] == row["payload_model"]
+                    assert manager.states[name] == free and manager.sessions[name].backend.state == free
+                    assert not manager.support_revoked and not manager.sessions[name].used_snapshots
+                    assert id(manager.sessions[name].backend.planner) == identities[name]
+                    dispatch_task({"id": 102, "op": "update_session", "snapshot_id": "same-token",
+                                   **{key: value for key, value in row.items() if key != "payload_model"}}, manager)
+            failed = deepcopy(reset)
+            failed["sessions"][2]["world"]["cuboid"]["scene::foreign::shape_0"]["pose"][0] = 999
+            try:
+                dispatch_task(failed, manager)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("partial task reset was accepted")
+            assert manager.episode_reset_pending and all(not session.valid for session in manager.sessions.values())
+            dispatch_task(reset, manager)
+            assert all(session.backend.configure_count == 1 for session in manager.sessions.values())
+            manager.shutdown({})
         assert rejected == 42
     print(json.dumps({"task_self_test": "PASS", "task_arm_shape": [3, 2], "negative_checks": rejected,
                       "checks": ["fixed_official_source_enum", "exact_shape_membership", "static_full_geometry_and_pose",
                                  "no_peer_or_foreign_permission", "task_specific_fixed_profiles", "legacy_validation_view_only",
-                                 "inherited_full_payload_protocol_and_lifecycle", "no_native_or_simulator_import"]}))
+                                 "inherited_full_payload_protocol_and_lifecycle", "task_source_pose_A_B_A",
+                                 "four_instance_identity_retained", "partial_task_reset_failure_and_recovery",
+                                 "no_native_or_simulator_import"]}))
 
 
 def main() -> None:
