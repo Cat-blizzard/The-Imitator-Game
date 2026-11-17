@@ -76,6 +76,11 @@ See [`scripts/collect_data.py`](scripts/collect_data.py) for collecting simulati
 python -m mani_skill.examples.motionplanning.dual.two_robot_run --shader "rt-fast" -n 50 -e "Task name" --save-video
 ```
 
+The default solutions execute arms serially. An optional MPLib synchronous
+solution is available for `TwoRobotPickPillToRegions-v1`; see
+[synchronous dual-arm generation](docs/dual-arm-sync.md) for generation,
+recording, configuration, replay, and 20 Hz dataset conversion.
+
 ## Benchmark
 
 Each baseline has its own README.md with training and evaluation commands under [examples/baselines/](examples/baselines/). An example script for model training and evaluation: 
