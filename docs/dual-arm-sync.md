@@ -18,8 +18,11 @@ python -m mani_skill.examples.motionplanning.dual.two_robot_run \
 ```
 
 Omit `--execution-mode sync` to use the original serial solution. Original
-solution scripts and the Panda planner are unchanged. Sync does not import
-cuRobo or require a worker process.
+solution scripts and the Panda planner are unchanged. The default planning
+backend is MPLib; that route does not import cuRobo or start a worker process.
+For the optional GPU planner, add `--planner-backend curobo` and select an
+interpreter with cuRobo 0.9.0 installed; see [cuRobo backend](curobo-backend.md).
+cuRobo selection requires sync mode and supports the same Panda pill task.
 
 The synchronous solution uses `solve(env, seed=None, debug=False, vis=False)`
 and operates on the supplied environment. It neither creates a second simulator
@@ -30,9 +33,11 @@ Choose a new output name/directory for each experiment.
 ## Planning and execution
 
 MPLib plans each arm without advancing physics. Actual forward kinematics
-checks each endpoint, with bounded native IK correction when needed. Native
+checks each endpoint, with bounded native IK correction when needed. Its native
 geometric paths are retimed against the selected phase velocity/acceleration
-limits, then sampled on the common 20 Hz control clock. Both arms start
+limits. The optional cuRobo backend supplies timestamped trajectories for the
+same phase goals. Both routes use the common 20 Hz control clock and shared
+executor, recording, replay, and conversion entries. Both arms start
 together; a shorter path holds its endpoint and gripper state while its peer
 finishes.
 

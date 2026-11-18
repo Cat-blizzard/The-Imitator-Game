@@ -80,6 +80,8 @@ The default solutions execute arms serially. An optional MPLib synchronous
 solution is available for `TwoRobotPickPillToRegions-v1`; see
 [synchronous dual-arm generation](docs/dual-arm-sync.md) for generation,
 recording, configuration, replay, and 20 Hz dataset conversion.
+An optional [cuRobo 0.9.0 backend](docs/curobo-backend.md) uses the same
+synchronous entry and executor.
 
 ## Benchmark
 

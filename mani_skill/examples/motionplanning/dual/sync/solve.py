@@ -1,4 +1,4 @@
-"""Optional MPLib synchronous solution using the original caller-owned env."""
+"""Optional synchronous solution using the original caller-owned environment."""
 from __future__ import annotations
 
 import time
@@ -72,7 +72,8 @@ def _compact_stage(name, result):
     return row
 
 
-def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
+def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
+          planner_backend='mplib', curobo_options=None):
     """Return original two-arm step tuples; write independent result facts.
 
     The caller creates/closes the environment and owns RecordEpisode. Planning
@@ -81,6 +82,10 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
     """
     if not isinstance(policy, RuntimePolicy):
         raise ValueError('Expected RuntimePolicy')
+    if planner_backend not in ('mplib', 'curobo'):
+        raise ValueError('Expected planner_backend mplib or curobo')
+    if planner_backend != 'curobo' and curobo_options:
+        raise ValueError('cuRobo options require planner_backend curobo')
     raw = env.unwrapped
     if (raw.spec.id != TASK_ID or raw.num_envs != 1
             or any(agent.control_mode != 'pd_joint_pos' for agent in raw.agent.agents)):
@@ -92,7 +97,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
     if policy.max_episode_steps != 200 or policy.last_completion_step != 199:
         raise ValueError('The official200-step horizon is fixed')
     env.reset(seed=seed)
-    report = {'schema': 'dual-panda-sync-v1', 'seed': seed, 'backend': 'mplib',
+    report = {'schema': 'dual-panda-sync-v1', 'seed': seed, 'backend': planner_backend,
         'control_freq': 20, 'physics_freq': 100, 'policy': policy.to_dict(),
         'motion_limits': dict(LIMITS), 'stages': [], 'planning': [],
         'execution': {'status': 'running'}, 'quality': {'status': 'not_evaluated'},
@@ -100,6 +105,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
     raw.dual_sync_result = report
     task = PillTask(raw)
     checker = None
+    backend = None
     capture = ObservedEnvironment(env, task, lambda: checker, policy)
     started = time.monotonic()
 
@@ -129,26 +135,39 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
             multi_robot_id=i, joint_vel_limits=.9, joint_acc_limits=.9,
             debug=debug, vis=vis, visualize_target_grasp_pose=False, print_env_info=False)
             for i, agent in enumerate(raw.agent.agents)]
-        for solver in solvers:
-            attach_topp_capture(solver)
+        if planner_backend == 'mplib':
+            for solver in solvers:
+                attach_topp_capture(solver)
         checker = PillDualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=task.targets)
         checker.set_measured_attachment_prediction(True)
+        if planner_backend == 'curobo':
+            from .curobo_backend import CuroboBackend
+            backend = CuroboBackend(env, solvers, task, seed=seed,
+                options=curobo_options, limits=LIMITS)
+            backend.initialize(checker)
 
         def plan(name, poses, closed):
             capture.phase = name
             before = elapsed()
+            # A failed solve has no endpoint measurement for this phase.
+            for solver in solvers:
+                solver.last_endpoint_audit = {}
             limits = compact_phase_limits(LIMITS, name)
-            compact_set_phase_limits(solvers, limits)
+            if planner_backend == 'mplib':
+                compact_set_phase_limits(solvers, limits)
             call = time.monotonic()
             try:
-                source = plan_dual_pose(*solvers, poses, gripper_commands=(-1, -1) if closed else (1, 1), policy=policy)
-                results, _ = compact_retime_pair(tuple(s.last_native_result for s in solvers),
-                    tuple(s.last_native_parameterization for s in solvers),
-                    velocity_limit=limits['nominal_velocity_limit_rad_s'],
-                    acceleration_limit=limits['nominal_acceleration_limit_rad_s2'])
-                trajectories = tuple(ArmTrajectory(t.action_key, t.joint_names, r['time'], r['position'], -1. if closed else 1.)
-                    for t, r in zip(source.trajectories, results))
-                schedule = build_hold_schedule(*trajectories, control_timestep_s=raw.control_timestep)
+                if backend is None:
+                    source = plan_dual_pose(*solvers, poses, gripper_commands=(-1, -1) if closed else (1, 1), policy=policy)
+                    results, _ = compact_retime_pair(tuple(s.last_native_result for s in solvers),
+                        tuple(s.last_native_parameterization for s in solvers),
+                        velocity_limit=limits['nominal_velocity_limit_rad_s'],
+                        acceleration_limit=limits['nominal_acceleration_limit_rad_s2'])
+                    trajectories = tuple(ArmTrajectory(t.action_key, t.joint_names, r['time'], r['position'], -1. if closed else 1.)
+                        for t, r in zip(source.trajectories, results))
+                    schedule = build_hold_schedule(*trajectories, control_timestep_s=raw.control_timestep)
+                else:
+                    schedule = backend.plan(name, poses, closed=closed, checker=checker, limits=limits)
                 settle = movement_budget(policy, before, schedule.num_steps, name)
             except StageFailure:
                 raise
@@ -232,6 +251,12 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
         report['execution'] = {'status': 'failed', 'category': 'runtime',
             'reason': f'{type(exc).__name__}: {exc}'}
     finally:
+        if backend is not None:
+            report['curobo'] = backend.summary()
+            try:
+                backend.close()
+            except Exception as exc:
+                report['curobo']['cleanup_error'] = f'{type(exc).__name__}: {exc}'
         capture.restore()
         success = bool(as_numpy(raw.evaluate()['success']).item())
         report['official'] = {'success': success, 'elapsed_steps': elapsed(),

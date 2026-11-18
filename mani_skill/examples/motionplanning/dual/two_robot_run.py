@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import os
+import sys
 from copy import deepcopy
 import argparse
 import gymnasium as gym
@@ -126,6 +127,10 @@ SYNC_TASKS = {"TwoRobotPickPillToRegions-v1"}
 
 def _solver_for(args):
     """Resolve the explicit mode before constructing a rendering environment."""
+    if args.planner_backend != "curobo" and args._explicit_curobo_options:
+        raise ValueError("--curobo-* options require --planner-backend curobo")
+    if args.planner_backend == "curobo" and args.execution_mode != "sync":
+        raise ValueError("--planner-backend curobo requires --execution-mode sync")
     if args.execution_mode == "sync":
         if args.env_id not in SYNC_TASKS:
             raise ValueError(
@@ -134,10 +139,18 @@ def _solver_for(args):
             )
         from mani_skill.examples.motionplanning.dual.sync.solve import load_policy, solve
 
+        options = {}
         if args.sync_config is not None:
+            options["policy"] = load_policy(args.sync_config)
+        if args.planner_backend == "curobo":
+            options.update(planner_backend="curobo", curobo_options={
+                "python": args.curobo_python or os.environ.get("TIG_CUROBO_PYTHON") or sys.executable,
+                "device": args.curobo_device, "cache_dir": args.curobo_cache_dir,
+            })
+        if options:
             from functools import partial
 
-            return partial(solve, policy=load_policy(args.sync_config))
+            return partial(solve, **options)
         return solve
     if args.sync_config is not None:
         raise ValueError("--sync-config requires --execution-mode sync")
@@ -174,6 +187,10 @@ def parse_args(args=None):
     parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Observation mode to use. Usually this is kept as 'none' as observations are not necesary to be stored, they can be replayed later via the mani_skill.trajectory.replay_trajectory script.")
     parser.add_argument("-n", "--num-traj", type=int, default=10, help="Number of trajectories to generate.")
     parser.add_argument("--execution-mode", choices=("serial", "sync"), default="serial", help="Use the original serial solver or the optional synchronous dual-arm solver.")
+    parser.add_argument("--planner-backend", choices=("mplib", "curobo"), default="mplib", help="Planning backend for synchronous execution (default: mplib).")
+    parser.add_argument("--curobo-python", default=argparse.SUPPRESS, metavar="PYTHON", help="Interpreter with cuRobo 0.9.0 installed (default: TIG_CUROBO_PYTHON, then the current interpreter).")
+    parser.add_argument("--curobo-device", default=argparse.SUPPRESS, metavar="DEVICE", help="CUDA device in the cuRobo worker (default: cuda:0).")
+    parser.add_argument("--curobo-cache-dir", default=argparse.SUPPRESS, metavar="DIR", help="Optional writable directory for prepared cuRobo robot assets.")
     parser.add_argument("--sync-config", type=str, help="Optional JSON policy overrides for synchronous execution.")
     parser.add_argument("--seed", type=int, default=0, help="First episode seed (default 0).")
     parser.add_argument("--only-count-success", action="store_true", help="If true, generates trajectories until num_traj of them are successful and only saves the successful trajectories/videos")
@@ -199,7 +216,13 @@ def parse_args(args=None):
             "Use --no-mirror-robot-pose to keep robots on original sides."
         ),
     )
-    return parser.parse_args(args)
+    parsed = parser.parse_args(args)
+    curobo_defaults = {"curobo_python": None, "curobo_device": "cuda:0", "curobo_cache_dir": None}
+    parsed._explicit_curobo_options = tuple(name for name in curobo_defaults if hasattr(parsed, name))
+    for name, default in curobo_defaults.items():
+        if not hasattr(parsed, name):
+            setattr(parsed, name, default)
+    return parsed
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     env_id = args.env_id
@@ -254,7 +277,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         output_dir=osp.join(args.record_dir, env_id, "motionplanning"),
         trajectory_name=new_traj_name, save_video=args.save_video,
         source_type="motionplanning",
-        source_desc=("synchronous MPLib dual-Panda solution" if args.execution_mode == "sync"
+        source_desc=(f"synchronous {dict(mplib='MPLib', curobo='cuRobo')[args.planner_backend]} dual-Panda solution" if args.execution_mode == "sync"
                      else "official motion planning solution from ManiSkill contributors"),
         video_fps=env.unwrapped.control_freq if args.execution_mode == "sync" else 30,
         record_reward=False,
@@ -265,6 +288,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     if args.execution_mode == "sync":
         env._json_data["motion_planning"] = {
             "execution_mode": "sync",
+            "planner_backend": args.planner_backend,
             "control_freq": env.unwrapped.control_freq,
             "action_order": ["panda_wristcam-0", "panda_wristcam-1"],
         }
