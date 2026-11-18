@@ -29,13 +29,13 @@ Usage examples:
     --n-jobs 128
 
 H5 data format:
-  - actions (N, 16): used directly as qpos_gripper_actions
-  - panda_wristcam-0 qpos (N+1, 9): left arm [7 joints + 2 grippers]
-  - panda_wristcam-1 qpos (N+1, 9): right arm [7 joints + 2 grippers]
+  - actions (N, native paired action width), used directly
+  - per-robot qpos (N+1, physical joint count), in recorded native order
+  - layout comes from the sidecar; original dual-Panda archives retain a fallback
 
 LeRobot output format:
-  - qpos_gripper_states (18): [left(9) + right(9)]
-  - qpos_gripper_actions (16): uses H5 actions directly
+  - qpos_gripper_states: concatenated native states (Panda 18, Piper 16)
+  - qpos_gripper_actions: native paired actions (Panda 16, Piper 14)
 """
 
 import os
@@ -188,8 +188,21 @@ def native_data_contract(h5_file: h5py.File, action_width: int) -> dict:
     sidecar = Path(h5_file.filename).with_suffix(".json")
     metadata = json.loads(sidecar.read_text()) if sidecar.is_file() else {}
     sync = metadata.get("embodiment_sync", {})
+    motion = metadata.get("motion_planning", {})
+    env = metadata.get("env_info", {})
+    kwargs = env.get("env_kwargs", {})
     order = sync.get("action_order")
+    frequency = sync.get("control_freq")
     if order is None:
+        order = motion.get("native_action_layout")
+        frequency = motion.get("control_freq")
+    if order is None:
+        robots = motion.get("robot_uids", kwargs.get("robot_uids"))
+        if (action_width != 16 or robots is not None
+                and tuple(robots) not in (("panda_wristcam",)*2, ("panda",)*2)):
+            raise ValueError("Recording lacks an explicit native action layout; "
+                             "record the controller and physical joint order before conversion. "
+                             "Only original dual-Panda archives have a legacy fallback.")
         # The original TIG recorder flattens these two native controllers in this order.
         order = [{"key": f"panda_wristcam-{side}", "size": 8,
                   "arm_joint_names": [f"panda_joint{i}" for i in range(1, 8)],
@@ -213,11 +226,10 @@ def native_data_contract(h5_file: h5py.File, action_width: int) -> dict:
         item.setdefault("gripper_coordinate_unit", "m")
         item.setdefault("gripper_open_action", 1.0)
         item.setdefault("gripper_closed_action", -1.0)
-    env = metadata.get("env_info", {})
-    kwargs = env.get("env_kwargs", {})
     return {"action_order": order, "env_id": env.get("env_id"),
-            "robot_uids": kwargs.get("robot_uids"), "control_mode": kwargs.get("control_mode", "pd_joint_pos"),
-            "control_freq": sync.get("control_freq"),
+            "robot_uids": kwargs.get("robot_uids", motion.get("robot_uids")),
+            "control_mode": kwargs.get("control_mode", "pd_joint_pos"),
+            "control_freq": frequency,
             "rendering": {"shader_dir": kwargs.get("shader_dir"),
                           "sensor_configs": kwargs.get("sensor_configs", {})}}
 

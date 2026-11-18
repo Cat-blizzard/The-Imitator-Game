@@ -2,6 +2,7 @@ import multiprocessing as mp
 import os
 from copy import deepcopy
 import argparse
+from typing import Any
 import gymnasium as gym
 import numpy as np
 from tqdm import tqdm
@@ -127,6 +128,18 @@ SYNC_TASKS = {"TwoRobotPickPillToRegions-v1"}
 def _selected_robot(args):
     robot = getattr(args, "robot", None)
     return "panda_wristcam" if robot == "panda" else robot
+
+
+def _native_action_layout(raw: Any) -> list[dict[str, Any]]:
+    """Describe the live controller and physical state order without inference."""
+    return [{"key": key, "size": int(np.prod(agent.single_action_space.shape)),
+        "arm_joint_names": [joint.get_name() for joint in agent.controller.controllers["arm"].joints],
+        "state_joint_names": [joint.get_name() for joint in agent.robot.get_active_joints()],
+        "arm_coordinate_unit": "rad",
+        "gripper_coordinate_unit": str(getattr(agent, "gripper_coordinate_unit", "m")),
+        "gripper_open_action": float(getattr(agent, "gripper_open_action", 1.)),
+        "gripper_closed_action": float(getattr(agent, "gripper_closed_action", -1.))}
+        for key, agent in raw.agent.agents_dict.items()]
 
 
 def _solver_for(args):
@@ -285,6 +298,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             "action_sizes": [int(np.prod(agent.single_action_space.shape))
                              for agent in env.unwrapped.agent.agents],
             "robot_uids": list(env.unwrapped.robot_uids),
+            "native_action_layout": _native_action_layout(env.unwrapped),
         }
     print(f"Motion Planning Running on {env_id}")
     pbar = tqdm(range(args.num_traj), desc=f"proc_id: {proc_id}")
