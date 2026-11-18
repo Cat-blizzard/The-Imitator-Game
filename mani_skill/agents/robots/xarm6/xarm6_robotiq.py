@@ -303,7 +303,26 @@ class XArm6Robotiq(BaseAgent):
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
 
+    def _couple_outer_knuckles(self) -> None:
+        """Represent the single physical opening coordinate with a finite tendon."""
+        coupled = self.embodiment_profile.coupled_gripper_joints
+        self.gripper_tendon_count = 0
+        if coupled is None:
+            return
+        left, right = (self.robot.active_joints_map[name] for name in coupled)
+        for root, first, second, articulation in zip(
+                left.get_parent_link()._objs, left.get_child_link()._objs,
+                right.get_child_link()._objs, self.robot._objs):
+            articulation.create_fixed_tendon(
+                [root, first, second], [0., -1., 1.], [0., -1., 1.],
+                rest_length=0., stiffness=self.embodiment_profile.gripper_coupling_stiffness,
+                damping=self.embodiment_profile.gripper_coupling_damping)
+            self.gripper_tendon_count += 1
+
     def _after_loading_articulation(self):
+        # The drives below preserve each finger's four-bar loop. Equal drive
+        # targets alone do not couple the two sides of the single motor.
+        self._couple_outer_knuckles()
         outer_finger = self.robot.active_joints_map["right_inner_finger_joint"]
         inner_knuckle = self.robot.active_joints_map["right_inner_knuckle_joint"]
         pad = outer_finger.get_child_link()

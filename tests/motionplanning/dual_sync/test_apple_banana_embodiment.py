@@ -79,13 +79,25 @@ def test_landing_proposal_preserves_measured_container_and_prefers_free_space():
     contents = np.array([[-.03, -.03, 0.], [.03, .03, .07]])
     before = basket.copy(), contents.copy()
     center = basket_release_center(basket, [.025, .025], contents, [-.2, -.2])
-    np.testing.assert_allclose(center, [0., 0.])
+    # The basket center is occupied. Propose nearby free space rather than
+    # dropping a second fruit onto it merely to minimize centrality.
+    assert np.any((center+.025 <= contents[0, :2]) |
+                  (center-.025 >= contents[1, :2]))
+    assert np.linalg.norm(center) < .08
     np.testing.assert_array_equal(basket, before[0])
     np.testing.assert_array_equal(contents, before[1])
     # A long banana can retain its original dimensions when just inside a basket.
     center = basket_release_center([[-.105, -.145, 0], [.105, .145, .08]],
                                    [.099, .035], contents, [-.2, 0.])
     assert np.all(np.isfinite(center)) and abs(center[0]) <= .006
+
+
+def test_overlapping_proposal_remains_available_when_no_free_footprint_exists():
+    # Bounds are a goal heuristic, not another containment/contact rejection.
+    # This basket admits a payload but cannot separate it from the contents.
+    center = basket_release_center([[-.04, -.04, 0.], [.04, .04, .08]],
+        [.025, .025], [[-.03, -.03, 0.], [.03, .03, .07]], [-.2, -.2])
+    assert center.shape == (2,) and np.isfinite(center).all()
 
 
 @pytest.mark.parametrize("half", [[0., .01], [.2, .01], [np.nan, .01]])

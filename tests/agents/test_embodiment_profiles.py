@@ -113,5 +113,6 @@ def test_original_pill_task_profile_preserves_panda_and_selects_supported_robots
     assert original.grasp_quaternions == (None, None)
     assert get_task_profile("TwoRobotPickPillToRegions-v1", "piper") is PILL_PROFILES["piper"]
     assert get_task_profile("TwoRobotPickPillToRegions-v1", "ur5_wsg") is PILL_PROFILES["ur5_wsg"]
-    with pytest.raises(ValueError, match="no profile.*supported robots"):
-        get_task_profile("TwoRobotPickPillToRegions-v1", "arx_x5")
+    for robot in ("arx_x5", "xarm6_robotiq"):
+        assert get_task_profile("TwoRobotPickPillToRegions-v1", robot) is PILL_PROFILES[robot]
+    assert ARXX5.prefer_nearby_revolute_goals is True

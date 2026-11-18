@@ -7,7 +7,7 @@ import pytest
 import sapien
 import torch
 
-from mani_skill.agents.robots.parallel_gripper import Piper, UR5WSG
+from mani_skill.agents.robots.parallel_gripper import Piper, ARXX5, UR5WSG
 
 
 def _native_finger_pair(agent_cls, coupled: bool):
@@ -69,7 +69,7 @@ def _step_with_load(scene, articulation, joints, target: float, load: tuple[floa
 
 
 @pytest.mark.parametrize("load", [(12., -12.), (-12., 12.)])
-@pytest.mark.parametrize("agent_cls", [Piper, UR5WSG])
+@pytest.mark.parametrize("agent_cls", [Piper, ARXX5, UR5WSG])
 def test_coupling_rejects_saturated_differential_load_without_locking_opening(agent_cls, load):
     # Opposing generalized loads exceed the original 10N drive force on each
     # finger. With independent saturated drives the aperture centre can drift.

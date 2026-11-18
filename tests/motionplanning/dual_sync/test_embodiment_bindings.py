@@ -16,6 +16,7 @@ from mani_skill.examples.motionplanning.dual.sync.dual_arm_execution import _Pha
 from mani_skill.examples.motionplanning.dual.sync.dual_payload_collision import DualPayloadCollisionChecker
 from mani_skill.examples.motionplanning.dual.sync.measurements import (
     _actions_valid, _measure, gripper_is_open, gripper_open_settings,
+    finger_displacement_m,
 )
 from mani_skill.examples.motionplanning.dual.sync.planning_endpoint import checked_screw_plan
 from mani_skill.examples.motionplanning.dual.sync.table_support_collision import (
@@ -187,6 +188,26 @@ def test_native_gripper_mapping_keeps_passive_joints_and_native_recorded_actions
     assert all(np.isclose(value[-1], .81) for value in env.actions[1].values())
     assert env.elapsed_steps.tolist() == [2]
     assert len(phase.report["trace"][0]["measurements"]["left"]["finger_qpos_m"]) == 6
+    # H5 rows already use native 0/.81. Replay must not apply the mapping twice.
+    for recorded_grip in (0., .81):
+        recorded = {arm.key: np.r_[arm.arm_qpos(), recorded_grip].astype(np.float32)
+                    for arm in phase.arms}
+        before = {key: value.copy() for key, value in recorded.items()}
+        phase.tick(recorded, 'replay', native_actions=True)
+        for key in recorded:
+            np.testing.assert_array_equal(env.actions[-1][key], before[key])
+            np.testing.assert_array_equal(recorded[key], before[key])
+    invalid = {arm.key: np.r_[arm.arm_qpos(), -.1].astype(np.float32) for arm in phase.arms}
+    with pytest.raises(ValueError, match='actual controller action space'):
+        phase.tick(invalid, 'invalid-native', native_actions=True)
+
+
+def test_three_axis_finger_motion_uses_same_physical_distance_in_generation_and_replay():
+    before = np.zeros((2, 3))
+    after = np.array([[.00015, .00015, .00015], [0., 0., 0.]])
+    assert np.max(np.abs(after-before)) < .0002
+    assert finger_displacement_m(after, before) > .0002
+    assert finger_displacement_m(np.array([.0001, .00019]), np.zeros(2)) == .00019
 
 
 def test_rotary_finger_stability_is_measured_in_tcp_metres():

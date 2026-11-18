@@ -21,6 +21,21 @@ def gripper_open_settings(arm: ArmBinding) -> dict[str, Any]:
     return {"tolerance": tolerance, "coordinate_unit": unit}
 
 
+def finger_positions_m(arm: ArmBinding, measurements: dict[str, Any]) -> np.ndarray:
+    """Use TCP-local finger translation for rotary hands, joint metres otherwise."""
+    if "finger_positions_tcp_m" in measurements:
+        return np.asarray(measurements["finger_positions_tcp_m"])
+    if gripper_open_settings(arm)["coordinate_unit"] != "m":
+        raise ValueError("Rotary grasp stability requires measured TCP-local finger positions")
+    return gripper_coordinates(measurements)
+
+
+def finger_displacement_m(current: np.ndarray, previous: np.ndarray) -> float:
+    """Largest finger translation, using Euclidean distance for 3D link positions."""
+    delta = np.asarray(current) - np.asarray(previous)
+    return float(np.max(np.linalg.norm(delta, axis=-1) if delta.ndim == 2 else np.abs(delta)))
+
+
 def gripper_is_open(arm: ArmBinding, coordinates: Any = None) -> bool:
     settings = gripper_open_settings(arm)
     upper = as_numpy(arm.agent.robot.get_qlimits())[0, arm.finger_indices, 1]
@@ -77,18 +92,20 @@ def _measure(arms: tuple[ArmBinding, ArmBinding]) -> dict[str, Any]:
 
 
 
-def _actions_valid(env: Any, arms: tuple[ArmBinding, ArmBinding], action: dict[str, Any]) -> None:
+def _actions_valid(env: Any, arms: tuple[ArmBinding, ArmBinding], action: dict[str, Any],
+                   *, native_actions: bool = False) -> None:
     if set(action) != {arm.key for arm in arms}:
         raise ValueError("Every control tick must contain exactly both robot actions")
     converted = {}
     for arm in arms:
         value = np.asarray(action[arm.key], dtype=np.float64)
         count = len(arm.names)
-        if value.shape != (count + 1,) or not np.isfinite(value).all() or abs(value[-1]) > 1:
+        if (value.shape != (count + 1,) or not np.isfinite(value).all()
+                or not native_actions and abs(value[-1]) > 1):
             raise ValueError("Each action must contain the named arm radians and one normalized gripper command")
         if np.any(value[:count] < arm.limits[:, 0] - 1e-6) or np.any(value[:count] > arm.limits[:, 1] + 1e-6):
             raise ValueError("Arm target exceeds joint limits")
-        converted[arm.key] = native_arm_action(arm, value)
+        converted[arm.key] = value.astype(np.float32) if native_actions else native_arm_action(arm, value)
     if not env.unwrapped.agent.single_action_space.contains(converted):
         raise ValueError("Action exceeds the actual controller action space")
 

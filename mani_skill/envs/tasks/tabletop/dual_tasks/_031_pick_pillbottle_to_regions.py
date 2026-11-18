@@ -53,7 +53,8 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
     """
 
     SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam"), ("piper", "piper"),
-                        ("ur5_wsg", "ur5_wsg")]
+                        ("ur5_wsg", "ur5_wsg"), ("arx_x5", "arx_x5"),
+                        ("xarm6_robotiq", "xarm6_robotiq")]
     agent: MultiAgent[Tuple[PandaWristCam, PandaWristCam]]
 
     PILL_MODEL_NAME = "080_pillbottle"
@@ -152,6 +153,23 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
                  [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])])
         super()._load_agent(options, poses)
         self.agent.__init__(self.agent.agents, wrist_sensor=self.wrist_sensor)
+        self._configure_embodiment_gripper()
+
+    def _configure_embodiment_gripper(self) -> None:
+        """Apply an explicit task effort setting without changing agent defaults."""
+        effort = self.embodiment_profile.gripper_drive_force_limit
+        if effort is None:
+            return
+        if not np.isfinite(effort) or effort <= 0:
+            raise ValueError("Task gripper effort must be positive and finite")
+        for agent in self.agent.agents:
+            agent.gripper_force_limit = effort
+            names = tuple(agent.embodiment_profile.controlled_gripper_joints)
+            for controller in agent.controllers.values():
+                for part in controller.controllers.values():
+                    if tuple(part.config.joint_names) == names:
+                        part.config.force_limit = effort
+                        part.set_drive_property()
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)

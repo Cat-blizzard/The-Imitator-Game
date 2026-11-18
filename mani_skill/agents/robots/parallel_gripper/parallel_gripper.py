@@ -67,7 +67,8 @@ class ParallelGripperArm(BaseAgent):
                     right.get_child_link()._objs, self.robot._objs):
                 articulation.create_fixed_tendon(
                     [root, first, second], [0., -1., 1.], [0., -1., 1.],
-                    rest_length=0., stiffness=1e5)
+                    rest_length=0., stiffness=self.embodiment_profile.gripper_coupling_stiffness,
+                    damping=self.embodiment_profile.gripper_coupling_damping)
                 self.gripper_tendon_count += 1
         # Keyframe qpos follows the loader's active joint order, not a URDF guess.
         names = [joint.name for joint in self.robot.get_active_joints()]
@@ -155,6 +156,7 @@ class Piper(ParallelGripperArm):
 class ARXX5(ParallelGripperArm):
     uid = "arx_x5"
     embodiment_profile = get_robot_profile(uid)
+    prefer_nearby_revolute_goals = embodiment_profile.prefer_nearby_revolute_goals
     urdf_path = "{ASSET_DIR}/robots/arx_x5/robot.urdf"
     arm_joint_names = list(embodiment_profile.arm_joint_names)
     gripper_joint_names = list(embodiment_profile.gripper_joint_names)

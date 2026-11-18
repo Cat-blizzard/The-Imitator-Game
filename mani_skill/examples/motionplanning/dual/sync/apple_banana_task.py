@@ -86,13 +86,19 @@ def basket_release_center(bounds: Any, payload_half_extent: Any,
     candidates = [np.array([x, y]) for x in np.linspace(low[0], high[0], 5)
                   for y in np.linspace(low[1], high[1], 5)]
 
-    def score(center: np.ndarray) -> tuple[float, float]:
+    def score(center: np.ndarray) -> tuple[float, float, float]:
         separation = np.maximum(contents[0, :2]-(center+half),
                                 (center-half)-contents[1, :2])
-        # Landing against the declared fruit is normal basket contact. Avoid
-        # long corner detours that sacrifice support and retreat workspace.
+        # First avoid placing the payload on the original fruit when the
+        # measured basket has a free proposal. The old weighted sum always
+        # preferred the center: moving away gains at most the same distance
+        # in separation but paid twice that distance in centrality. Clip free
+        # separation at zero so excess clearance cannot pull a goal into a
+        # distant corner. These bounds propose goals; they never accept or
+        # reject physical contacts.
         centrality = float(np.linalg.norm(center-bounds.mean(axis=0)[:2]))
-        return float(np.max(separation))-2*centrality, -float(np.linalg.norm(center-source))
+        return (min(float(np.max(separation)), 0.), -centrality,
+                -float(np.linalg.norm(center-source)))
 
     proposal = max(candidates, key=score).copy()
     assert proposal.shape == (2,) and np.isfinite(proposal).all()
@@ -208,5 +214,5 @@ if __name__ == "__main__":
     point = basket_release_center([[-.15, -.15, 0], [.15, .15, .08]], [.025, .025],
         [[-.03, -.03, 0], [.03, .03, .07]], [-.2, -.2])
     assert point.shape == (2,) and np.all(np.abs(point) <= .113+1e-12)
-    np.testing.assert_allclose(point, [0., 0.])
+    assert np.max(np.abs(point)) >= .055
     print("Basket landing proposal has two finite metre coordinates:", point)

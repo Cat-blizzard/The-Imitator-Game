@@ -85,16 +85,25 @@ class ObservedEnvironment:
             self.phase, self.task)
         for row in rows:
             if row['physical_contact'] and row['class'] == 'forbidden':
-                self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies']})
+                self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies'],
+                    "physical_substep_index": self.substeps, "points": row['points']})
         for contact in contacts:
             sides = [self.identities.get(body.entity, {'kind': 'unknown', 'actor': body.entity.name})
                 for body in contact.bodies]
             if not any(side.get('kind') == 'robot' for side in sides):
                 continue
+            native_points = contact.points
             points = [{'separation_m': float(p.separation), 'impulse_Ns': np.asarray(p.impulse).tolist()}
-                for p in contact.points]
+                for p in native_points]
             if physical_contact_points(points) and not contact_allowed(sides, self.phase, self.srdf):
-                self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides})
+                # Retain details only for an already forbidden event. This is
+                # the same native manifold, with no additional scene query or
+                # physical acceptance threshold.
+                for point, native_point in zip(points, native_points):
+                    point.update(position_m=np.asarray(native_point.position).tolist(),
+                                 normal=np.asarray(native_point.normal).tolist())
+                self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides,
+                    "physical_substep_index": self.substeps, "points": points})
         if self.references is not None and (self.phase == 'lift_and_hold' or self.phase.startswith('carry_')):
             self.held_substeps += 1
             for i, (agent, actor) in enumerate(zip(self.unwrapped.agent.agents, self.task.targets)):

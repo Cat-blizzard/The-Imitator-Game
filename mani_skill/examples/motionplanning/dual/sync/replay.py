@@ -18,7 +18,7 @@ from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
 from mani_skill.trajectory.utils import index_dict
 from .dual_arm_execution import (_Phase, ARM_SPEED, OBJECT_SPEED, OBJECT_ANGULAR_SPEED,
     WINDOW_POSITION, WINDOW_ROTATION, ENDPOINT)
-from .measurements import _rotation_distance
+from .measurements import _rotation_distance, finger_positions_m, finger_displacement_m
 from .observation import ObservedEnvironment
 from .physical_observation import measured_source_departure
 from .pill_support_collision import PillDualPayloadCollisionChecker
@@ -35,7 +35,7 @@ def action_layout(metadata: dict) -> tuple[tuple[str, str], tuple[int, int]]:
     motion = metadata.get("motion_planning", {})
     robots = tuple(motion.get("robot_uids", ("panda_wristcam", "panda_wristcam")))
     widths = {uid: get_robot_profile(uid).action_size
-              for uid in ("panda_wristcam", "piper", "ur5_wsg")}
+              for uid in ("panda_wristcam", "piper", "ur5_wsg", "arx_x5", "xarm6_robotiq")}
     if len(robots) != 2 or robots[0] != robots[1] or robots[0] not in widths:
         raise ValueError("Action replay requires a supported homogeneous robot pair")
     order = tuple(motion.get("action_order", ()))
@@ -107,6 +107,17 @@ def placement_window(row: dict, opened: bool, regions: list[bool], count: int,
     return count+1, window
 
 
+def failure_details(name: str, report: dict[str, Any]) -> dict[str, Any]:
+    """Keep existing refusal evidence without another collision/state query."""
+    details = {"phase": name, **{key: report[key] for key in
+        ("status", "reason", "error", "initial_collisions") if key in report}}
+    if report.get("trace"):
+        details["last_event"] = {key: report["trace"][-1][key] for key in
+            ("error", "collisions", "attachment_geometry", "elapsed_step_delta_on_error")
+            if key in report["trace"][-1]}
+    return details
+
+
 def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
     metadata, episode, policy, phases, actions, initial_state = load_episode(path, episode_id)
     order, sizes = action_layout(metadata)
@@ -153,30 +164,32 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 checker.set_target_contacts_allowed((name in ("descend", "close_and_confirm", "release") or held,)*2)
                 phase = _Phase(capture, checker, name, targets=task.targets, held=held, policy=policy)
                 if not phase.preflight():
+                    result["failure"] = failure_details(name, phase.report)
                     raise RuntimeError(f"{name}: {phase.report['status']}")
             if name == "retreat":
                 retreat_start = np.asarray([as_numpy(agent.tcp.pose.p)[0] for agent in raw.agent.agents])
             window, grasp_counts = None, np.zeros(2, dtype=int)
-            previous_fingers = ([np.asarray(phase.report["initial_measurements"][arm.key]["finger_qpos_m"])
+            previous_fingers = ([finger_positions_m(arm, phase.report["initial_measurements"][arm.key])
                 for arm in phase.arms] if phase is not None else None)
             row = phase.report["initial_observation"] if phase is not None else None
             for _ in range(count):
                 command = paired_action(actions[result["executed_actions"]], order, sizes)
                 before = int(as_numpy(raw.elapsed_steps).item())
-                row = phase.tick(command, name) if phase is not None else capture.step(command)
+                row = phase.tick(command, name, native_actions=True) if phase is not None else capture.step(command)
                 result["executed_actions"] += int(as_numpy(raw.elapsed_steps).item())-before
                 if phase is None:
                     continue
-                phase.report["trace"].clear()
                 if row is None or phase.report["status"] != "running" or (held and not phase.monitor(row)):
+                    result["failure"] = failure_details(name, phase.report)
                     raise RuntimeError(f"{name}: {phase.report.get('reason', phase.report['status'])}")
+                phase.report["trace"].clear()
                 opened = all(phase.opened(arm, row) for arm in phase.arms)
                 if name == "close_and_confirm":
                     if row["tracking_error_rad"] > ENDPOINT:
                         raise RuntimeError("Grasp arm hold error exceeded executor tolerance")
                     for i, arm in enumerate(phase.arms):
-                        fingers = np.asarray(row["measurements"][arm.key]["finger_qpos_m"])
-                        valid = row["objects"][i]["is_grasping"] and np.max(np.abs(fingers-previous_fingers[i])) <= .0002
+                        fingers = finger_positions_m(arm, row["measurements"][arm.key])
+                        valid = row["objects"][i]["is_grasping"] and finger_displacement_m(fingers, previous_fingers[i]) <= .0002
                         grasp_counts[i] = grasp_counts[i]+1 if valid else 0
                         previous_fingers[i] = fingers
                 if name == "release":

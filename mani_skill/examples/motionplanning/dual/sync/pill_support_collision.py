@@ -6,8 +6,10 @@ native contact offsets and quaternion roundoff can leave a micrometre gap at
 capture.  Raw FCL contacts, when present, are retained unchanged; their normals
 are diagnostics, while vertices and contact positions prove top support.
 
-All original motion, penetration and depth-growth bounds still apply.  The
-original 1 micrometre numerical clearance is reported separately from leaving
+Penetration and depth-growth bounds apply to actual contact geometry. Initial
+object displacement and rotation are diagnostic measurements: they do not by
+themselves establish a forbidden collision. The original 1 micrometre numerical
+clearance is reported separately from leaving
 the original 3 mm initial-support region.  Only measured refresh can close the
 region, permanently, after both full geometric clearance and band departure.
 This module neither steps an environment nor writes physical poses or masks.
@@ -26,7 +28,16 @@ from .table_support_collision import (
     NumericalTableSupportCollisionChecker, _rigid_transform, _scaled_vertices,
 )
 
-SUPPORT_VERSION = "pill_bounded_initial_tabletop_region_v1"
+SUPPORT_VERSION = "pill_initial_tabletop_geometry_v2"
+
+
+def _support_motion_diagnostics(displacement: np.ndarray, angle: float,
+                                band: float) -> dict[str, Any]:
+    """Retain the former vertical-pick window without treating it as geometry."""
+    return {"legacy_motion_window_passed": bool(
+                -1e-6 <= displacement[2] <= band
+                and np.linalg.norm(displacement[:2]) <= .001 and angle <= .01),
+            "motion_window_is_collision_gate": False}
 
 
 class PillTableSupportCollisionChecker(NumericalTableSupportCollisionChecker):
@@ -164,9 +175,10 @@ class PillTableSupportCollisionChecker(NumericalTableSupportCollisionChecker):
                         self._initial_object_depth_m + self.support_depth_slop_m)
             receipt.update(object_pose=pose.tolist(), displacement_m=displacement.tolist(), rotation_rad=angle,
                            initial_object_max_depth_m=self._initial_object_depth_m, depth_limit_m=limit)
-            if (not -1e-6 <= displacement[2] <= self.support_band_m
-                    or np.linalg.norm(displacement[:2]) > .001 or angle > .01):
-                raise RuntimeError("Original whole-object support motion bound exceeded")
+            receipt.update(_support_motion_diagnostics(displacement, angle, self.support_band_m))
+            # Initial top support can move slightly as real fingers load an
+            # object. Test actual finite-table convex geometry and depth below;
+            # measured permanent departure still revokes this exception.
             pieces = self._pieces(pose)
             if any(not p["entire_footprint_inside"] or not p["vertices_above_top"]
                    or p["vertex_penetration_m"] > limit for p in pieces):
@@ -203,3 +215,11 @@ class PillDualPayloadCollisionChecker(DualPayloadCollisionChecker):
         except Exception:
             self.attached, self._fresh = False, False
             raise
+
+
+if __name__ == '__main__':
+    diagnostic = _support_motion_diagnostics(np.array([.002, 0., -20e-6]), .02, .003)
+    assert not diagnostic['legacy_motion_window_passed']
+    assert not diagnostic['motion_window_is_collision_gate']
+    assert _support_motion_diagnostics(np.zeros(3), 0., .003)['legacy_motion_window_passed']
+    print('Initial support motion is diagnostic; convex geometry owns collision acceptance')

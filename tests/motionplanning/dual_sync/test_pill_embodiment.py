@@ -43,7 +43,8 @@ def test_piper_sync_selection_reaches_environment_with_the_selected_pair(monkeyp
     assert calls[0][1]["control_mode"] == "pd_joint_pos"
 
 
-def test_ur5_sync_selection_reaches_environment_with_native_pair(monkeypatch):
+@pytest.mark.parametrize("robot", ["ur5_wsg", "arx_x5", "xarm6_robotiq"])
+def test_new_sync_selection_reaches_environment_with_native_pair(monkeypatch, robot):
     class ReachedEnvironment(Exception):
         pass
 
@@ -55,10 +56,10 @@ def test_ur5_sync_selection_reaches_environment_with_native_pair(monkeypatch):
 
     monkeypatch.setattr(runner.gym, "make", make)
     with pytest.raises(ReachedEnvironment):
-        runner._main(runner.parse_args(["-e", TASK, "--robot", "ur5_wsg",
+        runner._main(runner.parse_args(["-e", TASK, "--robot", robot,
                                         "--execution-mode", "sync"]))
     assert len(calls) == 1 and calls[0][0] == TASK
-    assert calls[0][1]["robot_uids"] == ("ur5_wsg", "ur5_wsg")
+    assert calls[0][1]["robot_uids"] == (robot, robot)
     assert calls[0][1]["control_mode"] == "pd_joint_pos"
 
 
@@ -82,7 +83,6 @@ def test_configured_ur5_grasp_does_not_inherit_the_rest_tcp_closing_axis():
 
 @pytest.mark.parametrize("argv,reason", [
     (["-e", TASK, "--robot", "piper"], "requires --execution-mode sync"),
-    (["-e", TASK, "--robot", "arx_x5", "--execution-mode", "sync"], "no profile"),
     (["-e", "TwoRobotScanPillBottle-v1", "--robot", "piper",
       "--execution-mode", "sync"], "no profile"),
     (["-e", TASK, "--robot", "missing-robot", "--execution-mode", "sync"], "Unsupported"),
@@ -117,6 +117,7 @@ def _recording(tmp_path, robot, *, legacy=False):
 
 
 @pytest.mark.parametrize("robot,legacy,width", [("piper", False, 7), ("ur5_wsg", False, 7),
+                                               ("arx_x5", False, 7), ("xarm6_robotiq", False, 7),
                                                ("panda_wristcam", True, 8)])
 def test_replay_loads_native_width_and_physical_arm_order(tmp_path, robot, legacy, width):
     path, metadata, expected_actions, expected_states = _recording(tmp_path, robot, legacy=legacy)
@@ -363,7 +364,7 @@ def test_original_pill_assets_region_sizes_and_panda_mounts_are_preserved(monkey
     assert all(mount.quaternion == (1., 0., 0., 0.) for mount in profile.mount_poses)
 
 
-@pytest.mark.parametrize('robot', ['panda_wristcam', 'piper', 'ur5_wsg'])
+@pytest.mark.parametrize('robot', ['panda_wristcam', 'piper', 'ur5_wsg', 'arx_x5', 'xarm6_robotiq'])
 def test_original_pill_sampling_uses_the_same_random_offsets_and_object_heights(monkeypatch, robot):
     raw, _ = _original_pill_scene(monkeypatch, robot)
     raw.device, raw.num_envs = 'cpu', 3
@@ -417,6 +418,140 @@ def test_original_external_cameras_keep_resolution_fov_and_view_direction():
     assert (render.uid, render.width, render.height, render.fov, render.near, render.far) == (
         'render_camera', 512, 512, 1, .01, 100)
     np.testing.assert_allclose(render.pose.p[0], [.8, 0., .75], atol=1e-7)
+
+
+
+@pytest.mark.parametrize("robot", ["panda_wristcam", "piper", "arx_x5", "ur5_wsg", "xarm6_robotiq"])
+def test_original_sync_preparation_sends_native_open_actions(monkeypatch, robot):
+    import importlib
+    module = importlib.import_module("mani_skill.examples.motionplanning.dual.sync.solve")
+    from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
+    profile = get_robot_profile(robot)
+    agents = [NS(control_mode="pd_joint_pos", gripper_open_action=profile.gripper_open_action,
+                 gripper_closed_action=profile.gripper_closed_action) for _ in range(2)]
+    arms = tuple(NS(key=f"{robot}-{i}", agent=agent, names=profile.arm_joint_names,
+                    arm_qpos=lambda: np.zeros(len(profile.arm_joint_names)))
+                 for i, agent in enumerate(agents))
+    raw = NS(spec=NS(id=TASK), num_envs=1, agent=NS(agents=agents,
+             agents_dict=dict(zip((a.key for a in arms), agents))), robot_uids=(robot, robot),
+             embodiment_profile=get_task_profile(TASK, robot),
+             backend=NS(sim_backend="cpu"), control_timestep=.05, sim_timestep=.01,
+             elapsed_steps=np.array([0]), evaluate=lambda: {"success": np.array([False])})
+    env = NS(unwrapped=raw, reset=lambda **_: None)
+    actions = []
+    class Capture:
+        def __init__(self, *args): self.last_step = None
+        def install(self): pass
+        def restore(self): pass
+        def step(self, action):
+            actions.append(deepcopy(action)); raw.elapsed_steps += 1
+            self.last_step = (None, None, False, False, {"success": False})
+        def summary(self): return {}
+    monkeypatch.setattr(module, "ObservedEnvironment", Capture)
+    monkeypatch.setattr(module, "bindings", lambda *_: arms)
+    def stop(*args, **kwargs): raise RuntimeError("stop after preparation")
+    monkeypatch.setattr(module, "pill_planners", stop)
+    module.solve(env, seed=401, task_factory=lambda _: object())
+    assert len(actions) == 10 and raw.elapsed_steps.item() == 10
+    for action in actions:
+        assert tuple(action) == tuple(a.key for a in arms)
+        for arm in arms:
+            np.testing.assert_array_equal(action[arm.key][:-1], np.zeros(len(profile.arm_joint_names)))
+            assert action[arm.key][-1] == profile.gripper_open_action
+    assert raw.dual_sync_result["execution"]["reason"] == "RuntimeError: stop after preparation"
+
+
+def test_pill_effort_setting_only_changes_matching_instance_gripper_controllers():
+    from mani_skill.agents.robots.xarm6.xarm6_robotiq import XArm6Robotiq
+    from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
+    profile = get_task_profile(TASK, "xarm6_robotiq")
+    assert profile.gripper_drive_force_limit == .5
+    assert XArm6Robotiq.gripper_force_limit == .1
+    calls, agents = [], []
+    for index in range(2):
+        contract = get_robot_profile("xarm6_robotiq")
+        parts = {name: NS(config=NS(joint_names=joints, force_limit=force),
+            set_drive_property=lambda name=name, index=index: calls.append((index, name)))
+            for name, joints, force in (("arm", contract.arm_joint_names, 100.),
+                ("gripper_active", contract.controlled_gripper_joints, .1),
+                ("gripper_passive", contract.passive_gripper_joints, 0.))}
+        agents.append(NS(embodiment_profile=contract, gripper_force_limit=.1,
+                         controllers={"pd_joint_pos": NS(controllers=parts)}))
+    raw = NS(embodiment_profile=profile, agent=NS(agents=agents))
+    pill_env.TwoRobotPickPillToRegionsEnv._configure_embodiment_gripper(raw)
+    assert calls == [(0, "gripper_active"), (1, "gripper_active")]
+    for agent in agents:
+        parts = agent.controllers["pd_joint_pos"].controllers
+        assert agent.gripper_force_limit == .5
+        assert parts["gripper_active"].config.force_limit == .5
+        assert parts["arm"].config.force_limit == 100.
+        assert parts["gripper_passive"].config.force_limit == 0.
+    for robot in ("panda", "piper", "arx_x5", "ur5_wsg"):
+        profile = get_task_profile(TASK, robot)
+        assert profile.gripper_drive_force_limit is None
+        pill_env.TwoRobotPickPillToRegionsEnv._configure_embodiment_gripper(
+            NS(embodiment_profile=profile, agent=NS(agents=[])))
+
+
+def test_side_grasp_uses_world_offset_and_tool_local_approach_without_changing_state():
+    from mani_skill.examples.motionplanning.dual.sync.pill_task import PillTask
+    from mani_skill.utils.structs.pose import Pose
+    profile = get_task_profile(TASK, "xarm6_robotiq")
+    raw = NS(embodiment_profile=profile, agent=NS(agents=[object(), object()]))
+    task = object.__new__(PillTask)
+    task.raw = raw
+    task.targets = tuple(NS(pose=Pose.create_from_pq(p=[[x, y, .0014]], q=[[1., 0., 0., 0.]]))
+                         for x, y in ((-.25, -.15), (-.25, .15)))
+    original = [target.pose.raw_pose.clone() for target in task.targets]
+    for i, ((pregrasp, grasp), target) in enumerate(zip(task.grasp_poses(), task.targets)):
+        sign = 1. if i == 0 else -1.
+        np.testing.assert_allclose(grasp.p, target.pose.p[0].numpy()+[0., .007 if i == 0 else -.009, .08], atol=1e-7)
+        np.testing.assert_allclose(grasp.p-pregrasp.p, [0., sign*.09, -.10], atol=1e-7)
+        np.testing.assert_allclose(grasp.to_transformation_matrix()[:3, 2], [0., sign, 0.], atol=1e-7)
+        torch.testing.assert_close(target.pose.raw_pose, original[i])
+    for robot in ("panda", "piper", "arx_x5", "ur5_wsg"):
+        assert get_task_profile(TASK, robot).grasp_position_offsets_m is None
+        assert get_task_profile(TASK, robot).pregrasp_position_offsets_m is None
+        assert get_task_profile(TASK, robot).release_clearance_m == .015
+    assert profile.release_clearance_m == .005
+
+def test_held_motion_limits_are_task_specific_and_leave_approach_and_other_robots_unchanged():
+    from mani_skill.examples.motionplanning.dual.sync.solve import LIMITS, task_phase_limits
+    xarm = get_task_profile(TASK, "xarm6_robotiq")
+    for phase in ("lift_and_hold", "carry_lower"):
+        assert task_phase_limits(xarm, phase)["nominal_acceleration_limit_rad_s2"] == 2.
+        for robot in ("panda", "piper", "arx_x5", "ur5_wsg"):
+            profile = get_task_profile(TASK, robot)
+            assert profile.held_joint_acceleration_limit_rad_s2 is None
+            assert task_phase_limits(profile, phase)["nominal_acceleration_limit_rad_s2"] == LIMITS["joint_acc_limit_rad_s2"]
+    assert task_phase_limits(xarm, "retreat")["nominal_acceleration_limit_rad_s2"] == LIMITS["joint_acc_limit_rad_s2"]
+    for phase in ("pregrasp", "descend"):
+        assert task_phase_limits(xarm, phase)["nominal_acceleration_limit_rad_s2"] == LIMITS["approach_joint_acc_limit_rad_s2"]
+    from dataclasses import replace
+    for acceleration in (0., -1., float("nan")):
+        with pytest.raises(ValueError, match="finite and positive"):
+            task_phase_limits(replace(xarm, held_joint_acceleration_limit_rad_s2=acceleration), "carry_lower")
+
+
+def test_task_retreat_keeps_selected_vertical_distance_and_world_xy_withdrawal():
+    from mani_skill.examples.motionplanning.dual.sync.pill_task import PillTask
+    from mani_skill.utils.structs.pose import Pose
+    agents = [NS(tcp=NS(pose=Pose.create_from_pq(p=[[.1, sign*.2, .09]], q=[[.5, -.5, .5, .5]])))
+              for sign in (-1, 1)]
+    for robot in ("panda", "piper", "arx_x5", "ur5_wsg", "xarm6_robotiq"):
+        task = object.__new__(PillTask)
+        task.raw = NS(embodiment_profile=get_task_profile(TASK, robot), agent=NS(agents=agents))
+        original = [agent.tcp.pose.raw_pose.clone() for agent in agents]
+        for i, pose in enumerate(task.retreat_poses(.085)):
+            xy = (0., (-.06 if i == 0 else .06)) if robot == "xarm6_robotiq" else (0., 0.)
+            np.testing.assert_allclose(pose.p, agents[i].tcp.pose.p[0].numpy()+[*xy, .085], atol=1e-7)
+            np.testing.assert_allclose(pose.q, agents[i].tcp.pose.q[0].numpy(), atol=1e-7)
+            torch.testing.assert_close(agents[i].tcp.pose.raw_pose, original[i])
+        if robot != "xarm6_robotiq":
+            assert task.raw.embodiment_profile.retreat_horizontal_offsets_m is None
+        for distance in (0., -1., float("nan")):
+            with pytest.raises(ValueError, match="finite and positive"):
+                task.retreat_poses(distance)
 
 
 if __name__ == "__main__":

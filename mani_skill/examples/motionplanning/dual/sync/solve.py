@@ -2,14 +2,16 @@
 from __future__ import annotations
 
 import time
+from dataclasses import asdict
 
 import numpy as np
 import sapien
 
+from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
 from .dual_arm_execution import (plan_dual_pose, execute_dual_reach, close_dual_and_confirm,
     execute_dual_held_move, release_dual_and_confirm, verify_dual_placement)
-from .trajectory_execution import as_numpy, bindings
+from .trajectory_execution import as_numpy, bindings, native_arm_action
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
 from .phase_kinematics import (SOLVER_LIMIT_FRACTION, attach_topp_capture, compact_phase_limits,
     compact_set_phase_limits, compact_retime_pair, compact_route_positions)
@@ -26,6 +28,18 @@ LIMITS = {"joint_vel_limit_rad_s": 1.5, "joint_acc_limit_rad_s2": 2.6,
     "solver_limit_fraction": SOLVER_LIMIT_FRACTION}
 
 SYNC_TASK_IDS = (TASK_ID, "TwoRobotPickAppleBananaToBaskets-v1")
+
+
+def task_phase_limits(task_profile, phase):
+    """Resolve a task's held-payload acceleration without changing other phases."""
+    configuration = LIMITS
+    acceleration = getattr(task_profile, 'held_joint_acceleration_limit_rad_s2', None)
+    if phase in ('lift_and_hold', 'carry_lower') and acceleration is not None:
+        acceleration = float(acceleration)
+        if not np.isfinite(acceleration) or acceleration <= 0:
+            raise ValueError('Held-payload joint acceleration must be finite and positive')
+        configuration = {**LIMITS, 'joint_acc_limit_rad_s2': acceleration}
+    return compact_phase_limits(configuration, phase)
 
 
 def task_components(task_id: str) -> tuple:
@@ -78,13 +92,15 @@ def pill_planners(env, *, debug=False, vis=False):
             multi_robot_id=i, joint_vel_limits=.9, joint_acc_limits=.9,
             debug=debug, vis=vis, visualize_target_grasp_pose=False, print_env_info=False)
             for i, agent in enumerate(raw.agent.agents)]
-    if tuple(raw.robot_uids) in (('piper', 'piper'), ('ur5_wsg', 'ur5_wsg')):
+    if tuple(raw.robot_uids) in tuple((uid, uid) for uid in
+            ('piper', 'ur5_wsg', 'arx_x5', 'xarm6_robotiq')):
         return [ArmMotionPlanner(env, agent, velocity_limit=.9, acceleration_limit=.9)
                 for agent in raw.agent.agents]
-    raise ValueError('The synchronous solution supports Panda wrist-camera, Piper or UR5+WSG pairs')
+    raise ValueError('The synchronous solution requires a supported homogeneous fixed-base pair')
 
 
-def _compact_stage(name, result):
+def _compact_stage(name: str, result: dict) -> dict:
+    """Keep the existing first collision witness when a phase is rejected."""
     fields = ('status', 'reason', 'environment_steps', 'settling_steps', 'stable_steps_observed',
         'stable_steps_required', 'wall_seconds', 'object_index', 'error')
     row = {key: result[key] for key in fields if key in result}
@@ -93,6 +109,10 @@ def _compact_stage(name, result):
     if validation is not None:
         row['collision_validation'] = {key: validation[key] for key in ('status', 'reason', 'collision_count')
             if key in validation}
+        if result['status'] != 'passed' and validation.get('first_collision'):
+            row['collision_validation']['first_collision'] = validation['first_collision']
+    if result['status'] != 'passed' and result.get('initial_collisions'):
+        row['initial_collisions'] = result['initial_collisions']
     if result.get('trace') and result['status'] != 'passed':
         last = result['trace'][-1]
         row['last_event'] = {key: last[key] for key in ('error', 'collisions', 'attachment_geometry') if key in last}
@@ -126,6 +146,8 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
     report = {'schema': ('dual-panda-sync-v1' if raw.robot_uids[0] == 'panda_wristcam'
                          else 'dual-arm-sync-v2'),
         'task_id': task_id, 'robot_uids': list(raw.robot_uids), 'seed': seed, 'backend': 'mplib',
+        'task_profile': asdict(raw.embodiment_profile),
+        'robot_profile': asdict(get_robot_profile(raw.robot_uids[0])),
         'control_freq': 20, 'physics_freq': 100, 'policy': policy.to_dict(),
         'motion_limits': dict(LIMITS), 'stages': [], 'planning': [],
         'execution': {'status': 'running'}, 'quality': {'status': 'not_evaluated'},
@@ -155,7 +177,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
     try:
         capture.install()
         arms = bindings(raw, tuple(raw.agent.agents_dict))
-        opened = {arm.key: np.r_[arm.arm_qpos(), 1.] for arm in arms}
+        opened = {arm.key: native_arm_action(arm, np.r_[arm.arm_qpos(), 1.]) for arm in arms}
         for _ in range(10):
             capture.step(opened)
         solvers = pill_planners(env, debug=debug, vis=vis)
@@ -167,7 +189,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         def plan(name, poses, closed):
             capture.phase = name
             before = elapsed()
-            limits = compact_phase_limits(LIMITS, name)
+            limits = task_phase_limits(raw.embodiment_profile, name)
             compact_set_phase_limits(solvers, limits)
             call = time.monotonic()
             try:
@@ -186,6 +208,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
                 raise StageFailure('planning', f'{name}: {type(exc).__name__}: {exc}') from exc
             finally:
                 report['planning'].append({'name': name, 'wall_seconds': time.monotonic()-call,
+                    'motion_limits': limits,
                     'endpoint_checks': [{key: audit[key] for key in (
                         'status', 'corrections', 'final_error', 'position_tolerance_m',
                         'rotation_tolerance_rad', 'error') if key in audit}
@@ -230,8 +253,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         finish('release', release_dual_and_confirm(capture, checker, task.targets, max_steps=available, policy=policy))
         if policy.require_retreat:
             retreat_start = np.asarray([as_numpy(a.tcp.pose.p)[0].copy() for a in raw.agent.agents])
-            poses = tuple(sapien.Pose(p=p+[0., 0., policy.retreat_command_m], q=as_numpy(a.tcp.pose.q)[0])
-                for p, a in zip(retreat_start, raw.agent.agents))
+            poses = task.retreat_poses(policy.retreat_command_m)
             schedule, settle = plan('retreat', poses, False)
             finish('retreat', execute_dual_reach(capture, schedule, checker, settle_max_steps=settle, policy=policy))
             gain = np.asarray([as_numpy(a.tcp.pose.p)[0] for a in raw.agent.agents])-retreat_start
@@ -275,3 +297,12 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
     if capture.last_step is None or report['execution']['status'] != 'passed':
         return -1, -1
     return capture.last_step, capture.last_step
+
+
+if __name__ == '__main__':
+    witness = {'collisions': [{'link_name1': 'finger', 'object_name2': 'target'}]}
+    compact = _compact_stage('descend', {'status': 'rejected',
+        'validation': {'status': 'collision', 'first_collision': witness}})
+    assert compact['collision_validation']['first_collision'] == witness
+    assert 'trace' not in compact
+    print('Rejected stage preserves its collision witness without a second scan')

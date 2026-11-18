@@ -32,6 +32,9 @@ class EmbodimentProfile:
     robot_root_link_name: str | None = None
     prefer_nearby_revolute_goals: bool = False
     coupled_gripper_joints: tuple[str, str] | None = None
+    # Native generalized-coordinate tendon values: N/m or Nm/rad and damping.
+    gripper_coupling_stiffness: float = 1e5
+    gripper_coupling_damping: float = 0.
 
     @property
     def action_size(self) -> int:
@@ -69,6 +72,8 @@ ROBOT_PROFILES = MappingProxyType({
         gripper_joint_names=("joint7", "joint8"), ee_link_name="grasp_tcp",
         finger_link_names=("link7", "link8"), rest_arm_qpos=(0.,)*6,
         gripper_open_qpos=.044, gripper_closed_qpos=0.,
+        prefer_nearby_revolute_goals=True,
+        coupled_gripper_joints=("joint7", "joint8"),
         finger_open_directions=((0., 1., 0.), (0., -1., 0.))),
     "ur5_wsg": EmbodimentProfile(
         uid="ur5_wsg", arm_joint_names=("shoulder_pan_joint", "shoulder_lift_joint",
@@ -91,6 +96,8 @@ ROBOT_PROFILES = MappingProxyType({
         gripper_open_action=0., gripper_closed_action=.81,
         gripper_coordinate_unit="rad", robot_root_link_name="link_base",
         actuated_gripper_joint_names=("left_outer_knuckle_joint", "right_outer_knuckle_joint"),
+        coupled_gripper_joints=("left_outer_knuckle_joint", "right_outer_knuckle_joint"),
+        gripper_coupling_stiffness=1e3, gripper_coupling_damping=10.,
         prefer_nearby_revolute_goals=True),
 })
 

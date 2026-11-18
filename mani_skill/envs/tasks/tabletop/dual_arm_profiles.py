@@ -57,6 +57,26 @@ class PillTaskProfile:
     # None retains the task's original grasp built from the measured closing axis.
     grasp_quaternions: tuple[tuple[float, float, float, float] | None,
                              tuple[float, float, float, float] | None]
+    # Optional native joint effort for this task (N for prismatic, Nm for rotary).
+    # None preserves the agent's default controller setting.
+    gripper_drive_force_limit: float | None = None
+    # Positive planned air gap under actual held collision geometry at release.
+    release_clearance_m: float = .015
+    # Optional joint acceleration for held-payload phases; radians/s^2.
+    # None uses the shared executor limits, including all original Panda settings.
+    held_joint_acceleration_limit_rad_s2: float | None = None
+    # Optional WORLD XY withdrawal after side release. The vertical target
+    # still comes from the selected shared retreat policy.
+    retreat_horizontal_offsets_m: tuple[tuple[float, float],
+                                        tuple[float, float]] | None = None
+    # World-XYZ offsets from each sampled object origin to its grasp TCP.
+    # None retains the original (0, 0, grasp_height_offsets_m[i]) recipe.
+    grasp_position_offsets_m: tuple[tuple[float, float, float],
+                                    tuple[float, float, float]] | None = None
+    # Optional world-XYZ offset from grasp TCP to the pregrasp TCP.
+    # None approaches along tool-local -Z by pregrasp_clearances_m[i].
+    pregrasp_position_offsets_m: tuple[tuple[float, float, float],
+                                      tuple[float, float, float]] | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +96,20 @@ PICK_PLACE_PROFILES = {
 }
 
 PILL_PROFILES = {
+    "arx_x5": PillTaskProfile(
+        mount_poses=(MountPose((-.30, -.35, .202)), MountPose((-.30, .35, .202))),
+        grasp_height_offsets_m=(.12, .12), pregrasp_clearances_m=(.09, .09),
+        grasp_quaternions=((0., .7071067811865476, -.7071067811865476, 0.),
+                           (0., .7071067811865476, .7071067811865476, 0.))),
+    "xarm6_robotiq": PillTaskProfile(
+        mount_poses=(MountPose((-.50, -.30, .002)), MountPose((-.50, .30, .002))),
+        grasp_height_offsets_m=(.08, .08), pregrasp_clearances_m=(.09, .09),
+        grasp_quaternions=((.5, -.5, .5, .5), (.5, .5, .5, -.5)),
+        gripper_drive_force_limit=.5, release_clearance_m=.005,
+        held_joint_acceleration_limit_rad_s2=2.,
+        retreat_horizontal_offsets_m=((0., -.06), (0., .06)),
+        grasp_position_offsets_m=((0., .007, .08), (0., -.009, .08)),
+        pregrasp_position_offsets_m=((0., -.09, .10), (0., .09, .10))),
     "panda": PillTaskProfile(
         mount_poses=(MountPose((-.60, -.35, 0.)), MountPose((-.60, .35, 0.))),
         grasp_height_offsets_m=(.12, .13), pregrasp_clearances_m=(.09, .08),
