@@ -107,10 +107,13 @@ def collect(args: Any) -> int:
         print(json.dumps(summary, indent=2))
         return 0
     # Import the live profile only for an actual collection, not CPU summaries.
+    from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
     from mani_skill.envs.tasks.tabletop.dual_pick_place import PROFILES
     from mani_skill.examples.motionplanning.dual.sync.pick_place import POLICY
     settings = {"task": "DualArmPickPlace-v1", "robot": args.robot, "fps": 20,
-                "profile": asdict(PROFILES[args.robot]), "policy": POLICY.to_dict()}
+                "profile": asdict(PROFILES[args.robot]),
+                "robot_profile": asdict(get_robot_profile(args.robot)),
+                "policy": POLICY.to_dict()}
     settings = json.loads(json.dumps(settings))
     root.mkdir(parents=True, exist_ok=True)
     with (root / ".collection.lock").open("a") as lock:
