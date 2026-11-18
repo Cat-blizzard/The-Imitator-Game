@@ -1,9 +1,15 @@
 # Synchronous dual-arm generation
 
 `two_robot_run` retains the original serial solutions by default. The optional
-`--execution-mode sync` currently supports **TwoRobotPickPillToRegions-v1**,
-two Panda wrist-camera arms (the default) or two Piper arms, one environment, CPU physics, and absolute
-`pd_joint_pos` commands. Rendering still requires the normal TIG rendering setup.
+`--execution-mode sync` supports these homogeneous robot pairs:
+
+| Original task | Supported sync pair |
+| --- | --- |
+| `TwoRobotPickPillToRegions-v1` | Panda wrist-camera (default), Piper, UR5+WSG |
+| `TwoRobotPickAppleBananaToBaskets-v1` | Piper, initial integration |
+
+The implementation uses one environment, CPU physics and absolute `pd_joint_pos`
+commands. Rendering still requires the normal TIG rendering setup.
 Other tasks reject explicit sync selection before creating an environment.
 
 ## Generate
@@ -21,16 +27,33 @@ Omit `--execution-mode sync` to use the original serial solution. Original
 solution scripts and the Panda planner are unchanged. Sync does not import
 cuRobo or require a worker process.
 
-Add `--robot piper` to the command above to use two Piper arms on the same
-pill objects and regions. `--robot panda` is an alias for `panda_wristcam` on
+Add `--robot piper` or `--robot ur5_wsg` to the command above to use that pair on
+the same pill objects and regions. `--robot panda` is an alias for `panda_wristcam` on
 this entry. Selecting another robot with the serial mode, or selecting an
 unsupported task/robot combination, reports an error before creating a simulator.
-Piper uses raised, robot-specific mounts; object geometry, masses, scene
+Piper uses raised mounts; UR5 uses a task-specific right-base orientation to
+avoid unnecessary initial arm rotation. Object geometry, masses, scene
 sampling, region tests, external cameras and the official 200-step horizon are
-unchanged. Its native controller has seven actions per arm. It has no wrist
-camera; use the original external `zed2i` view.
-Initial Piper validation covers the default pill scene; L1--L3 scene variants
+unchanged. Piper and UR5 controllers have seven actions per arm. They have no
+wrist cameras; use the original external `zed2i` view.
+Initial validation covers the default scenes; L1--L3 scene variants
 need their own task/robot validation.
+
+For the original apple/banana task, select its task ID and Piper:
+
+```bash
+python -m mani_skill.examples.motionplanning.dual.two_robot_run \
+  -e TwoRobotPickAppleBananaToBaskets-v1 --execution-mode sync --robot piper \
+  --seed 401 -n 1 -b cpu -o rgb --shader default --save-video \
+  --record-dir demos --traj-name sync-baskets-401
+```
+
+This adapter computes grasp and release goals from measured geometry and
+reuses the same executor and replay. Original basket contents remain present;
+normal contact with the corresponding fruit is allowed during placement when
+both geometric centers and the measured contact lie in that basket under the
+original task's region/height semantics. Other-object and transport contacts
+retain their collision rules.
 
 The synchronous solution uses `solve(env, seed=None, debug=False, vis=False)`
 and operates on the supplied environment. It neither creates a second simulator
@@ -55,7 +78,7 @@ Measured poses refresh held-object prediction after physics advances.
 Native contacts and held-object slip are sampled at 100 Hz. These are sampled
 checks, not continuous collision detection or joint 14-DoF planning.
 
-The pill workflow includes preparation, pregrasp, descend, confirmed grasp,
+Both task adapters use preparation, pregrasp, descend, confirmed grasp,
 lift, transport to measured release targets, release, optional retreat, and
 optional final stability. There is no automatic recovery or spatial replanning.
 
@@ -105,13 +128,13 @@ stored actions. It does not force recorded states during playback.
 H5 stores `T` actions and `T+1` observations/states. Arm order is left then right:
 each action has seven arm radians plus one normalized gripper command (16
 values total); observed qpos has nine joints per arm (18 values total).
-For Piper, each arm has six arm radians plus one normalized gripper command
+For Piper and UR5, each arm has six arm radians plus one normalized gripper command
 (14 actions total), and eight physical joint coordinates (16 states total).
 Native action keys and sizes are saved explicitly. New replay reads those
 sizes and continues to accept the original Panda archives.
 New recordings also save the measured controller joint order, physical state
 joint order and native gripper endpoints in `motion_planning.native_action_layout`.
-The converter reads this description for either robot pair. Earlier Piper pill
+The converter reads this description for the selected robot pair. Earlier Piper pill
 archives that lack this description remain replayable; conversion requires a
 recording with an explicit native layout instead of inferring joint semantics
 from its action width. Earlier Panda archives retain their original fallback.
@@ -140,6 +163,15 @@ python -m pytest -q tests/motionplanning/dual_sync
 
 Tests cover scheduling/order, endpoint correction, retiming, collision/support
 boundaries, failed grasp/drop/slip/release, policy selection, entry dispatch,
-and conversion timing. The initial integration check uses pill seed 401;
-broader task/seed coverage is needed before claiming general success rates.
+and conversion timing. The fixed UR5 pill regression passes at 183/184/184
+steps, and the default Panda/Piper pill regressions retain 171/194-step
+completion. These are small task integration checks; broader task/seed coverage
+is needed before claiming general success rates.
+Piper basket development seed 401 completes generation and replay in 188 steps.
+In the fixed three-seed basket regression, all three reach official success,
+two complete generation, and one completes both generation and replay. One
+run stops on measured fingertip contact during retreat; another completes
+generation but its replay is refused by the geometry check. The latter is a
+proxy refusal, not a recorded physical collision. Basket integration remains
+preliminary, and these failures are retained separately from official success.
 Tested runtime: Python 3.12, SAPIEN 3.0.3, MPLib 0.1.1, NumPy 1.26.4.

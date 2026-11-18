@@ -10,17 +10,21 @@ Each pair contains two instances of the selected robot.
 | Agent UID | Native action / physical qpos per arm | Basic control and RGB | Expert task | Recording and action replay | LeRobot conversion | ACT policy evaluation |
 | --- | ---: | --- | --- | --- | --- | --- |
 | `panda` | 8 / 9 | Verified | Verified | Verified | Verified | Evaluated: 4/5 |
-| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | Frozen-policy regression: 1/5 after coupling correction |
-| `arx_x5` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
-| `ur5_wsg` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
-| `xarm6_robotiq` | 7 / 12 | Verified | Verified | Verified | Not tested | Not tested |
+| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | Retrained: 3/5 fresh seeds; 1/5 historical-seed regression |
+| `arx_x5` | 7 / 8 | Verified | Verified | Verified | Verified: one episode | Not tested |
+| `ur5_wsg` | 7 / 8 | Verified | Verified | Verified | Verified: one coupled episode | Not tested |
+| `xarm6_robotiq` | 7 / 12 | Verified | Verified | Verified | Verified: one episode | Not tested |
 
 Task verification refers to `DualArmPickPlace-v1`, a shared cube pick/place
 integration task. It does not establish compatibility with all TIG tasks. The
-original pill task supports Panda wrist-camera and Piper pairs through the
-[original entry](dual-arm-sync.md), selecting `--robot piper` for Piper.
-ARX, UR5 and xArm have not been adapted to that task. Realman
-and mixed-model pairs are outside this integration's current scope.
+original pill task supports Panda wrist-camera, Piper and UR5+WSG pairs through
+the [original entry](dual-arm-sync.md). Piper also supports the original
+apple/banana basket task. ARX and xArm have not been adapted to those original
+tasks. Realman and mixed-model pairs are outside this integration's current scope.
+The basket integration is preliminary: its fixed three-seed regression has
+three official successes, two completed generations and one accepted
+generation-plus-replay pair. See the original-entry documentation for the
+retained retreat-contact and replay-geometry failures.
 
 ## Prepare assets
 
@@ -40,7 +44,9 @@ fixed grasp TCP, prepares MPLib convex meshes, and retains source attribution.
 Follow the asset providers' redistribution terms when distributing prepared assets.
 
 The UR5 import reverses the left finger's coordinate and axis together, preserving
-physical motion while letting both fingers use one opening command. Invalid SRDF
+physical motion while letting both fingers use one opening command. Its source
+relation `q_right = -q_left` becomes `q_right = q_left` in the prepared coordinates;
+a finite native tendon represents this single opening coordinate. Invalid SRDF
 references to a different gripper are removed. Piper starts from an unfolded rest
 configuration; its source zero configuration has a physical self-contact.
 Piper also uses a finite-stiffness physical tendon for its single symmetric
@@ -132,7 +138,9 @@ python -m pytest -q tests/agents/test_parallel_gripper.py \
   tests/agents/test_parallel_gripper_dynamics.py \
   tests/agents/test_embodiment_profiles.py tests/test_embodiment_smoke.py \
   tests/motionplanning/dual_sync tests/baselines/test_act_single_pipeline.py \
-  tests/baselines/test_pill_native_conversion.py
+  tests/baselines/test_pill_native_conversion.py \
+  tests/baselines/test_h5_episode_manifest.py \
+  tests/baselines/test_pick_place_collection.py tests/baselines/test_image_statistics.py
 
 python -m mani_skill.examples.embodiments.check_sync_collision \
   --robot piper --output outputs/piper-collision-check.json
@@ -141,8 +149,10 @@ python -m mani_skill.examples.embodiments.check_sync_collision \
 The collision negative test overlaps only private planning models, requires
 inter-robot collisions, restores the models, and verifies that the physical
 environment did not move. Synchronous pill generation and action replay support
-Panda wrist-camera or Piper pairs through the [original entry](dual-arm-sync.md),
+Panda wrist-camera, Piper or UR5+WSG pairs through the [original entry](dual-arm-sync.md),
 with the original 200-step task horizon. The cube integration remains at 400 steps.
+The original apple/banana basket task supports a Piper pair with the same
+200-step horizon. The original Panda serial solutions remain available.
 
 ## Dataset conversion and policy baseline
 
@@ -154,22 +164,22 @@ dataset's `native_data_contract` and the trained checkpoint.
 
 Create a seed file before collection with `schema_version: 1` and disjoint
 `seed_splits` named `train`, `development` and `evaluation`. For example, use
-1000–1029 for a bounded training pool, 2000–2004 for development and 3000–3004
+1000–1029 for a bounded training pool, 2000–2004 for development and 4000–4004
 for independent policy evaluation. Do not collect evaluation seeds into the
 training dataset.
 
 ```bash
 python scripts/collect_data.py --robot piper \
   --seed-splits path/to/seed-splits.json --split train \
-  --target-episodes 20 --max-attempts 30 --demos-dir outputs/piper-raw
+  --target-episodes 20 --max-attempts 30 --demos-dir outputs/piper-raw-v2
 
 python scripts/collect_data.py --robot piper \
   --seed-splits path/to/seed-splits.json --split development \
-  --target-episodes 3 --max-attempts 5 --demos-dir outputs/piper-raw
+  --target-episodes 3 --max-attempts 5 --demos-dir outputs/piper-raw-v2
 
 python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
-  --episode-manifest outputs/piper-raw/episode_manifest.json \
-  --output-dir outputs/datasets --name dual-piper-v1 \
+  --episode-manifest outputs/piper-raw-v2/episode_manifest.json \
+  --output-dir outputs/datasets --name dual-piper-coupled-v2 \
   --fps 20 --drop-terminal-frame --no-gpu --n-jobs 1
 ```
 
@@ -179,11 +189,16 @@ writes `train` and `validation` episode indices to `meta/info.json` and preserve
 source mapping in `meta/source_episodes.json`. Use a new dataset name for a new
 version. T actions and T+1 observations become T supervised rows; the terminal
 observation has no action label. Video decoding uses exact frame seeking.
+The saved collection configuration includes the robot profile, including finger
+coupling. Resuming requires the same configuration. Older collection directories
+without that field require a new output directory; their existing data remain
+readable, convertible and replayable. Do not mix uncoupled and coupled runs in
+one collection version.
 
 Create `piper-datasets.json`:
 
 ```json
-[{"repo_id": "dual-piper-v1", "root": "dual-piper-v1", "env_id": "DualArmPickPlace-v1"}]
+[{"repo_id": "dual-piper-coupled-v2", "root": "dual-piper-coupled-v2", "env_id": "DualArmPickPlace-v1"}]
 ```
 
 Then use the existing single-task ACT entries:
@@ -193,14 +208,14 @@ python -m examples.baselines.act.train_act_single \
   --sub-config piper-datasets.json --sim-root outputs/datasets \
   --cameras base_camera --state-dim 16 --action-dim 14 \
   --batch-size 16 --num-workers 2 --max-updates 1000 \
-  --output-dir outputs/piper-act
+  --output-dir outputs/piper-act-v2
 
 python -m examples.baselines.act.eval_act_single \
   --checkpoint path/to/checkpoint_epoch_XXXX.pt \
   --sub-config piper-datasets.json --env-id DualArmPickPlace-v1 --robot piper \
-  --seeds-file outputs/piper-raw/episode_manifest.json --seed-split evaluation \
+  --seeds-file outputs/piper-raw-v2/episode_manifest.json --seed-split evaluation \
   --max-episode-steps 400 --fps 20 --execute-steps 8 \
-  --save-video --output-dir outputs/piper-policy-eval
+  --save-video --output-dir outputs/piper-policy-eval-v2
 ```
 
 `training_summary.json` identifies the final checkpoint. To check a few episodes
@@ -208,7 +223,7 @@ can be fitted, use a separate dataset configuration with `train: [0]` or
 `train: [0, 1]`, a finite update budget and a separate output directory. A small
 fit check does not establish performance on unseen states.
 
-Normalization is computed from the selected training rows, including when loading
+State and action normalization is computed from the selected training rows, including when loading
 validation. Evaluation uses the exact saved training statistics and strict model
 reload. It renders with the expert's shader and source image resolution, then
 uses the same image resize as training. Only predicted native actions drive the
@@ -219,6 +234,12 @@ reported separately from execution failures.
 For Panda, change the robot, dataset configuration and model dimensions to 18
 state values and 16 actions. This baseline does not imply that one policy's
 weights transfer between embodiments.
+
+Images use division by 255 in both training and evaluation. Exported image
+statistics now accumulate floating-point second moments in the default and
+streaming writers, avoiding uint8 square overflow. Their metadata aggregation
+still covers all converted episodes; these statistics are not used by this ACT
+image path and do not constitute train-only image normalization.
 
 The initial baseline, before the Piper finger-coupling correction, used
 20 training and 3 development episodes per embodiment,
@@ -245,6 +266,21 @@ Piper checkpoint was run on the same five evaluation seeds with the same
 8-action execution setting. It succeeded in 1/5 episodes, with four timeouts.
 This is a cross-version regression on previously evaluated seeds, not a fresh
 independent benchmark. The earlier dataset, checkpoint and 4/5 result remain
-separate historical artifacts. Regenerating Piper training data and training
-a baseline for the corrected dynamics remain future work; the original pill
-integration is currently verified with expert generation and action replay.
+separate historical artifacts.
+
+A separate dataset for the corrected Piper dynamics contains 20 newly generated
+training and three development episodes (4,402/658 supervised rows). The new ACT
+model retains the same architecture, 1,000-update budget, seed 1, batch size 16
+and 8-action execution setting. Its final checkpoint was fixed before evaluation.
+
+| Seed group | Final successes | Unsuccessful horizon runs | Purpose |
+| --- | ---: | ---: | --- |
+| 2000–2002 | 1/3 | 2/3 | Development; no parameter reselection |
+| 4000–4004 | 3/5 | 2/5 | Fresh, reserved evaluation initial states |
+| 3000–3004 | 1/5 | 4/5 | Historical-seed regression |
+
+The new 3/5 and previous 1/5 use different seed groups and do not establish a
+paired improvement. The retrained model also scores 1/5 on the historical group.
+This is an actual generation-to-learning baseline with limited reliability;
+broader learning performance remains unresolved. Original pill and basket
+integrations are verified with experts and action replay, not learned policies.
