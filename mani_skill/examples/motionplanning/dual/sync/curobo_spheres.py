@@ -17,13 +17,9 @@ import numpy as np
 from scipy.optimize import linprog
 from scipy.spatial import ConvexHull
 
+from ._arrays import as_float_array as _array
+
 TIGHT_BOUND_PADDING_M = 1e-8
-
-
-def _array(value: Any) -> np.ndarray:
-    if hasattr(value, "detach"):
-        value = value.detach().cpu().numpy()
-    return np.asarray(value, dtype=np.float64)
 
 
 def coarse_convex_spheres(vertices: Any, pitch_m: float) -> tuple[np.ndarray, float]:

@@ -26,6 +26,7 @@ from scipy.spatial import ConvexHull
 from scipy.spatial.transform import Rotation
 import trimesh
 
+from ._arrays import as_float_array as _array
 from .curobo_spheres import coarse_convex_spheres as _cover_convex, tight_convex_spheres
 
 
@@ -46,12 +47,6 @@ def _cache_root(cache_dir: str | Path | None) -> Path:
     else:
         root = Path(cache_dir).expanduser()
     return root.resolve()
-
-
-def _array(value: Any) -> np.ndarray:
-    if hasattr(value, "detach"):
-        value = value.detach().cpu().numpy()
-    return np.asarray(value, dtype=np.float64)
 
 
 def _finite(value: Any, shape: tuple[int, ...], label: str) -> np.ndarray:
