@@ -147,5 +147,28 @@ def test_piper_wrong_conversion_fps_is_rejected_before_creating_a_writer(tmp_pat
     assert not passed and "control frequency" in message
 
 
+def test_recorded_physical_profiles_survive_conversion_without_live_reconstruction(tmp_path):
+    path, metadata, _, _, _ = _source(tmp_path)
+    profiles = {"task_profile": {"gripper_drive_force_limit": .75},
+                "robot_profile": {"uid": "piper", "gripper_coupling_stiffness": 1000.,
+                                  "gripper_coupling_damping": 10.}}
+    metadata["episodes"] = [{"episode_id": 0, "dual_sync": deepcopy(profiles)}]
+    path.with_suffix(".json").write_text(json.dumps(metadata))
+    before = path.with_suffix(".json").read_bytes()
+    with h5py.File(path) as source:
+        contract = converter.load_trajectory_data(source, "traj_0", drop_terminal_frame=True)["data_contract"]
+    assert {key: contract[key] for key in profiles} == profiles
+    assert path.with_suffix(".json").read_bytes() == before
+
+
+def test_mixed_recorded_physics_cannot_be_silently_assigned_to_one_file(tmp_path):
+    path, metadata, _, _, _ = _source(tmp_path)
+    metadata["episodes"] = [{"dual_sync": {"task_profile": {"gripper_drive_force_limit": value}}}
+                            for value in (.1, .75)]
+    path.with_suffix(".json").write_text(json.dumps(metadata))
+    with h5py.File(path) as source, pytest.raises(ValueError, match="inconsistent task_profile"):
+        converter.native_data_contract(source, 14)
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

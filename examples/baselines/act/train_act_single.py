@@ -77,6 +77,7 @@ class TrainingArgs:
     split: str = "train"
     enable_augmentation: bool = False
     normalization_method: str = "bounds_q99"
+    normalization_min_range: float = 0.0  # Native units; zero keeps legacy scaling.
     video_backend: str = "torchcodec"
     tolerance_s: float = 0.001
 
@@ -312,6 +313,7 @@ def build_dataloader(args: TrainingArgs, *, normalization_stats=None):
         tolerance_s=args.tolerance_s,
         enable_augmentation=args.enable_augmentation,
         normalization_method=args.normalization_method,
+        normalization_min_range=args.normalization_min_range,
         normalization_stats=normalization_stats,
     )
     dataset = build_lerobot_dataset(cfg)
@@ -430,6 +432,7 @@ def train(args: TrainingArgs):
                     "rgb": "float32_CHW_0_1", "state_dim": args.state_dim,
                     "action_dim": args.action_dim, "control_mode": "pd_joint_pos",
                     "robot_order": "left_then_right", "normalization_method": args.normalization_method,
+                    "normalization_min_range": args.normalization_min_range,
                     "split": args.split,
                     "native": dataset.main_dataset.meta.info.get("native_data_contract"),
                     "source_image_size": list(dataset.main_dataset.meta.features[

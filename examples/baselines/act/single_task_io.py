@@ -45,9 +45,11 @@ def live_observation(raw: Any, observation: Mapping[str, Any], camera: str,
         raise ValueError("Single-task dual-arm evaluation requires two agents")
     if hasattr(raw, "left_agent") and (agents[0] is not raw.left_agent or agents[1] is not raw.right_agent):
         raise ValueError("Agent order must be physical left then physical right")
-    positions = [torch.as_tensor(agent.robot.get_qpos()).reshape(-1) for agent in agents]
+    keys = list(raw.agent.agents_dict)
+    # Proprioception is part of the public RGB observation. Do not feed hidden
+    # simulator state or object poses to the policy's state encoder.
+    positions = [torch.as_tensor(observation["agent"][key]["qpos"]).reshape(-1) for key in keys]
     if action_order is not None:
-        keys = list(raw.agent.agents_dict)
         if keys != [item["key"] for item in action_order]:
             raise ValueError("Live robot controller keys differ from the training recording")
         for agent, item, position in zip(agents, action_order, positions):

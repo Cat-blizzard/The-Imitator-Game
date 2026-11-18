@@ -1,4 +1,4 @@
-"""Bounded, resumable collection behind scripts/collect_data.py --robot.
+"""Bounded, resumable synchronous collection behind collect_data.py --robot.
 
 Each seed launches the existing expert/recorder in its own immutable directory.
 The predeclared evaluation pool is never collected by this entrypoint.
@@ -16,6 +16,76 @@ import subprocess
 import sys
 import time
 from typing import Any
+
+
+SUPPORTED_TASKS = ("DualArmPickPlace-v1", "TwoRobotPickPillToRegions-v1",
+                   "TwoRobotPickAppleBananaToBaskets-v1")
+ACCEPTANCE_RULE_VERSION = 2  # Honor failed quality checks selected in the saved policy.
+
+
+def selected_task(tasks: list[str] | None) -> str:
+    """An explicit single task; retain the historical shared-task default."""
+    if tasks is None:
+        return SUPPORTED_TASKS[0]
+    if len(tasks) != 1:
+        raise ValueError("--robot collection requires exactly one task")
+    task = tasks[0] if tasks[0].endswith("-v1") else tasks[0]+"-v1"
+    if task not in SUPPORTED_TASKS:
+        raise ValueError(f"Unsupported synchronous collection task: {task}")
+    return task
+
+
+def worker_spec(task: str, robot: str, seed: int, output: Path) -> tuple[list[str], Path]:
+    """Return one-seed official-worker command and its native recording path."""
+    if task == "DualArmPickPlace-v1":
+        return ([sys.executable, "-m", "mani_skill.examples.motionplanning.dual.sync.pick_place",
+                 "--robot", robot, "--seed", str(seed), "--output-dir", str(output)],
+                output / "trajectory.h5")
+    return ([sys.executable, "-m", "mani_skill.examples.motionplanning.dual.two_robot_run",
+             "--env-id", task, "--execution-mode", "sync", "--robot", robot,
+             "--seed", str(seed), "--num-traj", "1", "--obs-mode", "rgb",
+             "--sim-backend", "cpu", "--shader", "default", "--save-video",
+             "--record-dir", str(output), "--traj-name", "trajectory"],
+            output / task / "motionplanning" / "trajectory.h5")
+
+
+def worker_result(task: str, output: Path, source: Path) -> dict:
+    """Read task/execution/quality/recording facts without conflating them."""
+    if task == "DualArmPickPlace-v1":
+        return json.loads((output / "result.json").read_text())
+    metadata = json.loads(source.with_suffix(".json").read_text())
+    episodes = metadata.get("episodes", [])
+    if len(episodes) != 1 or episodes[0].get("episode_id") != 0:
+        raise ValueError("A bounded worker must preserve exactly its requested episode")
+    result = episodes[0].get("dual_sync")
+    if not isinstance(result, dict):
+        raise ValueError("Official episode is missing its synchronous execution report")
+    return {**result, "task_success": bool(result.get("official", {}).get("success", False)),
+            "steps": result.get("official", {}).get("elapsed_steps")}
+
+
+def training_usable(result: dict, returncode: int) -> bool:
+    """Native recorder success labels differ; preserve their original reports."""
+    return (returncode == 0 and bool(result.get("task_success", False))
+            and result.get("execution", {}).get("status") == "passed"
+            and result.get("recording", {}).get("status") in ("passed", "saved")
+            and result.get("quality", {}).get("status") != "failed")
+
+
+def failure_reason(result: dict, returncode: int, error: str | None = None) -> str | None:
+    """Prefer the worker's specific cause over its independent official result."""
+    if training_usable(result, returncode):
+        return None
+    if error:
+        return error
+    for category in ("execution", "quality", "recording"):
+        for key in ("error", "reason"):
+            if result.get(category, {}).get(key):
+                return str(result[category][key])
+    if result.get("quality", {}).get("status") == "failed":
+        return "selected_quality_failed"
+    return ("official_task_unsuccessful" if returncode == 0 and not result.get("task_success")
+            else f"worker_exit_{returncode}")
 
 
 def write_json(path: Path, value: dict) -> None:
@@ -98,8 +168,7 @@ def collect(args: Any) -> int:
     """Run finite seed pools; retain failures and resume without replacing attempts."""
     if not args.seed_splits or args.target_episodes < 1 or args.max_attempts < 1:
         raise ValueError("Collection requires --seed-splits and positive target/attempt limits")
-    if args.tasks and args.tasks != ["DualArmPickPlace"]:
-        raise ValueError("--robot currently collects the shared DualArmPickPlace task")
+    task = selected_task(args.tasks)
     pools = read_splits(args.seed_splits)
     root = Path(args.demos_dir).resolve()
     if args.dry_run:
@@ -108,12 +177,15 @@ def collect(args: Any) -> int:
         return 0
     # Import the live profile only for an actual collection, not CPU summaries.
     from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
-    from mani_skill.envs.tasks.tabletop.dual_pick_place import PROFILES
+    from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
     from mani_skill.examples.motionplanning.dual.sync.pick_place import POLICY
-    settings = {"task": "DualArmPickPlace-v1", "robot": args.robot, "fps": 20,
-                "profile": asdict(PROFILES[args.robot]),
+    from mani_skill.examples.motionplanning.dual.sync.runtime_policy import DEFAULT_POLICY
+    policy = POLICY if task == "DualArmPickPlace-v1" else DEFAULT_POLICY
+    settings = {"task": task, "robot": args.robot, "fps": 20,
+                "acceptance_rule_version": ACCEPTANCE_RULE_VERSION,
+                "profile": asdict(get_task_profile(task, args.robot)),
                 "robot_profile": asdict(get_robot_profile(args.robot)),
-                "policy": POLICY.to_dict()}
+                "policy": policy.to_dict()}
     settings = json.loads(json.dumps(settings))
     root.mkdir(parents=True, exist_ok=True)
     with (root / ".collection.lock").open("a") as lock:
@@ -152,8 +224,7 @@ def collect(args: Any) -> int:
                     return 2
                 seed = seeds[0]
                 output = root / f"{args.split}-{seed}"
-                command = [sys.executable, "-m", "mani_skill.examples.motionplanning.dual.sync.pick_place",
-                           "--robot", args.robot, "--seed", str(seed), "--output-dir", str(output)]
+                command, source = worker_spec(task, args.robot, seed, output)
                 append_event(events_path, {"event": "launch", "seed": seed, "split": args.split,
                                           "output_dir": str(output), "time": time.time()})
                 started = time.monotonic()
@@ -170,24 +241,29 @@ def collect(args: Any) -> int:
                     except OSError as exc:
                         error = f"worker_startup: {type(exc).__name__}: {exc}"
                 child = None
-                result_path = output / "result.json"
+                result_read_error = None
                 try:
-                    result = json.loads(result_path.read_text()) if result_path.exists() else {}
+                    result = worker_result(task, output, source)
                     if not isinstance(result, dict):
                         raise ValueError("Expected a result object")
-                except (ValueError, OSError) as exc:
+                except (ValueError, OSError, KeyError, TypeError) as exc:
                     result = {}
-                    error = f"worker_result_invalid: {type(exc).__name__}: {exc}"
+                    result_read_error = f"worker_result_invalid: {type(exc).__name__}: {exc}"
                 success = bool(result.get("task_success", False))
-                usable = (code == 0 and success and result.get("execution", {}).get("status") == "passed"
-                          and result.get("recording", {}).get("status") == "passed")
-                reason = None if usable else (error or result.get("execution", {}).get("error")
-                    or result.get("recording", {}).get("error")
-                    or ("official_task_unsuccessful" if code == 0 and not success else f"worker_exit_{code}"))
+                usable = training_usable(result, code)
+                reason = failure_reason(result, code, error or result_read_error)
                 append_event(events_path, {"event": "finish", "seed": seed, "split": args.split,
                     "returncode": code, "task_success": success, "training_usable": usable,
                     "failure_reason": reason, "steps": result.get("steps"),
-                    "h5_path": str((output / "trajectory.h5").relative_to(root)), "episode_id": 0,
+                    "worker_error": error, "result_read_error": result_read_error,
+                    "quality_status": result.get("quality", {}).get("status"),
+                    "quality": {key: result.get("quality", {})[key]
+                                for key in ("status", "reason", "error", "category")
+                                if key in result.get("quality", {})},
+                    "official": result.get("official", {}),
+                    "execution": result.get("execution", {}),
+                    "recording": result.get("recording", {}),
+                    "h5_path": str(source.relative_to(root)), "episode_id": 0,
                     "wall_seconds": time.monotonic()-started})
                 publish()
         except KeyboardInterrupt:

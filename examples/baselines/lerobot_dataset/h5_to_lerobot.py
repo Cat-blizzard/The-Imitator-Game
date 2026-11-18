@@ -226,12 +226,22 @@ def native_data_contract(h5_file: h5py.File, action_width: int) -> dict:
         item.setdefault("gripper_coordinate_unit", "m")
         item.setdefault("gripper_open_action", 1.0)
         item.setdefault("gripper_closed_action", -1.0)
-    return {"action_order": order, "env_id": env.get("env_id"),
+    contract = {"action_order": order, "env_id": env.get("env_id"),
             "robot_uids": kwargs.get("robot_uids", motion.get("robot_uids")),
             "control_mode": kwargs.get("control_mode", "pd_joint_pos"),
             "control_freq": frequency,
             "rendering": {"shader_dir": kwargs.get("shader_dir"),
                           "sensor_configs": kwargs.get("sensor_configs", {})}}
+    # Keep recorded physical settings with the data, rather than reconstructing
+    # them from whichever source checkout later converts the recording.
+    reports = [episode.get("dual_sync", {}) for episode in metadata.get("episodes", [])]
+    for field in ("task_profile", "robot_profile"):
+        values = [report[field] for report in reports if field in report]
+        if values:
+            if any(not isinstance(value, dict) or value != values[0] for value in values):
+                raise ValueError(f"Recording contains inconsistent {field} settings")
+            contract[field] = values[0]
+    return contract
 
 
 def load_trajectory_data(h5_file: h5py.File, traj_name: str,

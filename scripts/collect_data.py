@@ -705,7 +705,7 @@ def main():
     parser.add_argument("--demos-dir", type=str, default="demos",
                         help="Root directory for data")
     parser.add_argument("--robot", choices=("panda", "piper", "arx_x5", "ur5_wsg", "xarm6_robotiq"),
-                        help="Collect DualArmPickPlace-v1 with this homogeneous dual-arm configuration")
+                        help="Bounded synchronous collection for this pair; select one supported task with --tasks")
     parser.add_argument("--seed-splits", help="JSON with fixed train/development/evaluation seed pools")
     parser.add_argument("--split", choices=("train", "development"), default="train")
     parser.add_argument("--max-attempts", type=int, default=30,

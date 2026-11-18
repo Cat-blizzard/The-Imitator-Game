@@ -164,6 +164,7 @@ class LeRobotSimDataConfig:
 
     # Normalization
     normalization_method: str = "bounds_q99"  # "bounds" or "bounds_q99"
+    normalization_min_range: float = 0.0  # Native units per state/action feature.
     normalization_stats: Optional[List[Dict[str, Any]]] = None
 
     # Compatibility with RealDataConfig
@@ -287,7 +288,7 @@ class LeRobotSimDataset(Dataset):
 
         # Statistics always come from selected TRAIN rows, never full-dataset metadata.
         # Validation can consume the exact saved training/checkpoint statistics.
-        self.normalizer = ActionNormalizer()
+        self.normalizer = ActionNormalizer(min_range=config.normalization_min_range)
         for idx, (sub_ds, spec) in enumerate(zip(sub_datasets, dataset_specs)):
             if config.normalization_stats is not None:
                 records = [record for record in config.normalization_stats if record["repo_id"] == sub_ds.repo_id]

@@ -9,7 +9,8 @@ import torch
 
 from examples.baselines.act.single_task_io import masked_l1, prepare_rgb, split_action
 from examples.baselines.act.train_act_single import ACTSingleTaskAgent, TrainingArgs
-from examples.baselines.act.eval_act_single import SingleTaskNormalizer, evaluation_seeds
+from examples.baselines.act.eval_act_single import (SingleTaskNormalizer, evaluation_seeds,
+    evaluation_robot_uids, validate_recorded_profiles, load_checkpoint)
 from examples.baselines.lerobot_dataset import lerobot_sim_dataset as sim
 
 STATE = "observation.qpos_gripper_states"
@@ -70,14 +71,15 @@ class FakeDataset:
         return result
 
 
-def test_selected_train_statistics_validation_reuse_and_tail_padding(tmp_path, monkeypatch):
+@pytest.mark.parametrize("min_range", [0.0, 4.0])
+def test_selected_train_statistics_validation_reuse_and_tail_padding(tmp_path, monkeypatch, min_range):
     monkeypatch.setattr(sim, "LeRobotDataset", FakeDataset)
     monkeypatch.setattr(sim, "LeRobotDatasetMetadata", lambda **kw: FakeDataset(**kw).meta)
     config_file = tmp_path / "config.json"
     config_file.write_text(json.dumps([{"repo_id": "pill", "root": "pill"}]))
     config = sim.LeRobotSimDataConfig(root=str(tmp_path), dataset_file=str(config_file),
                                      cameras=["zed2i"], horizon=3, enable_augmentation=False,
-                                     fps=20, obs_horizon=2)
+                                     fps=20, obs_horizon=2, normalization_min_range=min_range)
     train = sim.LeRobotSimDataset(config)
     assert train.normalizer.dataset_stats[0][STATE]["max"] == [3.] * 18
     assert train[1]["action_is_pad"].tolist() == [False, True, True]
@@ -91,7 +93,8 @@ def test_selected_train_statistics_validation_reuse_and_tail_padding(tmp_path, m
     saved = [{"dataset_idx": 0, **train.normalizer.dataset_info[0],
               "stats": train.normalizer.dataset_stats[0]}]
     heldout = sim.LeRobotSimDataset(replace(config, split="validation", normalization_stats=saved))
-    normalizer = SingleTaskNormalizer(saved)
+    normalizer = SingleTaskNormalizer(saved, min_range=min_range)
+    assert train.normalizer.min_range == min_range
     assert torch.equal(heldout[0]["states"][-1], normalizer.normalize_state(torch.full((18,), 100.)))
     assert heldout[0]["view_1"].shape == (2, 3, 224, 224)
 
@@ -106,8 +109,8 @@ def test_explicit_seed_selection_never_filters_by_expert_result(tmp_path):
         evaluation_seeds(args)
 
 
-@pytest.mark.parametrize("state_dim,action_dim", [(18, 16), (16, 14)])
-def test_full_default_model_wiring_backward_and_strict_reload(state_dim, action_dim):
+@pytest.mark.parametrize("state_dim,action_dim", [(18, 16), (16, 14), (24, 14)])
+def test_full_default_model_wiring_backward_and_strict_reload(state_dim, action_dim, tmp_path):
     torch.manual_seed(7)
     args = TrainingArgs(dropout=0.0, state_dim=state_dim, action_dim=action_dim)
     agent = ACTSingleTaskAgent(args, torch.device("cpu"))
@@ -127,10 +130,92 @@ def test_full_default_model_wiring_backward_and_strict_reload(state_dim, action_
     assert torch.isfinite(agent.obs_proj.weight.grad).all()
     predicted = agent.get_action(batch["view_1"], batch["states"])
     assert predicted.shape == (1, 16, action_dim)
-    cloned = ACTSingleTaskAgent(args, torch.device("cpu"))
-    cloned.load_state_dict(agent.state_dict(), strict=True)
-    cloned.eval()
+    legacy_args = vars(args).copy()
+    legacy_args.pop("normalization_min_range")
+    checkpoint = tmp_path / "legacy.pt"
+    torch.save({"args": legacy_args, "agent_state_dict": agent.state_dict()}, checkpoint)
+    cloned, loaded_args = load_checkpoint(str(checkpoint), SimpleNamespace(), torch.device("cpu"))
+    assert loaded_args.normalization_min_range == 0
     assert torch.equal(predicted, cloned.get_action(batch["view_1"], batch["states"]))
+
+
+def test_original_panda_alias_and_other_embodiments_use_recorded_native_pair():
+    task = "TwoRobotPickPillToRegions-v1"
+    assert evaluation_robot_uids(task, "panda", ["panda_wristcam"]*2) == ("panda_wristcam",)*2
+    assert evaluation_robot_uids("DualArmPickPlace-v1", "panda", ["panda"]*2) == ("panda",)*2
+    assert evaluation_robot_uids(task, None, ["ur5_wsg"]*2) == ("ur5_wsg",)*2
+    with pytest.raises(ValueError, match="match the training"):
+        evaluation_robot_uids(task, "piper", ["ur5_wsg"]*2)
+
+
+def test_saved_physical_profiles_are_checked_without_rejecting_legacy_checkpoints():
+    from dataclasses import asdict
+    from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
+    from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+    task, robots = "TwoRobotPickPillToRegions-v1", ("piper",)*2
+    validate_recorded_profiles({}, task, robots)
+    native = json.loads(json.dumps({"task_profile": asdict(get_task_profile(task, "piper")),
+                                   "robot_profile": asdict(get_robot_profile("piper"))}))
+    validate_recorded_profiles(native, task, robots)
+    # Adding a None-valued optional profile field must not change old physics.
+    native["task_profile"] = {key: value for key, value in native["task_profile"].items()
+                              if value is not None}
+    native["robot_profile"]["optional_future_setting"] = None
+    validate_recorded_profiles(native, task, robots)
+    native["robot_profile"]["gripper_coupling_stiffness"] += 1
+    with pytest.raises(ValueError, match="robot_profile.*physical"):
+        validate_recorded_profiles(native, task, robots)
+
+
+def test_legacy_missing_field_uses_declared_default_not_current_robot_recipe(monkeypatch):
+    from dataclasses import asdict, replace
+    from mani_skill.agents.robots import embodiment_profiles
+    task, robots = "TwoRobotPickPillToRegions-v1", ("arx_x5",)*2
+    original = embodiment_profiles.get_robot_profile(robots[0])
+    assert original.gripper_coupling_stiffness == 1e5
+    saved = json.loads(json.dumps(asdict(original)))
+    saved.pop("gripper_coupling_stiffness")
+    native = {"robot_profile": saved}
+    validate_recorded_profiles(native, task, robots)
+    monkeypatch.setattr(embodiment_profiles, "get_robot_profile",
+                        lambda *args: replace(original, gripper_coupling_stiffness=1e3))
+    with pytest.raises(ValueError, match="robot_profile.*physical"):
+        validate_recorded_profiles(native, task, robots)
+    saved["gripper_coupling_stiffness"] = 1e3
+    validate_recorded_profiles(native, task, robots)
+
+
+def test_expert_recipe_changes_are_reported_but_physical_mount_or_effort_changes_reject():
+    from dataclasses import asdict
+    from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
+    from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+    task, robots = "TwoRobotPickPillToRegions-v1", ("arx_x5",)*2
+    native = json.loads(json.dumps({"task_profile": asdict(get_task_profile(task, robots[0])),
+                                   "robot_profile": asdict(get_robot_profile(robots[0]))}))
+    native["task_profile"].pop("release_clearance_m")
+    assert validate_recorded_profiles(native, task, robots) == {}
+    native["task_profile"]["release_clearance_m"] = .005
+    native["robot_profile"]["prefer_nearby_revolute_goals"] = False
+    notes = validate_recorded_profiles(native, task, robots)
+    assert notes == {"task_profile": ["release_clearance_m"],
+                     "robot_profile": ["prefer_nearby_revolute_goals"]}
+    native["task_profile"]["mount_poses"][0]["position"][0] += .01
+    with pytest.raises(ValueError, match="task_profile.*physical"):
+        validate_recorded_profiles(native, task, robots)
+    native["task_profile"] = json.loads(json.dumps(asdict(get_task_profile(task, robots[0]))))
+    native["task_profile"]["gripper_drive_force_limit"] = .5
+    with pytest.raises(ValueError, match="task_profile.*physical"):
+        validate_recorded_profiles(native, task, robots)
+
+
+def test_shared_cube_source_workspace_still_affects_policy_environment():
+    from dataclasses import asdict
+    from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+    task, robots = "DualArmPickPlace-v1", ("piper",)*2
+    native = json.loads(json.dumps({"task_profile": asdict(get_task_profile(task, robots[0]))}))
+    native["task_profile"]["source_x"] += .01
+    with pytest.raises(ValueError, match="task_profile.*physical"):
+        validate_recorded_profiles(native, task, robots)
 
 
 def test_piper_native_action_blocks_and_live_qpos_order():
@@ -145,8 +230,13 @@ def test_piper_native_action_blocks_and_live_qpos_order():
     raw = SimpleNamespace(agent=SimpleNamespace(agents=agents, agents_dict={'piper-0': agents[0], 'piper-1': agents[1]}))
     identity = SimpleNamespace(normalize_state=lambda value, _: value)
     order = [{'key': f'piper-{side}', 'state_joint_names': names} for side in range(2)]
-    sample = live_observation(raw, {'sensor_data': {'base_camera': {'rgb': np.zeros((1, 224, 224, 3), np.uint8)}}},
+    observation = {'sensor_data': {'base_camera': {'rgb': np.zeros((1, 224, 224, 3), np.uint8)}},
+                   'agent': {f'piper-{side}': {'qpos': torch.arange(8)+side*10} for side in range(2)}}
+    # A private simulator query must not supply policy inputs.
+    for agent in agents:
+        agent.robot.get_qpos = lambda: pytest.fail('read simulator qpos instead of public observation')
+    sample = live_observation(raw, observation,
                               'base_camera', identity, action_order=order)
     assert sample['state'].tolist() == list(range(8))+list(range(10, 18))
     with pytest.raises(ValueError, match='controller keys'):
-        live_observation(raw, {}, 'base_camera', identity, action_order=list(reversed(order)))
+        live_observation(raw, observation, 'base_camera', identity, action_order=list(reversed(order)))

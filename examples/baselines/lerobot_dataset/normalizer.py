@@ -1,3 +1,4 @@
+import math
 import torch
 from typing import Dict
 
@@ -8,10 +9,26 @@ class ActionNormalizer:
     Each dataset has its own normalization statistics.
     """
 
-    def __init__(self):
+    def __init__(self, min_range: float = 0.0):
         """Initialize empty normalizer that will be populated with dataset stats."""
+        if not math.isfinite(min_range) or min_range < 0:
+            raise ValueError("Normalization min_range must be finite and nonnegative")
+        # Native units per feature: e.g. radians, meters or normalized gripper commands.
+        # Zero preserves historical bounds and arithmetic exactly.
+        self.min_range = float(min_range)
         self.dataset_stats = {}  # Maps dataset_idx -> stats_dict
         self.dataset_info = {}   # Maps dataset_idx -> {repo_id, state_key, action_key}
+
+    def _effective_bounds(self, lower: torch.Tensor,
+                          upper: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Expand narrow bounds around their midpoint without changing saved statistics."""
+        if self.min_range == 0:
+            return lower, upper
+        narrow = upper - lower < self.min_range
+        center = (lower + upper) * 0.5
+        half = self.min_range * 0.5
+        return (torch.where(narrow, center - half, lower),
+                torch.where(narrow, center + half, upper))
 
     def add_dataset_stats(
         self,
@@ -97,6 +114,7 @@ class ActionNormalizer:
         # Extract right arm if needed
         s_min = self._extract_right_arm(s_min, single_arm)
         s_max = self._extract_right_arm(s_max, single_arm)
+        s_min, s_max = self._effective_bounds(s_min, s_max)
 
         # Normalize to [-1, 1]
         denom = s_max - s_min
@@ -154,6 +172,7 @@ class ActionNormalizer:
         # Extract right arm if needed
         a_min = self._extract_right_arm(a_min, single_arm)
         a_max = self._extract_right_arm(a_max, single_arm)
+        a_min, a_max = self._effective_bounds(a_min, a_max)
 
         # Normalize to [-1, 1]
         denom = a_max - a_min
@@ -211,6 +230,7 @@ class ActionNormalizer:
         # Extract right arm if needed
         a_min = self._extract_right_arm(a_min, single_arm)
         a_max = self._extract_right_arm(a_max, single_arm)
+        a_min, a_max = self._effective_bounds(a_min, a_max)
 
         # Denormalize from [-1, 1]
         action = 0.5 * (normalized_action + 1.0) * (a_max - a_min) + a_min
@@ -265,8 +285,28 @@ class ActionNormalizer:
         # Extract right arm if needed
         s_min = self._extract_right_arm(s_min, single_arm)
         s_max = self._extract_right_arm(s_max, single_arm)
+        s_min, s_max = self._effective_bounds(s_min, s_max)
 
         # Denormalize from [-1, 1]
         state = 0.5 * (normalized_state + 1.0) * (s_max - s_min) + s_min
 
         return state
+
+
+if __name__ == "__main__":
+    lower = torch.tensor([2., -.0001, -2.])
+    upper = torch.tensor([2., .0001, 2.])
+    values = torch.tensor([2., .00003, .4])
+    stats = {key: {"q01": lower.tolist(), "q99": upper.tolist()}
+             for key in ("state", "action")}
+    legacy, expanded = ActionNormalizer(), ActionNormalizer(min_range=.01)
+    for normalizer in (legacy, expanded):
+        normalizer.add_dataset_stats(0, "sanity", stats, "state", "action")
+    span = upper - lower
+    span[span == 0] = 1.
+    assert torch.equal(legacy.normalize_action(values, 0),
+                       torch.clamp(2. * (values - lower) / span - 1., -1., 1.))
+    for normalize, inverse in ((expanded.normalize_state, expanded.denormalize_state),
+                               (expanded.normalize_action, expanded.denormalize_action)):
+        torch.testing.assert_close(inverse(normalize(values, 0), 0), values, rtol=0, atol=2e-7)
+    print("ActionNormalizer CPU sanity passed")

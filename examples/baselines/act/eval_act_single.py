@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 from collections import deque
+from dataclasses import MISSING, asdict, fields
 from datetime import datetime
 import json
 from pathlib import Path
@@ -23,14 +24,17 @@ from examples.baselines.act.single_task_io import live_observation, split_action
 from examples.baselines.act.train_act_single import ACTSingleTaskAgent, TrainingArgs
 from examples.baselines.lerobot_dataset.normalizer import ActionNormalizer
 
+RELEASE_OBSERVED_SEMANTICS = "legacy_ever_grasped_and_finally_ungrasped_includes_grasp_loss"
+
 
 class SingleTaskNormalizer:
     """Use the exact training-row statistics embedded in the checkpoint."""
 
-    def __init__(self, dataset_stats: list[dict[str, Any]], method: str = "bounds_q99"):
+    def __init__(self, dataset_stats: list[dict[str, Any]], method: str = "bounds_q99",
+                 min_range: float = 0.0):
         if not dataset_stats:
             raise ValueError("Checkpoint has no saved training statistics; retrain with train_act_single.py")
-        self.normalizer = ActionNormalizer()
+        self.normalizer = ActionNormalizer(min_range=min_range)
         self.method = method
         self.repo_to_idx = {}
         for record in dataset_stats:
@@ -93,6 +97,74 @@ def evaluation_seeds(args: Any) -> list[int]:
     return seeds
 
 
+def evaluation_robot_uids(env_id: str, requested: str | None,
+                          recorded: list[str] | None) -> tuple[str, ...] | None:
+    """Resolve the original entry's Panda alias against the recorded robot pair."""
+    if requested is None:
+        return tuple(recorded) if recorded else None
+    uid = "panda_wristcam" if requested == "panda" and env_id != "DualArmPickPlace-v1" else requested
+    selected = (uid, uid)
+    if recorded is not None and list(selected) != list(recorded):
+        raise ValueError("Evaluation robot must match the training recording")
+    return selected
+
+
+def validate_recorded_profiles(contract: dict[str, Any], env_id: str,
+                               robot_uids: tuple[str, ...] | None) -> dict[str, list[str]]:
+    """Check saved physical configuration when present; keep legacy data usable."""
+    if not any(name in contract for name in ("task_profile", "robot_profile")):
+        return {}
+    if robot_uids is None or len(robot_uids) != 2 or robot_uids[0] != robot_uids[1]:
+        raise ValueError("Recorded embodiment profiles require their homogeneous robot pair")
+    from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
+    from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+    task_id = extract_base_env_name(env_id)
+    profiles = {
+        "task_profile": get_task_profile(task_id, robot_uids[0]),
+        "robot_profile": get_robot_profile(robot_uids[0]),
+    }
+
+    def effective(value: Any) -> Any:
+        # New optional None fields preserve behavior. Keep None list entries
+        # (for example an inherited grasp quaternion) and all numeric settings.
+        if isinstance(value, dict):
+            return {key: effective(item) for key, item in value.items() if item is not None}
+        if isinstance(value, list):
+            return [effective(item) for item in value]
+        return value
+
+    task_environment_fields = {
+        "TwoRobotPickPillToRegions-v1": {"mount_poses", "gripper_drive_force_limit"},
+        "TwoRobotPickAppleBananaToBaskets-v1": {"mount_poses"},
+        "DualArmPickPlace-v1": {"base_x", "arm_separation", "source_x", "destination_x",
+                                 "base_height", "source_jitter_m"},
+    }
+    differences = {}
+    for name, profile in profiles.items():
+        if name not in contract:
+            continue
+        saved = dict(contract[name])
+        # An omitted field predates its introduction. Its declared default is
+        # the old behavior; using the selected profile's value could hide drift.
+        for field in fields(profile):
+            if field.name not in saved:
+                if field.default is not MISSING:
+                    saved[field.name] = field.default
+                elif field.default_factory is not MISSING:
+                    saved[field.name] = field.default_factory()
+        saved = effective(json.loads(json.dumps(saved)))
+        current = effective(json.loads(json.dumps(asdict(profile))))
+        changed = {key for key in saved.keys() | current.keys() if saved.get(key) != current.get(key)}
+        environment_fields = (task_environment_fields.get(task_id, saved.keys() | current.keys())
+                              if name == "task_profile" else
+                              (saved.keys() | current.keys()) - {"prefer_nearby_revolute_goals"})
+        if changed & environment_fields:
+            raise ValueError(f"Evaluation {name} differs from the recorded physical configuration")
+        if changed:
+            differences[name] = sorted(changed)
+    return differences
+
+
 def _bool(value: Any) -> bool:
     return bool(torch.as_tensor(value).reshape(-1)[0].item())
 
@@ -149,6 +221,49 @@ def settling_measurements(events: list[dict[str, Any]], window_steps: int = 20) 
         ) if placement_observed else None),
         "robot_static_all": (all(row["is_robot_static"] for row in window)
                              if window and all("is_robot_static" in row for row in window) else None),
+    }
+
+
+def grasp_placement_measurements(events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Report sampled predicates, without inferring intentional release or cause.
+
+    A grasp-to-ungrasped transition can be normal release or loss of contact.
+    A placement is the task's region predicate and no grasp in the same sample;
+    it does not prove that a robot transported or deliberately released it.
+    Missing predicates remain unknown, and gaps do not create transitions.
+    """
+    arms = {}
+    for side in ("left", "right"):
+        grasp_key, region_key = f"{side}_grasped", f"{side}_in_region"
+        grasps = [row[grasp_key] for row in events if grasp_key in row]
+        placed = [row.get(region_key) is True and row.get(grasp_key) is False
+                  for row in events]
+        transitions = [row["step"] for previous, row in zip(events, events[1:])
+                       if previous.get(grasp_key) is True and row.get(grasp_key) is False]
+        outside = [row["step"] for previous, row in zip(events, events[1:])
+                   if previous.get(grasp_key) is True and row.get(grasp_key) is False
+                   and row.get(region_key) is False]
+        final = events[-1] if events else {}
+        arms[side] = {
+            "grasp_measurements_complete": bool(events) and len(grasps) == len(events),
+            "region_measurements_complete": bool(events) and all(region_key in row for row in events),
+            "ever_grasped": any(grasps) if grasps else None,
+            "first_grasp_step": next((row["step"] for row in events
+                                      if row.get(grasp_key) is True), None),
+            "grasp_to_ungrasped_steps": transitions,
+            "grasp_to_ungrasped_outside_region_steps": outside,
+            "first_placed_and_ungrasped_step": next((row["step"] for row, valid in zip(events, placed)
+                                                     if valid), None),
+            "final_placed_and_ungrasped": (bool(final[region_key] and not final[grasp_key])
+                if region_key in final and grasp_key in final else None),
+        }
+    final_values = [arm["final_placed_and_ungrasped"] for arm in arms.values()]
+    return {
+        "schema": "sampled-grasp-placement-v1",
+        "semantics": "observed_predicates_only_not_controlled_release_or_loss_cause",
+        "arms": arms,
+        "both_final_placed_and_ungrasped": (all(final_values)
+            if all(value is not None for value in final_values) else None),
     }
 
 
@@ -235,6 +350,8 @@ def evaluate_episode(agent: ACTSingleTaskAgent, env: Any, normalizer: SingleTask
         "timeout": len(events) >= args.max_episode_steps and not final_success,
         "failure_stage": failure_stage, "action_clipped_steps": clip_steps,
         "physical": {"ever_grasped": ever_grasped, "release_observed": release_observed,
+                     "release_observed_semantics": RELEASE_OBSERVED_SEMANTICS,
+                     "grasp_placement": grasp_placement_measurements(events),
                      "final": final, "settling": settling_measurements(events)}, "events": events,
     }
 
@@ -244,7 +361,7 @@ def parse_args(argv=None):
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--sub-config", required=True)
     parser.add_argument("--env-id", help="Override dataset repo name when it is not a registered environment")
-    parser.add_argument("--robot", help="Shared pick/place robot profile; defaults to the recorded training robot")
+    parser.add_argument("--robot", help="Homogeneous pair; defaults to the recorded training robot")
     parser.add_argument("--sim-root", default="./data/sim", help="Retained for existing command compatibility")
     parser.add_argument("--seeds", type=int, nargs="+")
     parser.add_argument("--seeds-file")
@@ -286,7 +403,8 @@ def main():
     if not 1 <= args.execute_steps <= train_args.pred_horizon:
         raise ValueError("execute_steps must be between 1 and the checkpoint prediction horizon")
     normalizer = SingleTaskNormalizer(checkpoint.get("dataset_stats", []),
-                                      contract.get("normalization_method", train_args.normalization_method))
+                                      contract.get("normalization_method", train_args.normalization_method),
+                                      contract.get("normalization_min_range", train_args.normalization_min_range))
     configs = json.loads(Path(args.sub_config).read_text())
     results = []
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -303,13 +421,10 @@ def main():
         try:
             recorded_robots = args.native_contract.get("robot_uids")
             robot_kwargs = {}
-            if args.robot:
-                requested = [args.robot, args.robot]
-                if recorded_robots is not None and requested != list(recorded_robots):
-                    raise ValueError("Evaluation robot must match the training recording")
-                robot_kwargs["robot_uids"] = tuple(requested)
-            elif recorded_robots:
-                robot_kwargs["robot_uids"] = tuple(recorded_robots)
+            selected_robots = evaluation_robot_uids(env_id, args.robot, recorded_robots)
+            if selected_robots:
+                robot_kwargs["robot_uids"] = selected_robots
+            profile_differences = validate_recorded_profiles(args.native_contract, env_id, selected_robots)
             if env_id == "DualArmPickPlace-v1" and args.max_episode_steps != 400:
                 raise ValueError("Shared pick/place evaluation uses its 400-step task budget")
             rendering = args.native_contract.get("rendering", {})
@@ -330,7 +445,8 @@ def main():
             for seed in seeds:
                 result = evaluate_episode(agent, env, normalizer, args, train_args, seed, repo_id, device)
                 result.update(env_id=env_id, robot_uids=list(env.unwrapped.robot_uids), checkpoint=str(Path(args.checkpoint).resolve()),
-                              fps=args.fps, execute_steps=args.execute_steps)
+                              fps=args.fps, execute_steps=args.execute_steps,
+                              profile_nonphysical_differences=profile_differences)
                 if args.save_trajectory:
                     env.flush_trajectory()
                     env._h5_file.flush()
@@ -351,6 +467,10 @@ def main():
         "official_success_at_end": sum(result["official_success_at_end"] for result in results),
         "timeouts": sum(result["timeout"] for result in results),
         "release_observed": sum(result["physical"]["release_observed"] for result in results),
+        "release_observed_semantics": RELEASE_OBSERVED_SEMANTICS,
+        "placed_and_ungrasped_at_end": sum(
+            result["physical"]["grasp_placement"]["both_final_placed_and_ungrasped"] is True
+            for result in results),
         "results": str(result_path.resolve()),
     }
     (output / f"summary_{stamp}.json").write_text(json.dumps(summary, indent=2) + "\n")
