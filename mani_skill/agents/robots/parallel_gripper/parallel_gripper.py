@@ -55,6 +55,20 @@ class ParallelGripperArm(BaseAgent):
         }
 
     def _after_loading_articulation(self) -> None:
+        # Equal drive targets alone let a force-saturated parallel gripper's
+        # centre translate. Represent the Piper's single opening coordinate as
+        # q7=q8, using the same finite tendon stiffness as the URDF mimic loader.
+        coupled = self.embodiment_profile.coupled_gripper_joints
+        self.gripper_tendon_count = 0
+        if coupled is not None:
+            left, right = (self.robot.active_joints_map[name] for name in coupled)
+            for root, first, second, articulation in zip(
+                    left.get_parent_link()._objs, left.get_child_link()._objs,
+                    right.get_child_link()._objs, self.robot._objs):
+                articulation.create_fixed_tendon(
+                    [root, first, second], [0., -1., 1.], [0., -1., 1.],
+                    rest_length=0., stiffness=1e5)
+                self.gripper_tendon_count += 1
         # Keyframe qpos follows the loader's active joint order, not a URDF guess.
         names = [joint.name for joint in self.robot.get_active_joints()]
         values = dict(zip(self.arm_joint_names, self.rest_arm_qpos))

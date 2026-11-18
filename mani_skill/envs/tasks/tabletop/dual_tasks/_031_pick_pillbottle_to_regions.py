@@ -17,6 +17,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig
 from mani_skill.utils.structs.types import SimConfig
 from mani_skill.utils.building.actors.robotwin import get_model_id
+from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
 from transforms3d.euler import euler2quat
 from mani_skill.envs.tasks.tabletop.utils.L0_L3_utils import (
     apply_l1_offset_xy,
@@ -51,7 +52,7 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
     - Both robots are static.
     """
 
-    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam"), ("piper", "piper")]
     agent: MultiAgent[Tuple[PandaWristCam, PandaWristCam]]
 
     PILL_MODEL_NAME = "080_pillbottle"
@@ -77,6 +78,12 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
         wrist_sensor: bool = False, 
         **kwargs
     ):
+        robot_uids = tuple(robot_uids)
+        if robot_uids not in self.SUPPORTED_ROBOTS:
+            raise ValueError(f"Pill task supports homogeneous pairs: {self.SUPPORTED_ROBOTS}")
+        if wrist_sensor and robot_uids == ("piper", "piper"):
+            raise ValueError("Piper has no wrist camera; use the original external zed2i camera")
+        self.embodiment_profile = get_task_profile("TwoRobotPickPillToRegions-v1", robot_uids[0])
         self.hi_res = hi_res
         self.wrist_sensor = wrist_sensor
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -138,14 +145,22 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
-        super()._load_agent(
-            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
-        )
+        poses = ([sapien.Pose(p=m.position, q=m.quaternion)
+                  for m in self.embodiment_profile.mount_poses]
+                 if self.robot_uids == ("piper", "piper") else
+                 [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])])
+        super()._load_agent(options, poses)
         self.agent.__init__(self.agent.agents, wrist_sensor=self.wrist_sensor)
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
         self.table_scene.build()
+        if self.robot_uids == ("piper", "piper"):
+            for i, mount in enumerate(self.embodiment_profile.mount_poses):
+                x, y, z = mount.position
+                actors.build_box(self.scene, half_sizes=[.065, .065, (z-.002)/2],
+                    color=[.3, .3, .33, 1], name=f"mount_{i}", body_type="static",
+                    initial_pose=sapien.Pose([x, y, (z-.002)/2]))
 
         self.pill_a_pose = sapien.Pose(
             p=[self.pill_a_xy[0], self.pill_a_xy[1], 0.0],
@@ -226,6 +241,11 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            if self.robot_uids == ("piper", "piper"):
+                for agent in self.agent.agents:
+                    agent.reset(agent.keyframes["rest"].qpos)
+            for agent, mount in zip(self.agent.agents, self.embodiment_profile.mount_poses):
+                agent.robot.set_pose(sapien.Pose(p=mount.position, q=mount.quaternion))
 
             # Initialize reward tracker
             if not hasattr(self, "reward_tracker"):

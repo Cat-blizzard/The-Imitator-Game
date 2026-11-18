@@ -5,6 +5,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import numpy as np
+from mani_skill import format_path
 
 from .trajectory_execution import as_numpy
 from .physical_observation import (contact_identities, contact_allowed, physical_contact_points,
@@ -36,7 +37,9 @@ class ObservedEnvironment:
             task.target_names, task.targets)
         self.srdf = {}
         for i, agent in enumerate(self.unwrapped.agent.agents):
-            tree = ET.parse(Path(agent.urdf_path).with_suffix(".srdf")).getroot()
+            urdf = Path(format_path(agent.urdf_path))
+            srdf = Path(format_path(str(getattr(agent, "srdf_path", urdf.with_suffix(".srdf")))))
+            tree = ET.parse(srdf).getroot()
             self.srdf[i] = {frozenset((node.attrib['link1'], node.attrib['link2']))
                 for node in tree.findall('disable_collisions')}
         self.original_hook = self.unwrapped._after_simulation_step

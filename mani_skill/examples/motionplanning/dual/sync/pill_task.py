@@ -148,6 +148,7 @@ class PillTask:
 
     def grasp_poses(self) -> tuple:
         agents = self.raw.agent.agents
+        profile = self.raw.embodiment_profile
         approaching = np.array([0., 0., -1.])
         closing = _array(agents[1].tcp.pose.to_transformation_matrix())[0, :3, 1].copy()
         closing -= np.dot(closing, approaching) * approaching
@@ -156,10 +157,13 @@ class PillTask:
         closing /= np.linalg.norm(closing)
         pairs = []
         for i, (agent, actor) in enumerate(zip(agents, self.targets)):
-            height = (.12, .13)[i]
-            grasp = agent.build_grasp_pose(approaching, closing,
-                _single(actor.pose.p, 3, "pill origin")) * sapien.Pose(p=[0., 0., -height])
-            pairs.append((grasp * sapien.Pose(p=[0., 0., -(.21-height)]), grasp))
+            height = profile.grasp_height_offsets_m[i]
+            quaternion = profile.grasp_quaternions[i]
+            origin = _single(actor.pose.p, 3, "pill origin")
+            grasp = (agent.build_grasp_pose(approaching, closing, origin)
+                     * sapien.Pose(p=[0., 0., -height]) if quaternion is None else
+                     sapien.Pose(p=origin+[0., 0., height], q=quaternion))
+            pairs.append((grasp * sapien.Pose(p=[0., 0., -profile.pregrasp_clearances_m[i]]), grasp))
         return tuple(pairs)
 
     def release_poses(self) -> tuple:

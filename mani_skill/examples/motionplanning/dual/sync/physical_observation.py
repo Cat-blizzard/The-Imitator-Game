@@ -28,8 +28,14 @@ def physical_support_transition(previous: bool, geometry_released: bool, referen
                             and measured_z-reference_z >= PHYSICAL_SUPPORT_CLEARANCE_M))
 
 def contact_identities(raw: Any, agents: Any, names: Any, targets: Any) -> tuple[dict, dict]:
-    identities = {obj.entity: {'kind':'robot','robot_index':i,'link_name':link.name,'actor':link.name}
-        for i,agent in enumerate(agents) for link in agent.robot.get_links() for obj in link._objs}
+    identities = {}
+    for i, agent in enumerate(agents):
+        fingers = tuple(getattr(agent, 'finger_link_names', ('panda_leftfinger', 'panda_rightfinger')))
+        for link in agent.robot.get_links():
+            for obj in link._objs:
+                identities[obj.entity] = {'kind': 'robot', 'robot_index': i,
+                    'link_name': link.name, 'actor': link.name,
+                    'is_grasp_finger': link.name in fingers}
     for name,actor in raw.scene.actors.items():
         for obj in actor._objs:
             if obj not in identities: identities[obj] = {'kind':'actor','actor':name}
@@ -43,7 +49,8 @@ def support_name(actor: Any) -> str:
 
 def contact_class(other: dict, index: int, released: bool, phase: str,
                   initial: tuple, destinations: tuple) -> str:
-    if other.get('robot_index') == index and other.get('link_name') in ('panda_leftfinger','panda_rightfinger'):
+    if other.get('robot_index') == index and other.get('is_grasp_finger',
+            other.get('link_name') in ('panda_leftfinger','panda_rightfinger')):
         return 'own_finger_allowed'
     placement = phase in ('release','retreat','verify_placement','observe_task_outcome')
     if placement and other.get('actor') == destinations[index]: return 'destination_support'
@@ -136,7 +143,8 @@ def contact_allowed(sides: list[dict[str, Any]], phase: str,
             robot, target = sides[i], sides[1-i]
             if (robot.get('kind') == 'robot' and target.get('kind') == 'payload'
                     and robot['robot_index'] == target['target_index']
-                    and robot['link_name'] in ('panda_leftfinger', 'panda_rightfinger')):
+                    and robot.get('is_grasp_finger',
+                        robot.get('link_name') in ('panda_leftfinger', 'panda_rightfinger'))):
                 return True
     return False
 

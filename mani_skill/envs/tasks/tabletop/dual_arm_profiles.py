@@ -76,7 +76,7 @@ PILL_PROFILES = {
         grasp_height_offsets_m=(.12, .13), pregrasp_clearances_m=(.09, .08),
         grasp_quaternions=(None, None)),
     "piper": PillTaskProfile(
-        mount_poses=(MountPose((-.32, -.24, .202)), MountPose((-.32, .24, .202))),
+        mount_poses=(MountPose((-.30, -.30, .202)), MountPose((-.30, .30, .202))),
         grasp_height_offsets_m=(.12, .12), pregrasp_clearances_m=(.09, .09),
         grasp_quaternions=((0., 0., 1., 0.), (0., 0., 1., 0.))),
 }

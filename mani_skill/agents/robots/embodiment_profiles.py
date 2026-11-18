@@ -31,6 +31,7 @@ class EmbodimentProfile:
         (0., 0., -1.), (0., 0., -1.))
     robot_root_link_name: str | None = None
     prefer_nearby_revolute_goals: bool = False
+    coupled_gripper_joints: tuple[str, str] | None = None
 
     @property
     def action_size(self) -> int:
@@ -61,7 +62,8 @@ ROBOT_PROFILES = MappingProxyType({
         uid="piper", arm_joint_names=tuple(f"joint{i}" for i in range(1, 7)),
         gripper_joint_names=("joint7", "joint8"), ee_link_name="grasp_tcp",
         finger_link_names=("link7", "link8"), rest_arm_qpos=(0., .8, -.8, 0., .2, 0.),
-        gripper_open_qpos=.04, gripper_closed_qpos=0.),
+        gripper_open_qpos=.04, gripper_closed_qpos=0.,
+        coupled_gripper_joints=("joint7", "joint8")),
     "arx_x5": EmbodimentProfile(
         uid="arx_x5", arm_joint_names=tuple(f"joint{i}" for i in range(1, 7)),
         gripper_joint_names=("joint7", "joint8"), ee_link_name="grasp_tcp",

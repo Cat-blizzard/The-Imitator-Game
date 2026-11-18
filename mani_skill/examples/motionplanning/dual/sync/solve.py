@@ -19,6 +19,7 @@ from .pill_task import TASK_ID, PillTask
 from .observation import ObservedEnvironment
 from .physical_observation import measured_source_departure
 from .task_outcome import observe_dual_task_outcome
+from .arm_planner import ArmMotionPlanner
 
 LIMITS = {"joint_vel_limit_rad_s": 1.5, "joint_acc_limit_rad_s2": 2.6,
     "approach_joint_vel_limit_rad_s": 1., "approach_joint_acc_limit_rad_s2": 1.3,
@@ -57,6 +58,20 @@ def movement_budget(policy, before, scheduled, phase):
     return min(policy.max_settle_steps, available)
 
 
+def pill_planners(env, *, debug=False, vis=False):
+    """Preserve the original Panda planner and use named joints for Piper."""
+    raw = env.unwrapped
+    if tuple(raw.robot_uids) == ('panda_wristcam', 'panda_wristcam'):
+        return [PandaArmMotionPlanningSolver(env, base_pose=agent.robot.pose,
+            multi_robot_id=i, joint_vel_limits=.9, joint_acc_limits=.9,
+            debug=debug, vis=vis, visualize_target_grasp_pose=False, print_env_info=False)
+            for i, agent in enumerate(raw.agent.agents)]
+    if tuple(raw.robot_uids) == ('piper', 'piper'):
+        return [ArmMotionPlanner(env, agent, velocity_limit=.9, acceleration_limit=.9)
+                for agent in raw.agent.agents]
+    raise ValueError('The synchronous pill solution supports Panda wrist-camera or Piper pairs')
+
+
 def _compact_stage(name, result):
     fields = ('status', 'reason', 'environment_steps', 'settling_steps', 'stable_steps_observed',
         'stable_steps_required', 'wall_seconds', 'object_index', 'error')
@@ -92,7 +107,9 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
     if policy.max_episode_steps != 200 or policy.last_completion_step != 199:
         raise ValueError('The official200-step horizon is fixed')
     env.reset(seed=seed)
-    report = {'schema': 'dual-panda-sync-v1', 'seed': seed, 'backend': 'mplib',
+    report = {'schema': ('dual-panda-sync-v1' if raw.robot_uids[0] == 'panda_wristcam'
+                         else 'dual-arm-sync-v2'),
+        'robot_uids': list(raw.robot_uids), 'seed': seed, 'backend': 'mplib',
         'control_freq': 20, 'physics_freq': 100, 'policy': policy.to_dict(),
         'motion_limits': dict(LIMITS), 'stages': [], 'planning': [],
         'execution': {'status': 'running'}, 'quality': {'status': 'not_evaluated'},
@@ -125,10 +142,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
         opened = {arm.key: np.r_[arm.arm_qpos(), 1.] for arm in arms}
         for _ in range(10):
             capture.step(opened)
-        solvers = [PandaArmMotionPlanningSolver(env, base_pose=agent.robot.pose,
-            multi_robot_id=i, joint_vel_limits=.9, joint_acc_limits=.9,
-            debug=debug, vis=vis, visualize_target_grasp_pose=False, print_env_info=False)
-            for i, agent in enumerate(raw.agent.agents)]
+        solvers = pill_planners(env, debug=debug, vis=vis)
         for solver in solvers:
             attach_topp_capture(solver)
         checker = PillDualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=task.targets)
