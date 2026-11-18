@@ -9,7 +9,7 @@ import sapien
 
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
 from .dual_arm_execution import (plan_dual_pose, execute_dual_reach, close_dual_and_confirm,
-    execute_dual_held_move, release_dual_and_confirm, verify_dual_placement)
+    execute_dual_held_move, release_dual_and_confirm, verify_dual_placement, observe_dual_task_outcome)
 from .trajectory_execution import as_numpy, bindings
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
 from .phase_kinematics import (SOLVER_LIMIT_FRACTION, attach_topp_capture, compact_phase_limits,
@@ -19,7 +19,6 @@ from .runtime_policy import DEFAULT_POLICY, RuntimePolicy, load_policy as load_p
 from .pill_task import TASK_ID, PillTask
 from .observation import ObservedEnvironment
 from .physical_observation import measured_source_departure
-from .task_outcome import observe_dual_task_outcome
 
 LIMITS = {"joint_vel_limit_rad_s": 1.5, "joint_acc_limit_rad_s2": 2.6,
     "approach_joint_vel_limit_rad_s": 1., "approach_joint_acc_limit_rad_s2": 1.3,
