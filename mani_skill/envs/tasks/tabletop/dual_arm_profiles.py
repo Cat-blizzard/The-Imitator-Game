@@ -59,6 +59,11 @@ class PillTaskProfile:
                              tuple[float, float, float, float] | None]
 
 
+@dataclass(frozen=True)
+class AppleBananaTaskProfile(PillTaskProfile):
+    """Original basket task mounts and grasps, relative to object geometry centres."""
+
+
 PICK_PLACE_PROFILES = {
     # The equivalent top-down grasp keeps joint6 away from its +/-pi limits.
     "piper": PickPlaceProfile(-.36, .48, -.04, .06,
@@ -79,6 +84,19 @@ PILL_PROFILES = {
         mount_poses=(MountPose((-.30, -.30, .202)), MountPose((-.30, .30, .202))),
         grasp_height_offsets_m=(.12, .12), pregrasp_clearances_m=(.09, .09),
         grasp_quaternions=((0., 0., 1., 0.), (0., 0., 1., 0.))),
+    "ur5_wsg": PillTaskProfile(
+        mount_poses=(MountPose((-.55, -.35, .002)),
+                     MountPose((-.55, .35, .002),
+                               (.25881904510252074, 0., 0., .9659258262890683))),
+        grasp_height_offsets_m=(.12, .12), pregrasp_clearances_m=(.09, .09),
+        grasp_quaternions=((0., 0., 1., 0.), (0., 0., 1., 0.))),
+}
+
+APPLE_BANANA_PROFILES = {
+    "piper": AppleBananaTaskProfile(
+        mount_poses=(MountPose((-.25, -.30, .202)), MountPose((-.25, .30, .202))),
+        grasp_height_offsets_m=(.012, .012), pregrasp_clearances_m=(.08, .08),
+        grasp_quaternions=((0., 0., 1., 0.), (0., 0., 1., 0.))),
 }
 
 TASK_PROFILES: dict[tuple[str, str], PickPlaceProfile | PillTaskProfile] = {
@@ -86,6 +104,8 @@ TASK_PROFILES: dict[tuple[str, str], PickPlaceProfile | PillTaskProfile] = {
 }
 TASK_PROFILES.update({("TwoRobotPickPillToRegions-v1", uid): profile
                       for uid, profile in PILL_PROFILES.items()})
+TASK_PROFILES.update({("TwoRobotPickAppleBananaToBaskets-v1", uid): profile
+                      for uid, profile in APPLE_BANANA_PROFILES.items()})
 
 
 def get_task_profile(task_id: str, robot_uid: str) -> PickPlaceProfile | PillTaskProfile:

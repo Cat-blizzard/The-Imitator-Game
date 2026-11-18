@@ -78,7 +78,8 @@ ROBOT_PROFILES = MappingProxyType({
         rest_arm_qpos=(-1.5447, -1.5447, -1.5447, -1.5794, 1.5794, 0.),
         gripper_open_qpos=.055, gripper_closed_qpos=.0027,
         finger_open_directions=((-1., 0., 0.), (-1., 0., 0.)),
-        robot_root_link_name="base_link"),
+        robot_root_link_name="base_link",
+        coupled_gripper_joints=("base_joint_gripper_left", "base_joint_gripper_right")),
     "xarm6_robotiq": EmbodimentProfile(
         uid="xarm6_robotiq", arm_joint_names=tuple(f"joint{i}" for i in range(1, 7)),
         gripper_joint_names=("left_outer_knuckle_joint", "left_inner_knuckle_joint",

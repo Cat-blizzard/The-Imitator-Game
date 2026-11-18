@@ -150,11 +150,13 @@ class PillTask:
         agents = self.raw.agent.agents
         profile = self.raw.embodiment_profile
         approaching = np.array([0., 0., -1.])
-        closing = _array(agents[1].tcp.pose.to_transformation_matrix())[0, :3, 1].copy()
-        closing -= np.dot(closing, approaching) * approaching
-        if np.linalg.norm(closing) < 1e-8:
-            raise ValueError("Degenerate horizontal closing direction")
-        closing /= np.linalg.norm(closing)
+        closing = None
+        if any(quaternion is None for quaternion in profile.grasp_quaternions):
+            closing = _array(agents[1].tcp.pose.to_transformation_matrix())[0, :3, 1].copy()
+            closing -= np.dot(closing, approaching) * approaching
+            if np.linalg.norm(closing) < 1e-8:
+                raise ValueError("Degenerate horizontal closing direction")
+            closing /= np.linalg.norm(closing)
         pairs = []
         for i, (agent, actor) in enumerate(zip(agents, self.targets)):
             height = profile.grasp_height_offsets_m[i]

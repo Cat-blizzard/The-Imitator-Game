@@ -25,6 +25,18 @@ LIMITS = {"joint_vel_limit_rad_s": 1.5, "joint_acc_limit_rad_s2": 2.6,
     "approach_joint_vel_limit_rad_s": 1., "approach_joint_acc_limit_rad_s2": 1.3,
     "solver_limit_fraction": SOLVER_LIMIT_FRACTION}
 
+SYNC_TASK_IDS = (TASK_ID, "TwoRobotPickAppleBananaToBaskets-v1")
+
+
+def task_components(task_id: str) -> tuple:
+    """Select a declared task adapter and its source-support collision checker."""
+    if task_id == TASK_ID:
+        return PillTask, PillDualPayloadCollisionChecker
+    if task_id == "TwoRobotPickAppleBananaToBaskets-v1":
+        from .apple_banana_task import AppleBananaTask
+        return AppleBananaTask, PillDualPayloadCollisionChecker
+    raise ValueError(f"Unsupported synchronous task {task_id!r}; choose {SYNC_TASK_IDS}")
+
 
 class StageFailure(RuntimeError):
     def __init__(self, category, reason):
@@ -59,17 +71,17 @@ def movement_budget(policy, before, scheduled, phase):
 
 
 def pill_planners(env, *, debug=False, vis=False):
-    """Preserve the original Panda planner and use named joints for Piper."""
+    """Preserve the original Panda planner; other supported arms use named joints."""
     raw = env.unwrapped
     if tuple(raw.robot_uids) == ('panda_wristcam', 'panda_wristcam'):
         return [PandaArmMotionPlanningSolver(env, base_pose=agent.robot.pose,
             multi_robot_id=i, joint_vel_limits=.9, joint_acc_limits=.9,
             debug=debug, vis=vis, visualize_target_grasp_pose=False, print_env_info=False)
             for i, agent in enumerate(raw.agent.agents)]
-    if tuple(raw.robot_uids) == ('piper', 'piper'):
+    if tuple(raw.robot_uids) in (('piper', 'piper'), ('ur5_wsg', 'ur5_wsg')):
         return [ArmMotionPlanner(env, agent, velocity_limit=.9, acceleration_limit=.9)
                 for agent in raw.agent.agents]
-    raise ValueError('The synchronous pill solution supports Panda wrist-camera or Piper pairs')
+    raise ValueError('The synchronous solution supports Panda wrist-camera, Piper or UR5+WSG pairs')
 
 
 def _compact_stage(name, result):
@@ -87,7 +99,8 @@ def _compact_stage(name, result):
     return row
 
 
-def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
+def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
+          task_id: str = TASK_ID, task_factory=None, checker_factory=None):
     """Return original two-arm step tuples; write independent result facts.
 
     The caller creates/closes the environment and owns RecordEpisode. Planning
@@ -97,9 +110,12 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
     if not isinstance(policy, RuntimePolicy):
         raise ValueError('Expected RuntimePolicy')
     raw = env.unwrapped
-    if (raw.spec.id != TASK_ID or raw.num_envs != 1
+    if (raw.spec.id != task_id or raw.num_envs != 1
             or any(agent.control_mode != 'pd_joint_pos' for agent in raw.agent.agents)):
-        raise ValueError(f'Sync supports one {TASK_ID} with pd_joint_pos')
+        raise ValueError(f'Sync supports one {task_id} with pd_joint_pos')
+    default_task, default_checker = task_components(task_id)
+    task_factory = default_task if task_factory is None else task_factory
+    checker_factory = default_checker if checker_factory is None else checker_factory
     if raw.backend.sim_backend not in ('cpu', 'physx_cpu'):
         raise ValueError('This sync implementation currently requires CPU physics')
     if not np.isclose(raw.control_timestep, .05) or not np.isclose(raw.sim_timestep, .01):
@@ -109,13 +125,13 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
     env.reset(seed=seed)
     report = {'schema': ('dual-panda-sync-v1' if raw.robot_uids[0] == 'panda_wristcam'
                          else 'dual-arm-sync-v2'),
-        'robot_uids': list(raw.robot_uids), 'seed': seed, 'backend': 'mplib',
+        'task_id': task_id, 'robot_uids': list(raw.robot_uids), 'seed': seed, 'backend': 'mplib',
         'control_freq': 20, 'physics_freq': 100, 'policy': policy.to_dict(),
         'motion_limits': dict(LIMITS), 'stages': [], 'planning': [],
         'execution': {'status': 'running'}, 'quality': {'status': 'not_evaluated'},
         'recording': {'status': 'owned_by_RecordEpisode'}}
     raw.dual_sync_result = report
-    task = PillTask(raw)
+    task = task_factory(raw)
     checker = None
     capture = ObservedEnvironment(env, task, lambda: checker, policy)
     started = time.monotonic()
@@ -145,7 +161,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY):
         solvers = pill_planners(env, debug=debug, vis=vis)
         for solver in solvers:
             attach_topp_capture(solver)
-        checker = PillDualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=task.targets)
+        checker = checker_factory.from_solvers(raw, *solvers, targets=task.targets)
         checker.set_measured_attachment_prediction(True)
 
         def plan(name, poses, closed):

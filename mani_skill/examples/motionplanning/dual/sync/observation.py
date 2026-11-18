@@ -65,7 +65,7 @@ class ObservedEnvironment:
         checker = self.checker_provider()
         geometry = measured_source_departure(checker, refresh=False)
         rows = task_object_contact_rows(contacts, self.identities, tuple(self.physical_released),
-            self.phase, self.task)
+            self.phase, self.task, include_destination_contents_proof=False)
         source_contact = [False, False]
         for row in rows:
             if row['physical_contact']:

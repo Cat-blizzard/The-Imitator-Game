@@ -112,5 +112,6 @@ def test_original_pill_task_profile_preserves_panda_and_selects_supported_robots
     assert original.pregrasp_clearances_m == (.09, .08)
     assert original.grasp_quaternions == (None, None)
     assert get_task_profile("TwoRobotPickPillToRegions-v1", "piper") is PILL_PROFILES["piper"]
+    assert get_task_profile("TwoRobotPickPillToRegions-v1", "ur5_wsg") is PILL_PROFILES["ur5_wsg"]
     with pytest.raises(ValueError, match="no profile.*supported robots"):
-        get_task_profile("TwoRobotPickPillToRegions-v1", "ur5_wsg")
+        get_task_profile("TwoRobotPickPillToRegions-v1", "arx_x5")

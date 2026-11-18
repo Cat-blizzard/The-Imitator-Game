@@ -43,10 +43,47 @@ def test_piper_sync_selection_reaches_environment_with_the_selected_pair(monkeyp
     assert calls[0][1]["control_mode"] == "pd_joint_pos"
 
 
+def test_ur5_sync_selection_reaches_environment_with_native_pair(monkeypatch):
+    class ReachedEnvironment(Exception):
+        pass
+
+    calls = []
+
+    def make(env_id, **kwargs):
+        calls.append((env_id, kwargs))
+        raise ReachedEnvironment
+
+    monkeypatch.setattr(runner.gym, "make", make)
+    with pytest.raises(ReachedEnvironment):
+        runner._main(runner.parse_args(["-e", TASK, "--robot", "ur5_wsg",
+                                        "--execution-mode", "sync"]))
+    assert len(calls) == 1 and calls[0][0] == TASK
+    assert calls[0][1]["robot_uids"] == ("ur5_wsg", "ur5_wsg")
+    assert calls[0][1]["control_mode"] == "pd_joint_pos"
+
+
+def test_configured_ur5_grasp_does_not_inherit_the_rest_tcp_closing_axis():
+    from mani_skill.examples.motionplanning.dual.sync.pill_task import PillTask
+    from mani_skill.utils.structs.pose import Pose
+
+    # A fixed task quaternion is independent of a projected rest-pose axis.
+    # No TCP property or dynamic grasp construction should be read here.
+    raw = NS(embodiment_profile=get_task_profile(TASK, "ur5_wsg"),
+             agent=NS(agents=[object(), object()]))
+    task = object.__new__(PillTask)
+    task.raw = raw
+    task.targets = tuple(NS(pose=Pose.create_from_pq(p=[[x, y, .0014]],
+                            q=[[1., 0., 0., 0.]])) for x, y in ((-.25, -.15), (-.25, .15)))
+    pairs = task.grasp_poses()
+    for (_, grasp), target in zip(pairs, task.targets):
+        np.testing.assert_allclose(grasp.p, target.pose.p[0].numpy()+[0., 0., .12], atol=1e-7)
+        np.testing.assert_allclose(np.abs(grasp.q), [0., 0., 1., 0.], atol=1e-7)
+
+
 @pytest.mark.parametrize("argv,reason", [
     (["-e", TASK, "--robot", "piper"], "requires --execution-mode sync"),
     (["-e", TASK, "--robot", "arx_x5", "--execution-mode", "sync"], "no profile"),
-    (["-e", "TwoRobotPickAppleBananaToBaskets-v1", "--robot", "piper",
+    (["-e", "TwoRobotScanPillBottle-v1", "--robot", "piper",
       "--execution-mode", "sync"], "no profile"),
     (["-e", TASK, "--robot", "missing-robot", "--execution-mode", "sync"], "Unsupported"),
 ])
@@ -57,7 +94,7 @@ def test_unsupported_robot_or_mode_is_rejected_before_gym_make(monkeypatch, argv
 
 
 def _recording(tmp_path, robot, *, legacy=False):
-    width = 7 if robot == "piper" else 8
+    width = 8 if robot == "panda_wristcam" else 7
     order = tuple(f"{robot}-{i}" for i in range(2))
     stages = [{"name": name, "status": "passed", "environment_steps": 1}
               for name in phase_sequence(DEFAULT_POLICY)]
@@ -79,7 +116,8 @@ def _recording(tmp_path, robot, *, legacy=False):
     return path, metadata, actions, states
 
 
-@pytest.mark.parametrize("robot,legacy,width", [("piper", False, 7), ("panda_wristcam", True, 8)])
+@pytest.mark.parametrize("robot,legacy,width", [("piper", False, 7), ("ur5_wsg", False, 7),
+                                               ("panda_wristcam", True, 8)])
 def test_replay_loads_native_width_and_physical_arm_order(tmp_path, robot, legacy, width):
     path, metadata, expected_actions, expected_states = _recording(tmp_path, robot, legacy=legacy)
     loaded, _, policy, phases, actions, initial = replay.load_episode(path)
@@ -149,6 +187,45 @@ def test_contact_permissions_follow_configured_piper_fingers_and_arm_identity():
                     assert contacts.contact_allowed([robot, payload], phase, srdf) is allowed
                     assert contacts.contact_allowed([payload, robot], phase, srdf) is allowed
                 assert not contacts.contact_allowed([robot, payload], "pregrasp", srdf)
+
+
+@pytest.mark.parametrize("root_name,pedestal", [("panda_link0", False),
+                                               ("link0", True), ("base_link", False)])
+def test_only_each_configured_root_can_contact_its_own_mount_support(root_name, pedestal):
+    agents, entities = [], {}
+    for arm in range(2):
+        links = []
+        for name in (root_name, "wrist"):
+            entity = object()
+            entities[arm, name] = entity
+            links.append(NS(name=name, _objs=[NS(entity=entity)]))
+        robot = NS(root=NS(name=root_name), get_links=lambda links=links: links)
+        agent = NS(robot=robot)
+        if root_name != "panda_link0":
+            agent.robot_root_link_name = root_name
+        agents.append(agent)
+    supports = {name: NS(_objs=[object()]) for name in
+                (("table", "mount_0", "mount_1") if pedestal else ("table", "obstacle"))}
+    identities, _ = contacts.contact_identities(NS(scene=NS(actors=supports)), agents,
+                                               ("a", "b"), [NS(_objs=[]), NS(_objs=[])])
+    for arm in range(2):
+        expected = f"mount_{arm}" if pedestal else "table"
+        root = identities[entities[arm, root_name]]
+        wrist = identities[entities[arm, "wrist"]]
+        assert root["is_mount_root"] and not wrist["is_mount_root"]
+        for name, actor in supports.items():
+            support = identities[actor._objs[0]]
+            for pair in ([root, support], [support, root]):
+                assert contacts.contact_allowed(pair, "preparation", {0: set(), 1: set()}) is (name == expected)
+            assert not contacts.contact_allowed([wrist, support], "preparation", {0: set(), 1: set()})
+    assert not contacts.contact_allowed([identities[entities[0, root_name]],
+                                         identities[entities[1, root_name]]],
+                                        "preparation", {0: set(), 1: set()})
+
+
+def test_legacy_panda_root_contact_dict_keeps_its_table_permission():
+    assert contacts.contact_allowed([{"kind": "robot", "link_name": "panda_link0"},
+                                     {"kind": "actor", "actor": "table"}], "preparation", {})
 
 
 def _six_joint_path():
@@ -286,7 +363,7 @@ def test_original_pill_assets_region_sizes_and_panda_mounts_are_preserved(monkey
     assert all(mount.quaternion == (1., 0., 0., 0.) for mount in profile.mount_poses)
 
 
-@pytest.mark.parametrize('robot', ['panda_wristcam', 'piper'])
+@pytest.mark.parametrize('robot', ['panda_wristcam', 'piper', 'ur5_wsg'])
 def test_original_pill_sampling_uses_the_same_random_offsets_and_object_heights(monkeypatch, robot):
     raw, _ = _original_pill_scene(monkeypatch, robot)
     raw.device, raw.num_envs = 'cpu', 3

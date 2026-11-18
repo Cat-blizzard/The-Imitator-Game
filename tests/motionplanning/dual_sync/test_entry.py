@@ -21,7 +21,7 @@ def test_serial_remains_default_and_seed_is_explicit():
 
 def test_unsupported_sync_rejected_before_environment_creation(monkeypatch):
     monkeypatch.setattr(runner.gym, "make", lambda *a, **k: pytest.fail("created env"))
-    args = runner.parse_args(["-e", "TwoRobotPickAppleBananaToBaskets-v1", "--execution-mode", "sync"])
+    args = runner.parse_args(["-e", "TwoRobotPickTennisBallGolfBall-v1", "--execution-mode", "sync"])
     with pytest.raises(ValueError, match="not supported"):
         runner._main(args)
 

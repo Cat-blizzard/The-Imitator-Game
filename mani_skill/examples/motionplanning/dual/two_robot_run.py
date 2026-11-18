@@ -122,7 +122,7 @@ MP_SOLUTIONS = {
     "TwoRobotTransFoodL3-v1": solveTwoRobotTransFoodL3,
     "TwoRobotPutBoxL3-v1": solveTwoRobotPutBoxL3,
 }
-SYNC_TASKS = {"TwoRobotPickPillToRegions-v1"}
+SYNC_TASKS = {"TwoRobotPickPillToRegions-v1", "TwoRobotPickAppleBananaToBaskets-v1"}
 
 
 def _selected_robot(args):
@@ -156,7 +156,13 @@ def _solver_for(args):
                 f"Synchronous execution is not supported for {args.env_id}. "
                 f"Supported tasks: {sorted(SYNC_TASKS)}"
             )
-        from mani_skill.examples.motionplanning.dual.sync.solve import load_policy, solve
+        from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+        get_task_profile(args.env_id, robot or "panda_wristcam")
+        from mani_skill.examples.motionplanning.dual.sync.solve import load_policy
+        if args.env_id == "TwoRobotPickAppleBananaToBaskets-v1":
+            from mani_skill.examples.motionplanning.dual.sync.apple_banana import solve
+        else:
+            from mani_skill.examples.motionplanning.dual.sync.solve import solve
 
         if args.sync_config is not None:
             from functools import partial

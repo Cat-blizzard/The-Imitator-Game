@@ -24,7 +24,7 @@ from .physical_observation import measured_source_departure
 from .pill_support_collision import PillDualPayloadCollisionChecker
 from .pill_task import PillTask, TASK_ID
 from .runtime_policy import RuntimePolicy
-from .solve import phase_sequence, pill_planners
+from .solve import SYNC_TASK_IDS, phase_sequence, pill_planners, task_components
 from .trajectory_execution import as_numpy
 
 ACTION_ORDER = ("panda_wristcam-0", "panda_wristcam-1")
@@ -34,9 +34,10 @@ def action_layout(metadata: dict) -> tuple[tuple[str, str], tuple[int, int]]:
     """Read native controller widths; old Panda archives retain their contract."""
     motion = metadata.get("motion_planning", {})
     robots = tuple(motion.get("robot_uids", ("panda_wristcam", "panda_wristcam")))
-    widths = {uid: get_robot_profile(uid).action_size for uid in ("panda_wristcam", "piper")}
+    widths = {uid: get_robot_profile(uid).action_size
+              for uid in ("panda_wristcam", "piper", "ur5_wsg")}
     if len(robots) != 2 or robots[0] != robots[1] or robots[0] not in widths:
-        raise ValueError("Action replay requires a supported homogeneous pill robot pair")
+        raise ValueError("Action replay requires a supported homogeneous robot pair")
     order = tuple(motion.get("action_order", ()))
     expected = tuple(f"{uid}-{i}" for i, uid in enumerate(robots))
     sizes = tuple(motion.get("action_sizes", (widths[robots[0]],)*2))
@@ -53,8 +54,8 @@ def load_episode(path: str | Path, episode_id: int = 0) -> tuple:
     if episode is None or "dual_sync" not in episode:
         raise ValueError("Selected episode needs standard synchronous episode metadata")
     sync = episode["dual_sync"]
-    if metadata["env_info"]["env_id"] != TASK_ID or sync.get("schema") not in ("dual-panda-sync-v1", "dual-arm-sync-v2"):
-        raise ValueError("This action replay supports the synchronous pill task only")
+    if metadata["env_info"]["env_id"] not in SYNC_TASK_IDS or sync.get("schema") not in ("dual-panda-sync-v1", "dual-arm-sync-v2"):
+        raise ValueError("This action replay supports declared synchronous tasks only")
     _, sizes = action_layout(metadata)
     policy = RuntimePolicy.from_dict(sync["policy"])
     if policy.max_episode_steps != 200 or policy.last_completion_step != 199:
@@ -109,13 +110,15 @@ def placement_window(row: dict, opened: bool, regions: list[bool], count: int,
 def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
     metadata, episode, policy, phases, actions, initial_state = load_episode(path, episode_id)
     order, sizes = action_layout(metadata)
+    task_id = metadata["env_info"]["env_id"]
+    task_factory, checker_factory = task_components(task_id)
     kwargs = dict(metadata["env_info"]["env_kwargs"])
     kwargs.update(sim_backend="physx_cpu", num_envs=1, obs_mode="none")
-    env = gym.make(TASK_ID, **kwargs)
+    env = gym.make(task_id, **kwargs)
     raw, capture, checker = env.unwrapped, None, None
     result = {"schema": ("dual-panda-action-replay-v1" if raw.robot_uids[0] == "panda_wristcam"
                          else "dual-arm-action-replay-v2"),
-        "robot_uids": list(raw.robot_uids), "episode_id": episode_id,
+        "task_id": task_id, "robot_uids": list(raw.robot_uids), "episode_id": episode_id,
         "seed": episode["episode_seed"], "recorded_actions": len(actions), "executed_actions": 0,
         "execution": {"status": "running"}, "quality": {"status": "not_evaluated"}}
     release_count = stable_count = 0
@@ -129,7 +132,7 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 or not np.isclose(raw.sim_timestep, .01)
                 or any(agent.control_mode != "pd_joint_pos" for agent in raw.agent.agents)):
             raise ValueError("Replay requires original 20 Hz absolute-joint control and 100 Hz CPU physics")
-        task = PillTask(raw)
+        task = task_factory(raw)
         capture = ObservedEnvironment(env, task, lambda: checker, policy)
         capture.install()
         predicates = task.region_predicates()
@@ -138,7 +141,7 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
             held = name in ("lift_and_hold", "carry_lower")
             if name == "pregrasp":
                 solvers = pill_planners(env)
-                checker = PillDualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=task.targets)
+                checker = checker_factory.from_solvers(raw, *solvers, targets=task.targets)
                 checker.set_measured_attachment_prediction(True)
             if name == "lift_and_hold":
                 checker.attach()

@@ -56,8 +56,8 @@ class ParallelGripperArm(BaseAgent):
 
     def _after_loading_articulation(self) -> None:
         # Equal drive targets alone let a force-saturated parallel gripper's
-        # centre translate. Represent the Piper's single opening coordinate as
-        # q7=q8, using the same finite tendon stiffness as the URDF mimic loader.
+        # centre translate. Represent the configured single opening coordinate
+        # by equal outward travel, using the URDF mimic loader's finite tendon.
         coupled = self.embodiment_profile.coupled_gripper_joints
         self.gripper_tendon_count = 0
         if coupled is not None:
