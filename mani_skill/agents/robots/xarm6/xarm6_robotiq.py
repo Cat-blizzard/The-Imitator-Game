@@ -1,16 +1,18 @@
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import sapien.core as sapien
 import torch
 
-from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
+from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR, format_path
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
+from mani_skill.agents.robots.xarm6.inertia_asset import prepare_xarm6_robotiq_inertia
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import assets, common, download_asset, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
 
@@ -95,6 +97,20 @@ class XArm6Robotiq(BaseAgent):
     ee_link_name = embodiment_profile.ee_link_name
 
     def __init__(self, *args, **kwargs):
+        source = Path(format_path(str(self.urdf_path)))
+        if not source.is_file():
+            if not download_asset.prompt_yes_no(
+                f"Robot {self.uid} has assets available for download. "
+                "Would you like to download them now?"
+            ):
+                raise FileNotFoundError(
+                    "Download xArm assets with: "
+                    "python -m mani_skill.utils.download_asset xarm6 --non-interactive"
+                )
+            download_asset.download(assets.DATA_SOURCES["xarm6"])
+        # Keep the downloaded model intact. Physics, IK and collision planners
+        # all consume this same derived URDF and its unchanged SRDF/mesh tree.
+        self.urdf_path = str(prepare_xarm6_robotiq_inertia(source))
         super().__init__(*args, **kwargs)
 
     @property

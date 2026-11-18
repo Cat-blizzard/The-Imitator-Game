@@ -63,10 +63,32 @@ asset with the newer geometry.
 These are simulation models, not calibrated hardware twins. The distributed
 [xArm asset](https://github.com/haosulab/ManiSkill-XArm6/blob/v0.1.1/xarm6_robotiq.urdf)
 inherits link2/link3 inertias whose principal values are positive
-but violate the rigid-body triangle inequality. Its finger masses/inertias are
-computed from collision geometry by the loader. This integration preserves that
-upstream model; successful task runs do not validate hardware dynamics, torque
-ratings or those source inertias.
+but violate the rigid-body triangle inequality. For that known asset version,
+the xArm agent automatically prepares a separate `urdf-products-v1` model using
+the manufacturer's [inertia-product sign correction](https://github.com/xArm-Developer/xarm_ros/commit/04dc79616ef55433bd589daee01c2d0db713f2f0),
+reported in [xarm_ros2 issue 37](https://github.com/xArm-Developer/xarm_ros2/issues/37).
+Only `ixy`, `ixz` and `iyz` in arm links 1 through 6 change sign; mass, COM,
+diagonal inertia, base, gripper, meshes, SRDF and controller settings stay the
+same. Physics and planning use the same derived file. The downloaded source
+remains intact; preparation is cached, and unrecognized/custom URDFs are left
+unchanged to avoid applying the correction twice. The derived directory's
+`source.json` records its model version and source.
+
+The correction is a port of the manufacturer's convention fix to the old asset,
+not a manufacturer validation of this particular model. Finger masses/inertias
+are still computed from collision geometry by the loader. Earlier xArm data and
+policy results used the original inertia model; keep those results associated
+with that version and evaluate old policies again after changing physics.
+Successful task runs do not validate hardware dynamics or torque ratings.
+
+With the corrected model, an unchanged xArm ACT checkpoint completed the same
+five reserved evaluation states (5/5). Three newly generated pill episodes met
+official success within the original horizon; two also passed final stability
+and action replay. The third did not complete the required stability window.
+Directly replaying three old expert action sequences on the new physics passed
+only one: keep original archives with their original model version rather than
+assuming cross-version replay compatibility. These are fixed regression cases,
+not a new success-rate estimate.
 
 ## Check loading and control
 
@@ -144,6 +166,7 @@ replan, add settling actions or impose recorded states on later frames.
 
 ```bash
 python -m pytest -q tests/agents/test_parallel_gripper.py \
+  tests/agents/test_xarm_inertia_asset.py \
   tests/agents/test_parallel_gripper_dynamics.py \
   tests/agents/test_embodiment_profiles.py tests/test_embodiment_smoke.py \
   tests/agents/test_robotiq_outer_coupling.py \
