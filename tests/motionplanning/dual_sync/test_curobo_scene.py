@@ -176,6 +176,11 @@ def test_snapshot_retains_base_world_peer_and_independent_fingers(tmp_path, monk
     monkeypatch.setattr(scene_collision, "scene_entities", lambda _: {"table": table, "pill": target})
     monkeypatch.setattr(scene, "_entity_shapes", lambda entity: entity.shapes)
     snapshots = [scene.export_curobo_snapshot(raw, i, cache_dir=tmp_path / "cache") for i in (0, 1)]
+    from mani_skill.examples.motionplanning.dual.sync.curobo_worker import robot_topology, world_topology
+    # Selecting the other Panda changes measured base-relative poses and finger
+    # locks, but retains fixed robot/world storage for a sequential profile.
+    assert robot_topology(snapshots[0]["robot_cfg"]) == robot_topology(snapshots[1]["robot_cfg"])
+    assert world_topology(snapshots[0]["world"]) == world_topology(snapshots[1]["world"])
     for index, result in enumerate(snapshots):
         kin = result["robot_cfg"]["kinematics"]
         assert kin["collision_spheres"]["panda_link0"]
@@ -221,6 +226,19 @@ def test_payload_reservation_preserves_base_and_only_allows_own_fingers():
     assert kin["extra_links"][scene.PAYLOAD_LINK]["link_mass"] == 0
     with pytest.raises(ValueError, match="unextended|extra"):
         scene.reserve_payload_config(reserved, 64)
+    resized = scene.resize_payload_config(reserved, 128)
+    assert reserved["kinematics"]["extra_collision_spheres"][scene.PAYLOAD_LINK] == 64
+    assert resized["kinematics"]["extra_collision_spheres"][scene.PAYLOAD_LINK] == 128
+    assert len(resized["kinematics"]["collision_spheres"][scene.PAYLOAD_LINK]) == 128
+    # Resizing changes storage only; every ordinary sphere and collision
+    # permission stays exactly as exported by the physical model.
+    resized["kinematics"]["collision_spheres"][scene.PAYLOAD_LINK] = kin["collision_spheres"][scene.PAYLOAD_LINK]
+    resized["kinematics"]["extra_collision_spheres"][scene.PAYLOAD_LINK] = 64
+    assert resized == reserved
+    altered = copy.deepcopy(reserved)
+    altered["kinematics"]["collision_spheres"][scene.PAYLOAD_LINK][0]["radius"] = .01
+    with pytest.raises(ValueError, match="disabled payload storage"):
+        scene.resize_payload_config(altered, 128)
 
 
 @pytest.mark.parametrize("bad", [0, -1, float("nan"), float("inf")])

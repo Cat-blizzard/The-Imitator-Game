@@ -311,6 +311,7 @@ class Session:
         seed = request.get("seed", 0)
         if type(seed) is not int or not 0 <= seed < 2**31:
             raise ValueError("seed must be an integer in [0,2**31)")
+        self.seed = seed
         robot = request["robot_cfg"]
         urdf_limits, self.fingers = load_urdf(robot["kinematics"]["urdf_path"])
         config = profile_config(robot, self.velocity, self.acceleration, urdf_limits)
@@ -348,14 +349,33 @@ class Session:
                 if float(torch.max(torch.abs(params.fixed_transforms[idx]-actual)).item()) > 2e-6:
                     raise RuntimeError("Cached prismatic transform differs from native initialization")
             self.cached_params[id(params)] = cached
+        construction_s = time.perf_counter()-begin
         receipt = self.update(request)
+        initial_update_s = receipt["wall_s"]
         warm_begin = time.perf_counter()
         warm = bool(self.planner.warmup(enable_graph=True, num_warmup_iterations=1))
         torch.cuda.synchronize()
+        warmup_s = time.perf_counter()-warm_begin
+        # Warmup exercises synthetic plans. Both fresh and retained profiles
+        # start their first real query at the constructor seed's stream origin.
+        self.reset_seed()
         return {**receipt, "configured": True, "curobo_version": str(curobo.__version__),
                 "native_model_limits": self.native_limits, "warmup_success": warm,
-                "warmup_s": time.perf_counter()-warm_begin, "wall_s": time.perf_counter()-begin,
+                "construction_s": construction_s, "initial_update_s": initial_update_s,
+                "warmup_s": warmup_s, "wall_s": time.perf_counter()-begin,
                 "use_cuda_graph": True, "payload_inertia_applied_to_timeopt": False}
+
+    def reset_seed(self) -> None:
+        random.seed(self.seed)
+        self.torch.manual_seed(self.seed)
+        self.torch.cuda.manual_seed_all(self.seed)
+        self.planner.reset_seed()
+
+    def begin_episode(self) -> dict[str, Any]:
+        """Retain captures and limits, invalidate all old measured snapshots."""
+        self.ready = False
+        self.reset_seed()
+        return {"reset": True, "planner_seed": self.seed}
 
     def update(self, request: dict[str, Any]) -> dict[str, Any]:
         self.ready = False
@@ -363,8 +383,11 @@ class Session:
         robot, world = request["robot_cfg"], request["world"]
         if robot_topology(robot) != self.robot_structure or world_topology(world) != self.world_structure:
             raise ValueError("Robot/world geometry or profile changed; construct a new session")
+        payload_model = deepcopy(request.get("payload_model", self.payload_model))
+        if payload_model is not None:
+            validate_payload_model(payload_model, robot["kinematics"], world)
         state = deepcopy(request.get("payload_state", empty_payload_state()))
-        layers, masks, disabled = collision_policy(self.payload_model, state, world,
+        layers, masks, disabled = collision_policy(payload_model, state, world,
                                                    robot["kinematics"]["collision_link_names"])
         kin, defaults = robot["kinematics"], robot["kinematics"]["cspace"]
         locks = kin["lock_joints"]
@@ -392,7 +415,7 @@ class Session:
                 checker.update_obstacle_pose(name, self.Pose.from_list(shape["pose"], device_cfg=self.device))
                 checker.data.set_obstacle_layers(name, layers[name])
                 checker.enable_obstacle(name, enable=name not in disabled)
-        if self.payload_model is not None:
+        if payload_model is not None:
             manager = self.planner.attachment_manager
             attachment = state["attachment"]
             if attachment is None:
@@ -423,11 +446,17 @@ class Session:
             if any(abs(values[list(locked.joint_names).index(n)]-locks[n]) > 1e-7 for n in FINGER_NAMES):
                 raise RuntimeError("Native model failed to update both measured finger locks")
             readback.append(dict(zip(locked.joint_names, values)))
+        if request.get("reset_seed") is True:
+            # One fixed-profile planner may serve both arms sequentially. Each
+            # query starts at the same constructor seed after its full refresh.
+            self.reset_seed()
         self.snapshot_id += 1
+        self.payload_model = payload_model
         self.ready = True
         return {"updated": True, "snapshot_id": self.snapshot_id, "joint_names": ARM_NAMES,
                 "locked_fingers": readback, "disabled_own_target_shapes": sorted(disabled),
                 "collision_layers": layers, "link_collision_masks": masks,
+                "seed_reset": request.get("reset_seed") is True,
                 "wall_s": time.perf_counter()-begin}
 
     def plan_pose(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -484,6 +513,13 @@ class Worker:
         if request.get("op") == "shutdown":
             self.shutdown()
             return {"shutdown": True}
+        if request.get("op") == "begin_episode":
+            # Invalidate the whole pair before any reset or subsequent update.
+            # A partial refresh can never expose an old world to another arm.
+            for session in self.sessions.values():
+                session.ready = False
+            results = {name: session.begin_episode() for name, session in self.sessions.items()}
+            return {"reset": True, "sessions": results}
         op, name = request.get("op"), request.get("session_id")
         if op not in ("configure", "update", "plan_pose", "release"):
             raise ValueError("Unknown operation")
@@ -492,8 +528,8 @@ class Worker:
         if op == "configure":
             if name in self.sessions:
                 raise RuntimeError("Session is already configured")
-            if len(self.sessions) >= 4:
-                raise RuntimeError("Worker supports two arms with two fixed profiles each")
+            if len(self.sessions) >= 2:
+                raise RuntimeError("Worker supports at most two resident planners")
             session = self.session_factory()
             try:
                 result = session.configure(request)

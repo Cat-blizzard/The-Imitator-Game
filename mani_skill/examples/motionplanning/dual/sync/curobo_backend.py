@@ -145,6 +145,124 @@ class CuroboProcess:
             self.log.close()
 
 
+def _configuration_key(request: Mapping[str, Any]) -> dict[str, Any]:
+    """Fixed storage/solver identity; measured poses and payload fits may vary."""
+    from .curobo_worker import robot_topology, world_topology
+    model = request.get("payload_model")
+    # Target identity and its fitted sphere values are validated dynamic state:
+    # the same fixed TCP storage can serve either Panda's current target.
+    payload = None if model is None else {key: deepcopy(model.get(key)) for key in (
+        "link_name", "capacity")}
+    return {"robot": robot_topology(request["robot_cfg"]),
+        "world": world_topology(request["world"]), "payload": payload,
+        **{key: request.get(key) for key in ("velocity_limit", "acceleration_limit",
+            "seed", "device", "interpolation_dt", "tool_frame")}}
+
+
+class CuroboSession:
+    """Own two fixed-profile planners, serving the Panda arms sequentially.
+
+    The first episode fixes the planner seed unless explicitly supplied. Scene,
+    fingers and attachments are measured afresh each episode; geometry/storage
+    incompatibility rebuilds the affected profile instead of trimming geometry.
+    """
+
+    def __init__(self, options: Mapping[str, Any] | None = None,
+                 planner_seed: int | None = None) -> None:
+        if planner_seed is not None and (type(planner_seed) is not int or not 0 <= planner_seed < 2**31):
+            raise ValueError("planner_seed must be an integer in [0,2**31)")
+        self.options = None if options is None else dict(options)
+        self.planner_seed = planner_seed
+        self.rpc: CuroboProcess | None = None
+        self.configured: dict[str, dict[str, Any]] = {}
+        self.active = False
+        self.episode_count = 0
+
+    def connect(self, options: Mapping[str, Any], episode_seed: int) -> CuroboProcess:
+        if self.active:
+            raise RuntimeError("A cuRobo session can run only one episode at a time")
+        if self.options is None:
+            self.options = dict(options)
+        elif self.options != dict(options):
+            raise ValueError("Shared cuRobo session options changed")
+        if self.planner_seed is None:
+            self.planner_seed = episode_seed
+        if self.rpc is not None and self.rpc.failed:
+            self.close()
+        if self.rpc is None:
+            self.rpc = CuroboProcess(**self.options)
+        self.active = True
+        return self.rpc
+
+    def prepare(self, name: str, request: dict[str, Any]) -> dict[str, Any]:
+        """Keep an existing buffer size when the new complete fit fits inside."""
+        previous = self.configured.get(name)
+        model = request.get("payload_model")
+        if previous is None or model is None:
+            return request
+        capacity = (previous["request"].get("payload_model") or {}).get("capacity", 0)
+        if capacity <= model["capacity"]:
+            return request
+        from .curobo_scene import resize_payload_config
+        return {**request, "payload_model": {**model, "capacity": capacity},
+            "robot_cfg": resize_payload_config(request["robot_cfg"], capacity)}
+
+    def begin_episode(self, requests: Mapping[str, dict[str, Any]]) -> list[dict[str, Any]]:
+        assert self.rpc is not None
+        self.episode_count += 1
+        self.rpc.request("begin_episode")
+        receipts = []
+        try:
+            for name in list(self.configured):
+                request = self.prepare(name, requests[name])
+                if _configuration_key(request) != self.configured[name]["key"]:
+                    self.rpc.request("release", session_id=name)
+                    del self.configured[name]
+                    continue
+                # Refresh every retained profile, including currently inactive
+                # transport models: no previous episode's attachment survives.
+                result = self.rpc.request("update", session_id=name,
+                    **{key: request[key] for key in ("robot_cfg", "world", "payload_model", "payload_state")})
+                receipts.append({"session_id": name, "configuration_reused": True,
+                                 "episode_reset": True, **result})
+        except BaseException:
+            self.close()
+            raise
+        return receipts
+
+    def acquire(self, name: str, request: dict[str, Any]) -> dict[str, Any]:
+        assert self.rpc is not None
+        request = self.prepare(name, request)
+        key = _configuration_key(request)
+        if name in self.configured:
+            if key == self.configured[name]["key"]:
+                return {"configured": True, "configuration_reused": True,
+                    "native_model_limits": deepcopy(self.configured[name]["receipt"].get("native_model_limits"))}
+            self.rpc.request("release", session_id=name)
+            del self.configured[name]
+        try:
+            result = self.rpc.request("configure", session_id=name, **request)
+        except BaseException:
+            self.close()
+            raise
+        self.configured[name] = {"key": key, "request": deepcopy(request), "receipt": deepcopy(result)}
+        return {**result, "configuration_reused": False}
+
+    def end_episode(self) -> None:
+        self.active = False
+        if self.rpc is not None and self.rpc.failed:
+            self.close()
+
+    def close(self) -> None:
+        self.active = False
+        try:
+            if self.rpc is not None:
+                self.rpc.close()
+        finally:
+            self.rpc = None
+            self.configured.clear()
+
+
 def checked_trajectory(result: Mapping[str, Any], measured_start: Any,
                        joint_names: tuple[str, ...], gripper: float, action_key: str,
                        *, velocity_limit: float, acceleration_limit: float) -> ArmTrajectory:
@@ -175,14 +293,16 @@ def checked_trajectory(result: Mapping[str, Any], measured_start: Any,
 
 
 class CuroboBackend:
-    """Two resident arm planners; approach models retire before transport.
+    """Fixed-profile arm planners for the shared executor.
 
-    Each fixed phase profile is constructed once. The workflow never returns to
-    approach after grasp, so it need not keep both profiles on the GPU at once.
+    A standalone episode retires approach before transport (two arm residents).
+    A batch retains one planner per profile (two residents), updating the full
+    measured snapshot before each independent arm's candidate query.
     """
 
     def __init__(self, env: Any, solvers: list[Any], task: Any, *, seed: int | None,
-                 options: Mapping[str, Any] | None, limits: dict[str, Any]) -> None:
+                 options: Mapping[str, Any] | None, limits: dict[str, Any],
+                 session: CuroboSession | None = None) -> None:
         self.raw, self.solvers, self.task = env.unwrapped, solvers, task
         options = dict(options or {})
         unsupported = set(options) - {"python", "device", "cache_dir"}
@@ -190,8 +310,11 @@ class CuroboBackend:
             raise ValueError(f"Unsupported cuRobo options: {sorted(unsupported)}")
         self.cache_dir = options.get("cache_dir")
         self.arms = bindings(self.raw, tuple(self.raw.agent.agents_dict))
-        self.seed, self.limits = int(seed or 0), limits
-        self.rpc = CuroboProcess(**options)
+        self.episode_seed, self.limits = int(seed or 0), limits
+        self.session = session
+        self.rpc = CuroboProcess(**options) if session is None else session.connect(options, self.episode_seed)
+        self.seed = self.episode_seed if session is None else session.planner_seed
+        self.request_start = len(self.rpc.receipts)
         self.serial = 0
         self.profile: str | None = None
         self.models: list[dict[str, Any]] = []
@@ -230,10 +353,11 @@ class CuroboBackend:
                 "spheres_actor_local": spheres,
                 "source_obstacle_names": [SOURCE_TABLE]})
         model = self.models[arm_index]
-        if closed and not model.get("cover_frozen_at_grasp", False):
+        if closed:
             agent = self.raw.agent.agents[arm_index]
             if not checker.attached or not bool(as_numpy(agent.is_grasping(target)).item()):
-                raise ValueError("cuRobo payload refinement requires a confirmed physical grasp")
+                raise ValueError("cuRobo payload attachment requires a current confirmed physical grasp")
+        if closed and not model.get("cover_frozen_at_grasp", False):
             tcp_to_object = _pose(np.linalg.inv(_matrix(agent.tcp.pose)) @ _matrix(target.pose))
             shapes = _entity_shapes(target._objs[0])
             spheres, proofs = [], []
@@ -255,9 +379,6 @@ class CuroboBackend:
             "attachment": None, "source_support_allowed": False,
             "source_support_obstacle_names": []}
         if closed:
-            agent = self.raw.agent.agents[arm_index]
-            if not checker.attached or not bool(as_numpy(agent.is_grasping(target)).item()):
-                raise ValueError("cuRobo payload attachment requires a current confirmed physical grasp")
             base = _matrix(agent.robot.pose)
             state["attachment"] = {"spheres": model["spheres_actor_local"],
                 "object_pose_base_wxyz": _pose(np.linalg.inv(base) @ _matrix(target.pose)),
@@ -273,19 +394,43 @@ class CuroboBackend:
     def initialize(self, checker: Any) -> None:
         snapshots = [self._snapshot(i, phase="initialization", closed=False, checker=checker)
                      for i in (0, 1)]
+        if self.session is not None:
+            requests = {profile: self._request(profile, self._shared_snapshots(profile, snapshots)[0])
+                for profile in ("approach", "global")}
+            self.initialization.extend(self.session.begin_episode(requests))
         self._configure("approach", snapshots)
 
-    def _configure(self, profile: str, snapshots: list[dict[str, Any]]) -> None:
+    def _shared_snapshots(self, profile: str, snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Reserve the complete two-arm fits before allocating one profile."""
+        from .curobo_scene import resize_payload_config
+        capacity = max(snapshot["payload_model"]["capacity"] for snapshot in snapshots)
+        previous = self.session.configured.get(profile)
+        if previous is not None:
+            capacity = max(capacity, previous["request"]["payload_model"]["capacity"])
+        return [snapshot if snapshot["payload_model"]["capacity"] == capacity else {
+            **snapshot, "payload_model": {**snapshot["payload_model"], "capacity": capacity},
+            "robot_cfg": resize_payload_config(snapshot["robot_cfg"], capacity)}
+            for snapshot in snapshots]
+
+    def _request(self, profile: str, snapshot: dict[str, Any]) -> dict[str, Any]:
         from .phase_kinematics import compact_phase_limits
         phase = "pregrasp" if profile == "approach" else "carry_lower"
         limits = compact_phase_limits(self.limits, phase)
+        return {key: snapshot[key] for key in ("robot_cfg", "world", "payload_model", "payload_state")} | {
+            "velocity_limit": limits["solver_velocity_limit_rad_s"],
+            "acceleration_limit": limits["solver_acceleration_limit_rad_s2"],
+            "device": self.rpc.device, "seed": self.seed, "interpolation_dt": .02}
+
+    def _configure(self, profile: str, snapshots: list[dict[str, Any]]) -> None:
+        if self.session is not None:
+            snapshot = self._shared_snapshots(profile, snapshots)[0]
+            result = self.session.acquire(profile, self._request(profile, snapshot))
+            self.initialization.append({"session_id": profile, **result})
+            self.profile = profile
+            return
         for arm, snapshot in zip(("left", "right"), snapshots):
-            result = self.rpc.request("configure", session_id=f"{arm}:{profile}",
-                robot_cfg=snapshot["robot_cfg"], world=snapshot["world"],
-                payload_model=snapshot["payload_model"], payload_state=snapshot["payload_state"],
-                velocity_limit=limits["solver_velocity_limit_rad_s"],
-                acceleration_limit=limits["solver_acceleration_limit_rad_s2"],
-                device=self.rpc.device, seed=self.seed, interpolation_dt=.02)
+            name, request = f"{arm}:{profile}", self._request(profile, snapshot)
+            result = self.rpc.request("configure", session_id=name, **request)
             self.initialization.append({"session_id": f"{arm}:{profile}", **result})
         self.profile = profile
 
@@ -298,9 +443,12 @@ class CuroboBackend:
         if self.profile != profile:
             if self.profile != "approach" or profile != "global":
                 raise ValueError("The task may transition from approach to transport only once")
-            for arm in ("left", "right"):
-                self.rpc.request("release", session_id=f"{arm}:approach")
+            if getattr(self, "session", None) is None:
+                for arm in ("left", "right"):
+                    self.rpc.request("release", session_id=f"{arm}:approach")
             self._configure(profile, snapshots)
+        if getattr(self, "session", None) is not None:
+            snapshots = self._shared_snapshots(profile, snapshots)
         paths, audits = [], []
         call_started = time.monotonic()
         phase_report = {"name": phase, "status": "planning", "arms": audits}
@@ -309,11 +457,17 @@ class CuroboBackend:
             for index, (arm, binding, snapshot, goal) in enumerate(zip(
                     ("left", "right"), self.arms, snapshots, poses)):
                 session = f"{arm}:{profile}"
-                arm_report: dict[str, Any] = {"session_id": session}
+                if getattr(self, "session", None) is not None:
+                    session = profile
+                    acquired = self.session.acquire(profile, self._request(profile, snapshot))
+                    if acquired["configuration_reused"] is False:
+                        self.initialization.append({"session_id": profile, "arm": arm, **acquired})
+                arm_report: dict[str, Any] = {"session_id": session, "arm": arm}
                 audits.append(arm_report)
                 update = self.rpc.request("update", session_id=session,
                     robot_cfg=snapshot["robot_cfg"], world=snapshot["world"],
-                    payload_state=snapshot["payload_state"])
+                    payload_model=snapshot["payload_model"], payload_state=snapshot["payload_state"],
+                    reset_seed=getattr(self, "session", None) is not None)
                 arm_report["update"] = update
                 goal_base = _pose(np.linalg.inv(_matrix(binding.agent.robot.pose)) @ _matrix(goal))
                 native = self.rpc.request("plan_pose", session_id=session, snapshot_id=update["snapshot_id"],
@@ -357,13 +511,19 @@ class CuroboBackend:
 
     def summary(self) -> dict[str, Any]:
         return {"version": "0.9.0", "initialization": self.initialization,
-            "planning": self.planning, "requests": list(self.rpc.receipts),
+            "planning": self.planning, "requests": list(self.rpc.receipts[self.request_start:]),
+            "episode_seed": self.episode_seed, "planner_seed": self.seed,
             "path_generator": "curobo", "mplib_path_fallback": False,
             "shared_geometry_checks": True, "joint_14d_planning": False,
-            "resident_planners": 2, "phase_profiles_constructed_once": True}
+            "resident_planners": 2 if self.session is None else len(self.session.configured),
+            "phase_profiles_constructed_once": True, "cross_episode_reuse": self.session is not None,
+            "shared_per_query_seed_reset": self.session is not None}
 
     def close(self) -> None:
-        self.rpc.close()
+        if self.session is None:
+            self.rpc.close()
+        else:
+            self.session.end_episode()
 
 
 def self_test() -> None:

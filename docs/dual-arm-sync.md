@@ -72,7 +72,7 @@ and selected future windows; there is no fixed extra three-tick margin veto.
 Each standard episode JSON includes `dual_sync` with independent facts:
 
 - `official`: environment success, elapsed steps, horizon, native done signals.
-- `execution`: planning, budget, physical, control, or runtime failure reason.
+- `execution`: planning, geometry, budget, physical, control, or runtime failure reason.
 - `quality`: selected retreat/stability outcome and evaluated flags.
 - `physics`: actual forbidden contacts, source departure, and measured slip.
 - `recording`: whether the caller saved the standard trajectory.
@@ -83,6 +83,15 @@ collision. Normal generation keeps compact phase summaries, actions, states,
 seed, and resolved configuration; it does not archive source trees or require
 per-file source hashes. Failures remain recordable; `--only-count-success`
 continues to filter on the original environment success rule.
+
+Geometric refusals use the `geometry` execution category. Historical reason
+names such as `measured_collision` mean a geometry query at measured poses;
+native forbidden contacts and observed grasp/drop/slip events remain physical
+failures. The terminal summary reports execution categories, official success
+and quality failures separately. Initial pill/table support is decided by all
+actual convex pieces, finite tabletop containment and the existing penetration
+and depth-growth limits. Actor-origin displacement and rotation are diagnostic;
+measured departure permanently closes the initial-support permission.
 
 ## Replay and dataset conversion
 

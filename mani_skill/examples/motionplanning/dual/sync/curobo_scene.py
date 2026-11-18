@@ -477,6 +477,23 @@ def reserve_payload_config(robot_cfg: dict[str, Any], capacity: int) -> dict[str
     return result
 
 
+def resize_payload_config(robot_cfg: dict[str, Any], capacity: int) -> dict[str, Any]:
+    """Resize only disabled storage on an already reserved payload link."""
+    if type(capacity) is not int or not 1 <= capacity <= 100_000:
+        raise ValueError("Payload capacity must be an integer in [1,100000]")
+    result = copy.deepcopy(robot_cfg)
+    kin = result["kinematics"]
+    previous = kin.get("extra_collision_spheres", {}).get(PAYLOAD_LINK)
+    spheres = kin.get("collision_spheres", {}).get(PAYLOAD_LINK, [])
+    if (type(previous) is not int or len(spheres) != previous
+            or any(sphere != {"center": [0., 0., 0.], "radius": -1.} for sphere in spheres)):
+        raise ValueError("Expected the disabled payload storage from reserve_payload_config")
+    kin["collision_spheres"][PAYLOAD_LINK] = [
+        {"center": [0., 0., 0.], "radius": -1.} for _ in range(capacity)]
+    kin["extra_collision_spheres"][PAYLOAD_LINK] = capacity
+    return result
+
+
 def _entity_shapes(entity: Any) -> list[Any]:
     import sapien.physx as physx
     bodies = [c for c in entity.components if isinstance(c, physx.PhysxRigidBaseComponent)]

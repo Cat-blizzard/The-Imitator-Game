@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
 import numpy as np
 import sapien
@@ -72,8 +73,26 @@ def _compact_stage(name, result):
     return row
 
 
-def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
-          planner_backend='mplib', curobo_options=None):
+def _failure_category(name: str, result: dict[str, Any], *, physical_events: bool) -> str:
+    """Keep geometric checks separate from observed contact or grasp failures."""
+    reason = result.get('reason')
+    if physical_events or reason in (
+            'grasp_lost', 'object_dropped', 'position_slip', 'rotation_slip'):
+        return 'physics'
+    if reason in ('measured_collision', 'initial_collision', 'candidate_collision',
+                  'updated_candidate_collision'):
+        return 'geometry'
+    if result['status'] == 'rejected':
+        return 'planning'
+    if ((name == 'retreat' and result['status'] == 'reach_timeout')
+            or (name == 'verify_placement' and result['status'] == 'placement_timeout')):
+        return 'quality'
+    return 'execution'
+
+
+def solve(env: Any, seed: int | None = None, debug: bool = False, vis: bool = False, *,
+          policy: RuntimePolicy = DEFAULT_POLICY, planner_backend: str = 'mplib',
+          curobo_options: dict[str, Any] | None = None, curobo_session: Any = None) -> tuple[Any, Any]:
     """Return original two-arm step tuples; write independent result facts.
 
     The caller creates/closes the environment and owns RecordEpisode. Planning
@@ -84,8 +103,8 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         raise ValueError('Expected RuntimePolicy')
     if planner_backend not in ('mplib', 'curobo'):
         raise ValueError('Expected planner_backend mplib or curobo')
-    if planner_backend != 'curobo' and curobo_options:
-        raise ValueError('cuRobo options require planner_backend curobo')
+    if planner_backend != 'curobo' and (curobo_options or curobo_session is not None):
+        raise ValueError('cuRobo options/session require planner_backend curobo')
     raw = env.unwrapped
     if (raw.spec.id != TASK_ID or raw.num_envs != 1
             or any(agent.control_mode != 'pd_joint_pos' for agent in raw.agent.agents)):
@@ -117,12 +136,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         if debug:
             print(f'sync {name}: {result["status"]} at step{elapsed()}', flush=True)
         if result['status'] != 'passed':
-            physical = capture.events or result.get('reason') in (
-                'grasp_lost', 'object_dropped', 'position_slip', 'rotation_slip', 'measured_collision')
-            quality_timeout = ((name == 'retreat' and result['status'] == 'reach_timeout')
-                or (name == 'verify_placement' and result['status'] == 'placement_timeout'))
-            category = ('physics' if physical else 'planning' if result['status'] == 'rejected'
-                else 'quality' if quality_timeout else 'execution')
+            category = _failure_category(name, result, physical_events=bool(capture.events))
             raise StageFailure(category, f'{name}: {result.get("reason", result["status"])}')
 
     try:
@@ -143,7 +157,7 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         if planner_backend == 'curobo':
             from .curobo_backend import CuroboBackend
             backend = CuroboBackend(env, solvers, task, seed=seed,
-                options=curobo_options, limits=LIMITS)
+                options=curobo_options, limits=LIMITS, session=curobo_session)
             backend.initialize(checker)
 
         def plan(name, poses, closed):

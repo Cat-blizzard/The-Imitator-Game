@@ -265,7 +265,8 @@ def test_worker_error_and_protocol_error_poison_only_the_owned_worker(
     ("pregrasp", False, "approach"), ("descend", False, "approach"),
     ("carry_lower", True, "global"),
 ])
-def test_backend_maps_measured_snapshots_base_poses_and_shared_hold_clock(phase, closed, profile):
+@pytest.mark.parametrize("shared", [False, True])
+def test_backend_maps_measured_snapshots_base_poses_and_shared_hold_clock(phase, closed, profile, shared):
     backend = client.CuroboBackend.__new__(client.CuroboBackend)
     backend.raw = SimpleNamespace(control_timestep=.05)
     backend.serial, backend.planning = 0, []
@@ -279,7 +280,13 @@ def test_backend_maps_measured_snapshots_base_poses_and_shared_hold_clock(phase,
     goals_base = [goal.copy() for goal in poses]
     for goal, base in zip(goals_base, bases):
         goal[:3] -= base[:3]
-    snapshots, calls, fk_inputs = [], [], []
+    snapshots, calls, fk_inputs, acquired = [], [], [], []
+    if shared:
+        def acquire(name, request):
+            acquired.append((name, deepcopy(request)))
+            return {"configuration_reused": True}
+        backend.session = SimpleNamespace(configured={}, acquire=acquire)
+        backend._request = lambda profile, snapshot: snapshot
     user_names = ("panda_finger_joint2", NAMES[1], NAMES[0], *NAMES[2:], "panda_finger_joint1")
     active_names = (*NAMES, "panda_finger_joint1", "panda_finger_joint2")
     backend.arms, backend.solvers = [], []
@@ -300,13 +307,19 @@ def test_backend_maps_measured_snapshots_base_poses_and_shared_hold_clock(phase,
 
     def snapshot(index, **kwargs):
         snapshots.append((index, kwargs))
+        if shared:
+            result = configuration_fixture((64, 128)[index])
+            result["robot_cfg"]["arm"] = index
+            return {**result, "q_start": starts[index].tolist()}
         return {"robot_cfg": {"arm": index}, "world": {"snapshot": index},
-                "payload_state": {"closed": closed}, "q_start": starts[index].tolist()}
+                "payload_model": {}, "payload_state": {"closed": closed}, "q_start": starts[index].tolist()}
 
+    selected = [None]
     def request(operation, **kwargs):
         calls.append((operation, kwargs))
-        index = 0 if kwargs["session_id"].startswith("left:") else 1
+        index = kwargs["robot_cfg"]["arm"] if operation == "update" else selected[0]
         if operation == "update":
+            selected[0] = index
             return {"snapshot_id": f"measured-{index}"}
         return native_path(starts[index], duration=(.1, .15)[index])
 
@@ -319,7 +332,7 @@ def test_backend_maps_measured_snapshots_base_poses_and_shared_hold_clock(phase,
     assert snapshots == [(i, {"phase": phase, "closed": closed, "checker": checker}) for i in (0, 1)]
     assert [op for op, _ in calls] == ["update", "plan_pose", "update", "plan_pose"]
     for index, (_, request_body) in enumerate(calls[1::2]):
-        assert request_body["session_id"] == f"{('left', 'right')[index]}:{profile}"
+        assert request_body["session_id"] == (profile if shared else f"{('left', 'right')[index]}:{profile}")
         assert request_body["snapshot_id"] == f"measured-{index}"
         np.testing.assert_allclose(request_body["goal_pose"], goals_base[index])
         np.testing.assert_array_equal(request_body["start"], starts[index])
@@ -334,6 +347,12 @@ def test_backend_maps_measured_snapshots_base_poses_and_shared_hold_clock(phase,
         assert trajectory.gripper_command == (-1. if closed else 1.)
     assert backend.planning[0]["name"] == phase
     assert all(arm["endpoint"]["status"] == "passed" for arm in backend.planning[0]["arms"])
+    assert [body["reset_seed"] for op, body in calls if op == "update"] == [shared, shared]
+    if shared:
+        assert [name for name, _ in acquired] == [profile, profile]
+        assert [body["payload_model"]["capacity"] for _, body in acquired] == [128, 128]
+        assert all(body["robot_cfg"]["kinematics"]["extra_collision_spheres"]["tig_payload"] == 128
+                   for _, body in acquired)
 
 
 @pytest.mark.parametrize("native_failure", [True, False])
@@ -345,7 +364,7 @@ def test_failed_native_or_rejected_trajectory_remains_in_phase_report(native_fai
     backend.arms = [SimpleNamespace(key="left", names=NAMES, arm_qpos=lambda: START.copy(),
         agent=SimpleNamespace(robot=SimpleNamespace(pose=identity)))]
     backend._snapshot = lambda index, **kwargs: {"robot_cfg": {}, "world": {},
-        "payload_state": {}, "q_start": START.tolist()}
+        "payload_model": {}, "payload_state": {}, "q_start": START.tolist()}
     native = native_path()
     native.update(native_result_is_none=native_failure, graph_calls=0 if native_failure else 1,
                   graph_success=not native_failure, graph_time_s=0. if native_failure else .01,
@@ -370,6 +389,170 @@ def test_failed_native_or_rejected_trajectory_remains_in_phase_report(native_fai
         assert arm[key] == native[key]
     assert "endpoint" not in arm
     json.dumps(report, allow_nan=False)
+
+
+def configuration_fixture(capacity=64, *, shift=0., finger=.03, radius=.01):
+    from mani_skill.examples.motionplanning.dual.sync.curobo_scene import reserve_payload_config
+    robot = {"kinematics": {"collision_link_names": [*client.FINGER_LINKS],
+        "collision_spheres": {}, "tool_frames": ["panda_hand_tcp"],
+        "lock_joints": {"panda_finger_joint1": finger, "panda_finger_joint2": finger / 2},
+        "cspace": {"default_joint_position": [shift] * 7}}}
+    return {"robot_cfg": reserve_payload_config(robot, capacity),
+        "world": {"cuboid": {f"scene::{actor}::shape_0": {
+            "pose": [shift, 0., 0., 1., 0., 0., 0.], "dims": [.1, .1, .1]}
+            for actor in ("target", "other")}},
+        "payload_model": {"link_name": "tig_payload", "capacity": capacity,
+            "target_actor_name": "target", "target_obstacle_names": ["scene::target::shape_0"],
+            "finger_links": list(client.FINGER_LINKS), "source_obstacle_names": [client.SOURCE_TABLE],
+            "spheres_actor_local": [[0., 0., 0., radius]]},
+        "payload_state": {"contact_allowed": False, "attachment": None,
+            "source_support_allowed": False, "source_support_obstacle_names": []},
+        "velocity_limit": .9, "acceleration_limit": 1.2, "device": "cuda:0",
+        "seed": 541, "interpolation_dt": .02}
+
+
+class FakeBatchProcess:
+    def __init__(self, **options):
+        self.device = options.get("device", "cuda:0")
+        self.failed, self.closed = False, False
+        self.receipts, self.calls, self.models = [], [], {}
+        self.fail_update = False
+
+    def request(self, op, **payload):
+        self.calls.append((op, deepcopy(payload)))
+        self.receipts.append({"op": op, "session_id": payload.get("session_id"), "wall_seconds": .01})
+        name = payload.get("session_id")
+        if op == "configure":
+            assert name not in self.models
+            self.models[name] = deepcopy(payload)
+            return {"configured": True, "snapshot_id": 1,
+                "native_model_limits": {"velocity": payload["velocity_limit"]},
+                "wall_s": 3., "construction_s": 2., "initial_update_s": .1, "warmup_s": .9}
+        if op == "update":
+            if self.fail_update:
+                self.failed = True
+                raise RuntimeError("interrupted batch update")
+            self.models[name].update(deepcopy(payload))
+            return {"updated": True, "snapshot_id": 2, "wall_s": .01}
+        if op == "release":
+            del self.models[name]
+        return {}
+
+    def close(self):
+        self.closed = True
+        self.models.clear()
+
+
+def test_batch_reuses_warm_profiles_but_resets_all_measured_episode_state(monkeypatch):
+    processes = []
+    def make(**options):
+        rpc = FakeBatchProcess(**options)
+        processes.append(rpc)
+        return rpc
+    monkeypatch.setattr(client, "CuroboProcess", make)
+    pool = client.CuroboSession()
+    rpc = pool.connect({}, 541)
+    names = ["approach", "global"]
+    initial = {name: configuration_fixture(128 if name == "global" else 64) for name in names}
+    assert pool.begin_episode(initial) == []
+    for name in names:
+        assert pool.acquire(name, initial[name])["configuration_reused"] is False
+    # Last episode ended holding an object; the next initial state detaches it
+    # and refreshes both independent fingers, arm defaults and world poses.
+    for model in rpc.models.values():
+        model["payload_state"]["attachment"] = {"old": True}
+    pool.end_episode()
+    assert pool.connect({}, 542) is rpc and pool.planner_seed == 541
+    changed = {name: configuration_fixture(64, shift=.2, finger=.017, radius=.02) for name in names}
+    receipts = pool.begin_episode(changed)
+    assert len(receipts) == 2 and all(r["episode_reset"] for r in receipts)
+    for name in names:
+        assert pool.acquire(name, changed[name])["configuration_reused"] is True
+        actual = rpc.models[name]
+        assert actual["payload_state"]["attachment"] is None
+        assert actual["world"]["cuboid"]["scene::target::shape_0"]["pose"][0] == .2
+        assert actual["robot_cfg"]["kinematics"]["lock_joints"] == {
+            "panda_finger_joint1": .017, "panda_finger_joint2": .0085}
+        assert actual["payload_model"]["spheres_actor_local"][0][3] == .02
+        assert actual["payload_model"]["capacity"] == (128 if name == "global" else 64)
+    assert len(processes) == 1
+    assert [op for op, _ in rpc.calls].count("configure") == 2
+    assert [op for op, _ in rpc.calls].count("begin_episode") == 2
+    pool.close()
+    assert rpc.closed and pool.configured == {} and pool.rpc is None
+
+
+@pytest.mark.parametrize("change", ["capacity", "geometry", "limits"])
+def test_batch_incompatible_storage_rebuilds_without_trimming_or_changing_limits(monkeypatch, change):
+    monkeypatch.setattr(client, "CuroboProcess", FakeBatchProcess)
+    pool = client.CuroboSession(planner_seed=77)
+    rpc = pool.connect({}, 541)
+    original = configuration_fixture()
+    original["seed"] = 77
+    pool.acquire("left:global", original)
+    changed = deepcopy(original)
+    if change == "capacity":
+        changed = configuration_fixture(128)
+        changed["seed"] = 77
+    elif change == "geometry":
+        changed["world"]["cuboid"]["scene::target::shape_0"]["dims"][0] = .2
+    else:
+        changed["velocity_limit"] = .7
+    assert pool.acquire("left:global", changed)["configuration_reused"] is False
+    assert [op for op, _ in rpc.calls] == ["configure", "release", "configure"]
+    assert rpc.models["left:global"]["payload_model"] == changed["payload_model"]
+    assert rpc.models["left:global"]["velocity_limit"] == changed["velocity_limit"]
+    pool.close()
+
+
+def test_batch_partial_refresh_discards_worker_and_next_episode_reconnects(monkeypatch):
+    monkeypatch.setattr(client, "CuroboProcess", FakeBatchProcess)
+    pool = client.CuroboSession()
+    rpc = pool.connect({}, 541)
+    request = configuration_fixture()
+    pool.acquire("left:global", request)
+    pool.end_episode()
+    pool.connect({}, 542)
+    rpc.fail_update = True
+    with pytest.raises(RuntimeError, match="interrupted batch"):
+        pool.begin_episode({"left:global": request})
+    assert rpc.closed and pool.configured == {} and pool.rpc is None
+    replacement = pool.connect({}, 543)
+    assert replacement is not rpc and pool.planner_seed == 541
+    with pytest.raises(RuntimeError, match="one episode"):
+        pool.connect({}, 544)
+    pool.end_episode()
+    with pytest.raises(ValueError, match="options changed"):
+        pool.connect({"device": "cuda:1"}, 544)
+    pool.close()
+
+
+def test_profile_storage_reserves_both_complete_targets_and_ignores_dynamic_target_identity(monkeypatch):
+    monkeypatch.setattr(client, "CuroboProcess", FakeBatchProcess)
+    pool = client.CuroboSession()
+    rpc = pool.connect({}, 541)
+    backend = client.CuroboBackend.__new__(client.CuroboBackend)
+    backend.session, backend.initialization, backend.rpc = pool, [], rpc
+    backend._request = lambda profile, snapshot: snapshot
+    left, right = configuration_fixture(64), configuration_fixture(128, finger=.02, shift=.3, radius=.02)
+    right["payload_model"].update(target_actor_name="other", target_obstacle_names=["scene::other::shape_0"])
+    backend._snapshot = lambda index, **kwargs: (left, right)[index]
+    backend.initialize(object())
+    assert set(rpc.models) == {"approach"}
+    assert rpc.models["approach"]["payload_model"]["capacity"] == 128
+    prepared = backend._shared_snapshots("approach", [left, right])
+    assert client._configuration_key(prepared[0]) == client._configuration_key(prepared[1])
+    assert pool.acquire("approach", prepared[1])["configuration_reused"] is True
+    assert prepared[1]["payload_model"]["target_actor_name"] == "other"
+    assert left["payload_model"]["capacity"] == 64  # source snapshot is not changed
+    backend._configure("global", [left, right])
+    assert set(rpc.models) == {"approach", "global"}
+    enlarged = configuration_fixture(192)
+    backend._configure("global", [left, enlarged])
+    assert set(rpc.models) == {"approach", "global"} and len(rpc.models) == 2
+    assert rpc.models["global"]["payload_model"]["capacity"] == 192
+    assert [op for op, _ in rpc.calls].count("configure") == 3
+    pool.close()
 
 
 if __name__ == "__main__":

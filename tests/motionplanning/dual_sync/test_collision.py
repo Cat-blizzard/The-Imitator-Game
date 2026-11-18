@@ -137,6 +137,58 @@ def test_initial_micrometre_gap_does_not_fabricate_contact_or_close_support():
     assert support_allowed(checker, objects, contact_pose)
 
 
+@pytest.mark.parametrize("displacement,angle", [
+    ((-1.5e-6, -2.2e-6, -8.3e-6), .00076),
+    ((.005, 0., 0.), .02),
+])
+def test_supported_geometry_survives_origin_motion_window(displacement, angle):
+    checker, objects = pill_fixture()
+    pose = checker._initial_object.copy()
+    pose[:3, 3] += displacement
+    pose[:3, :3] = euler2mat(0., 0., angle)
+    assert support_allowed(checker, objects, pose)
+    receipt = checker._last_support_validation
+    assert not receipt["original_motion_window_within_bounds"]
+    assert receipt["original_motion_window_used_for_acceptance"] is False
+    assert all(p["entire_footprint_inside"] and p["vertices_above_top"]
+               and p["vertex_penetration_m"] <= receipt["depth_limit_m"]
+               for p in receipt["whole_object_pieces"])
+    assert not checker.support_released
+
+
+@pytest.mark.parametrize("height,downward_m,expected_limit_m", [
+    (-1.14e-6, .00021, .00020114),
+    (-.0029, .00015, .003),
+])
+def test_geometry_rejects_depth_growth_and_absolute_penetration_cap(
+        height, downward_m, expected_limit_m):
+    checker, objects = pill_fixture(height)
+    pose = checker._initial_object.copy()
+    pose[2, 3] -= downward_m
+    assert not support_allowed(checker, objects, pose)
+    receipt = checker._last_support_validation
+    assert receipt["depth_limit_m"] == pytest.approx(expected_limit_m, abs=1e-7)
+    assert receipt["reason"] == "Supplied whole-object geometry exceeds bounded top support"
+    assert any(p["vertex_penetration_m"] > receipt["depth_limit_m"]
+               for p in receipt["whole_object_pieces"])
+
+
+@pytest.mark.parametrize("two_pieces,x", [(False, .995), (True, .96)])
+def test_finite_table_rejects_any_convex_piece_crossing_edge(two_pieces, x):
+    checker, objects = pill_fixture(two_pieces=two_pieces)
+    pose = checker._initial_object.copy()
+    pose[0, 3] = x
+    assert not support_allowed(checker, objects, pose)
+    receipt = checker._last_support_validation
+    assert receipt["reason"] == "Supplied whole-object geometry exceeds bounded top support"
+    pieces = {p["target"]: p for p in receipt["whole_object_pieces"]}
+    assert any(not p["entire_footprint_inside"] for p in pieces.values())
+    if two_pieces:
+        # The contacting piece stays valid; the noncontacting piece crosses the edge.
+        assert pieces["piece0"]["entire_footprint_inside"]
+        assert not pieces["piece1"]["entire_footprint_inside"]
+
+
 def test_support_departure_requires_all_pieces_then_permanently_rejects_recontact():
     checker, objects = pill_fixture(two_pieces=True)
     tilted = checker._initial_object.copy()

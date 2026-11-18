@@ -59,9 +59,31 @@ are reported through the selected route; they do not silently select MPLib.
 The worker starts and warms the GPU planner before handling its planning
 requests. Record startup, scene updates and planning separately when comparing
 costs. Selecting the backend does not establish a performance advantage.
-Each arm reuses its planner within a phase profile. The approach planners retire
-after grasp; transport planners then use the measured attached-object geometry.
-Reuse across episodes is outside this adapter's current scope.
+
+With `-n 1`, each arm reuses one approach planner for pregrasp/descend, then
+retires it and constructs a transport planner with measured held-object
+geometry. At most two planners remain resident. A direct call to `solve` uses
+the same lifetime unless the caller supplies a shared `CuroboSession`.
+
+For `-n 2` or more, or `--only-count-success`, the collection process shares one
+session across attempts. It retains at most two planners: one approach profile
+and one transport profile. The two Panda arms use each profile sequentially
+while generating their candidate paths. Before each arm's query, its complete
+base-frame world, both measured fingers, attached geometry, and contact
+permissions replace the previous query's state. Both resulting paths still
+execute together through the common executor. Compatible profiles reuse GPU
+allocations and warmup. The complete covers of both held objects determine
+reserved capacity; topology or capacity changes rebuild the affected profile.
+Separate collection commands still pay their own startup cost.
+
+The environment seed increments normally. A shared session keeps the first
+episode's planner seed and resets native samplers before each arm query;
+`episode_seed` and `planner_seed` are recorded separately. Compare fresh and
+reused planners with the same planner seed when measuring reuse. Candidate counts,
+motion limits and collision acceptance do not change to reduce startup time.
+Shared mode records `shared_per_query_seed_reset`; its sampling sequence is
+different from the independent one-episode arm planners.
+The session closes its worker on completion or collection errors.
 
 ## Record and reuse trajectories
 
@@ -121,7 +143,8 @@ check the interface; they do not establish a learned-policy success rate.
 ## Validation
 
 CPU tests cover backend dispatch, interpreter selection, independent finger
-updates, held-object geometry, failure diagnostics, recording metadata, and
+updates, held-object geometry, shared-session reset and cleanup, failure
+diagnostics, recording metadata, and
 importing the default routes without cuRobo or CUDA initialization:
 
 ```bash

@@ -6,11 +6,13 @@ import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
+from typing import Any
 
 if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 import pytest
+import numpy as np
 
 from mani_skill.examples.motionplanning.dual import two_robot_run as runner
 
@@ -131,7 +133,11 @@ def test_recorder_metadata_uses_selected_backend(monkeypatch, backend, label):
     module.load_policy = lambda path: pytest.fail("loaded unrequested policy")
     monkeypatch.setitem(sys.modules, module.__name__, module)
     env = SimpleNamespace(unwrapped=SimpleNamespace(control_freq=20),
-        _json_data={}, _h5_file=SimpleNamespace(filename="synthetic.h5"))
+        _json_data={}, _h5_file=SimpleNamespace(filename="synthetic.h5"), close=lambda: None)
+    if backend == "curobo":
+        backend_module = ModuleType("mani_skill.examples.motionplanning.dual.sync.curobo_backend")
+        backend_module.CuroboSession = lambda **kwargs: SimpleNamespace(close=lambda: None)
+        monkeypatch.setitem(sys.modules, backend_module.__name__, backend_module)
     monkeypatch.setattr(runner.gym, "make", lambda *a, **k: env)
     recorded = []
     monkeypatch.setattr(runner, "RecordEpisode", lambda env, **kwargs: recorded.append(kwargs) or env)
@@ -218,6 +224,124 @@ def test_recording_failure_does_not_change_official_success(tmp_path, monkeypatc
         episode = env._json_data["episodes"][0]
         assert episode["success"] is True
         assert episode["dual_sync"]["recording"]["status"] == "failed"
+
+
+def _entry_harness(monkeypatch: pytest.MonkeyPatch, *, failure_at: str | None = None,
+                   outcomes: list[dict[str, Any]] | None = None) -> SimpleNamespace:
+    """Exercise the episode loop with owned CPU fakes and no renderer/worker."""
+    state = SimpleNamespace(sessions=[], calls=[], postfix=[], flushed=[], env_closes=0,
+                            progress_closes=0)
+    outcomes = outcomes or [
+        {"official": False, "execution": {"status": "failed", "category": "geometry"},
+         "quality": {"status": "not_evaluated"}},
+        {"official": True, "execution": {"status": "passed"},
+         "quality": {"status": "failed"}},
+    ]
+
+    def close_env() -> None:
+        state.env_closes += 1
+
+    env = SimpleNamespace(control_freq=20, _json_data={},
+        _h5_file=SimpleNamespace(filename="synthetic.h5"), close=close_env)
+    env.unwrapped = env
+    env.evaluate = lambda: {"success": np.bool_(state.current["official"])}
+    state.env = env
+
+    class Session:
+        def __init__(self, *, options: dict[str, Any]) -> None:
+            self.options, self.close_count = options, 0
+            state.sessions.append(self)
+
+        def close(self) -> None:
+            self.close_count += 1
+
+    class Progress:
+        def update(self, count: int) -> None:
+            pass
+
+        def set_postfix(self, values: dict[str, Any]) -> None:
+            state.postfix.append(values)
+
+        def close(self) -> None:
+            state.progress_closes += 1
+
+    def solve(actual_env: Any, **kwargs: Any) -> tuple[Any, Any]:
+        state.calls.append(kwargs)
+        if failure_at == "solve":
+            raise RuntimeError("synthetic solve failure")
+        state.current = outcomes[len(state.calls)-1]
+        actual_env.dual_sync_result = {
+            "execution": state.current["execution"], "quality": state.current["quality"]}
+        if state.current["execution"]["status"] != "passed":
+            return -1, -1
+        result = (None, None, None, None,
+                  {"success": np.bool_(state.current["official"]), "elapsed_steps": np.int32(171)})
+        return result, result
+
+    def flush(actual_env: Any, mode: str, save: bool = True) -> None:
+        state.flushed.append(save)
+        if failure_at == "flush":
+            raise OSError("synthetic flush failure")
+
+    module = ModuleType("mani_skill.examples.motionplanning.dual.sync.curobo_backend")
+    module.CuroboSession = Session
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    monkeypatch.setattr(runner, "_solver_for", lambda args: solve)
+    monkeypatch.setattr(runner.gym, "make", lambda *args, **kwargs: env)
+    monkeypatch.setattr(runner, "RecordEpisode", lambda actual_env, **kwargs: actual_env)
+    monkeypatch.setattr(runner, "tqdm", lambda *args, **kwargs: Progress())
+    monkeypatch.setattr(runner, "_flush_trajectory", flush)
+    return state
+
+
+def test_curobo_batch_owns_one_session_and_reports_independent_outcomes(monkeypatch):
+    state = _entry_harness(monkeypatch)
+    args = runner.parse_args(["-e", TASK, "--execution-mode", "sync",
+        "--planner-backend", "curobo", "--curobo-device", "cuda:3", "-n", "2"])
+    assert runner._main(args, start_seed=541) == "synthetic.h5"
+    assert len(state.sessions) == 1
+    assert [call["seed"] for call in state.calls] == [541, 542]
+    assert all(call["curobo_session"] is state.sessions[0] for call in state.calls)
+    assert state.sessions[0].options["device"] == "cuda:3"
+    assert state.sessions[0].close_count == state.env_closes == state.progress_closes == 1
+    final = state.postfix[-1]
+    assert final["official_success_rate"] == .5
+    assert final["execution_failure_rate"] == .5
+    assert final["failure_categories"] == {"geometry": 1}
+    assert final["quality_failures"] == 1
+    assert "failed_motion_plan_rate" not in final
+
+
+def test_single_curobo_episode_keeps_backend_without_shared_pool(monkeypatch):
+    dispatch = runner._solver_for
+    state = _entry_harness(monkeypatch, outcomes=[{
+        "official": True, "execution": {"status": "passed"},
+        "quality": {"status": "passed"}}])
+    module = ModuleType("mani_skill.examples.motionplanning.dual.sync.solve")
+    module.solve = runner._solver_for(None)
+    module.load_policy = lambda path: pytest.fail("loaded unrequested policy")
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    monkeypatch.setattr(runner, "_solver_for", dispatch)
+    backend = sys.modules["mani_skill.examples.motionplanning.dual.sync.curobo_backend"]
+    monkeypatch.setattr(backend, "CuroboSession", lambda **kwargs: pytest.fail("created shared pool"))
+    args = runner.parse_args(["-e", TASK, "--execution-mode", "sync",
+        "--planner-backend", "curobo", "-n", "1"])
+    assert runner._main(args) == "synthetic.h5"
+    assert len(state.calls) == 1 and state.sessions == []
+    assert state.calls[0]["planner_backend"] == "curobo"
+    assert "curobo_session" not in state.calls[0]
+    assert state.env_closes == state.progress_closes == 1
+
+
+@pytest.mark.parametrize("failure_at,error", [("solve", RuntimeError), ("flush", OSError)])
+def test_owned_session_and_environment_close_on_episode_error(monkeypatch, failure_at, error):
+    state = _entry_harness(monkeypatch, failure_at=failure_at)
+    args = runner.parse_args(["-e", TASK, "--execution-mode", "sync",
+        "--planner-backend", "curobo", "-n", "2"])
+    with pytest.raises(error, match=f"synthetic {failure_at} failure"):
+        runner._main(args)
+    assert len(state.calls) == len(state.sessions) == 1
+    assert state.sessions[0].close_count == state.env_closes == state.progress_closes == 1
 
 
 if __name__ == "__main__":

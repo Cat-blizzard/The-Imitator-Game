@@ -209,6 +209,7 @@ class FakeSession:
         self.ready = False
         self.snapshot_id = 0
         self.closed = False
+        self.resets = 0
     def configure(self, request: dict) -> dict:
         return self.update(request)
     def update(self, request: dict) -> dict:
@@ -225,29 +226,33 @@ class FakeSession:
     def shutdown(self) -> None:
         self.closed = True
         self.ready = False
+    def begin_episode(self) -> dict:
+        self.ready = False
+        self.resets += 1
+        return {"reset": True}
 
 
-def test_four_sessions_reuse_stale_update_and_failure_recovery() -> None:
+def test_two_profile_sessions_reuse_stale_update_and_failure_recovery() -> None:
     worker = worker_module.Worker(FakeSession)
-    for name in ("left:approach", "left:global", "right:approach", "right:global"):
+    for name in ("approach", "global"):
         assert worker.dispatch({"op": "configure", "session_id": name})["snapshot_id"] == 1
-    resident = worker.sessions["left:global"]
-    worker.dispatch({"op": "update", "session_id": "left:global"})
-    assert worker.sessions["left:global"] is resident
+    resident = worker.sessions["global"]
+    worker.dispatch({"op": "update", "session_id": "global"})
+    assert worker.sessions["global"] is resident
     with pytest.raises(RuntimeError, match="Stale"):
-        worker.dispatch({"op": "plan_pose", "session_id": "left:global", "snapshot_id": 1})
-    assert worker.dispatch({"op": "plan_pose", "session_id": "left:global", "snapshot_id": 2})["success"] is False
+        worker.dispatch({"op": "plan_pose", "session_id": "global", "snapshot_id": 1})
+    assert worker.dispatch({"op": "plan_pose", "session_id": "global", "snapshot_id": 2})["success"] is False
     with pytest.raises(RuntimeError, match="Synthetic"):
-        worker.dispatch({"op": "update", "session_id": "left:global", "fail": True})
+        worker.dispatch({"op": "update", "session_id": "global", "fail": True})
     assert not resident.ready
     assert all(not s.ready for s in worker.sessions.values())
     with pytest.raises(RuntimeError):
-        worker.dispatch({"op": "plan_pose", "session_id": "left:global", "snapshot_id": 2})
-    worker.dispatch({"op": "update", "session_id": "left:global"})
-    assert worker.dispatch({"op": "plan_pose", "session_id": "left:global", "snapshot_id": 3})["success"] is False
+        worker.dispatch({"op": "plan_pose", "session_id": "global", "snapshot_id": 2})
+    worker.dispatch({"op": "update", "session_id": "global"})
+    assert worker.dispatch({"op": "plan_pose", "session_id": "global", "snapshot_id": 3})["success"] is False
     with pytest.raises(RuntimeError, match="already"):
-        worker.dispatch({"op": "configure", "session_id": "left:global"})
-    with pytest.raises(RuntimeError, match="two arms"):
+        worker.dispatch({"op": "configure", "session_id": "global"})
+    with pytest.raises(RuntimeError, match="two resident"):
         worker.dispatch({"op": "configure", "session_id": "extra"})
     worker.shutdown()
     assert resident.closed and worker.sessions == {}
@@ -280,3 +285,107 @@ def test_retired_approach_sessions_release_resources_before_transport() -> None:
     with pytest.raises(RuntimeError, match="configure must succeed"):
         worker.dispatch({"op": "plan_pose", "session_id": "left:approach", "snapshot_id": 1})
     worker.shutdown()
+
+
+def test_episode_boundary_invalidates_every_snapshot_before_any_refresh() -> None:
+    worker = worker_module.Worker(FakeSession)
+    for name in ("left:approach", "right:global"):
+        worker.dispatch({"op": "configure", "session_id": name})
+    response = worker.dispatch({"op": "begin_episode"})
+    assert response["reset"] and len(response["sessions"]) == 2
+    for name, session in worker.sessions.items():
+        assert not session.ready and session.resets == 1
+        with pytest.raises(RuntimeError, match="Stale"):
+            worker.dispatch({"op": "plan_pose", "session_id": name, "snapshot_id": 1})
+    worker.dispatch({"op": "update", "session_id": "left:approach"})
+    assert worker.sessions["left:approach"].ready
+    assert not worker.sessions["right:global"].ready
+    worker.shutdown()
+
+
+def test_native_reset_uses_constructor_seed_and_public_reset_seed() -> None:
+    calls = []
+    session = worker_module.Session()
+    session.seed, session.ready = 541, True
+    session.torch = SimpleNamespace(manual_seed=lambda seed: calls.append(("torch", seed)),
+        cuda=SimpleNamespace(manual_seed_all=lambda seed: calls.append(("cuda", seed))))
+    session.planner = SimpleNamespace(reset_seed=lambda: calls.append(("native",)))
+    receipt = session.begin_episode()
+    assert calls == [("torch", 541), ("cuda", 541), ("native",)]
+    assert receipt == {"reset": True, "planner_seed": 541} and not session.ready
+
+
+def test_native_update_rebinds_complete_payload_fit_and_detaches_on_next_episode() -> None:
+    import torch
+    model, state, world, links = payload_fixture()
+    model.update(target_actor_name="own", link_name=worker_module.PAYLOAD_LINK,
+        finger_links=worker_module.FINGER_LINKS)
+    for shapes in world.values():
+        for shape in shapes.values():
+            shape.update(pose=[0., 0., 0., 1., 0., 0., 0.], dims=[.1, .1, .1])
+    kin = {"collision_link_names": links,
+        "extra_collision_spheres": {worker_module.PAYLOAD_LINK: 2},
+        "extra_links": {worker_module.PAYLOAD_LINK: {"parent_link_name": "panda_hand_tcp",
+            "joint_type": "FIXED", "fixed_transform": [0., 0., 0., 1., 0., 0., 0.]}},
+        "self_collision_ignore": {worker_module.PAYLOAD_LINK: worker_module.FINGER_LINKS},
+        "lock_joints": dict(zip(worker_module.FINGER_NAMES, (.021, .017))),
+        "cspace": {"joint_names": worker_module.ARM_NAMES, "default_joint_position": [0.] * 7}}
+    robot = {"kinematics": kin}
+    events = []
+    scene = SimpleNamespace(update_obstacle_pose=lambda name, pose: events.append(("pose", name)),
+        data=SimpleNamespace(set_obstacle_layers=lambda name, layer: None),
+        enable_obstacle=lambda name, enable: events.append(("enable", name, enable)))
+    sphere_tensor = torch.zeros((2, 4), dtype=torch.float64)
+    manager = SimpleNamespace(detach=lambda **kwargs: events.append(("detach", kwargs)),
+        update=lambda spheres, q, **kwargs: events.append(("attach", worker_module.clean(spheres))),
+        kinematics_params=SimpleNamespace(get_link_spheres=lambda link: sphere_tensor))
+    session = worker_module.Session()
+    session.torch = SimpleNamespace(cuda=SimpleNamespace(synchronize=lambda: None))
+    session.device = SimpleNamespace(to_device=lambda value: torch.tensor(value, dtype=torch.float64))
+    session.Pose = SimpleNamespace(from_list=lambda value, **kwargs: value)
+    session.JointState = SimpleNamespace(from_position=lambda value, **kwargs: value)
+    session.planner = SimpleNamespace(scene_collision_checker=scene, attachment_manager=manager,
+        graph_planner=SimpleNamespace(reset_buffer=lambda: events.append(("graph_reset",))))
+    params = SimpleNamespace(lock_jointstate=SimpleNamespace(joint_names=worker_module.FINGER_NAMES,
+        position=torch.zeros((1, 2), dtype=torch.float64)),
+        cspace=SimpleNamespace(joint_names=worker_module.ARM_NAMES,
+            default_joint_position=torch.zeros(7, dtype=torch.float64)),
+        update_link_spheres=lambda *args: None, reset_link_spheres=lambda *args: None,
+        set_link_collision_mask=lambda *args: None)
+    native_model = SimpleNamespace(config=SimpleNamespace(kinematics_config=params),
+        update_kinematics_config=lambda *args: None)
+    session.models = lambda: [native_model]
+    session.fingers, session.cached_params = {}, {id(params): params}
+    session.robot_structure = worker_module.robot_topology(robot)
+    session.world_structure = worker_module.world_topology(world)
+    session.payload_model = deepcopy(model)
+    session.reset_seed = lambda: events.append(("seed_reset",))
+    replacement = deepcopy(model)
+    replacement["spheres_actor_local"] = [[.002, 0., 0., .008], [-.002, 0., 0., .008]]
+    state.update(contact_allowed=True, attachment={"positions": [0.] * 7,
+        "object_pose_base_wxyz": [0., 0., 0., 1., 0., 0., 0.],
+        "obstacle_names": model["target_obstacle_names"], "spheres": replacement["spheres_actor_local"]})
+    receipt = session.update({"robot_cfg": robot, "world": world,
+        "payload_model": replacement, "payload_state": state, "reset_seed": True})
+    assert isinstance(session.payload_model, dict)
+    assert session.payload_model == replacement and receipt["snapshot_id"] == 1
+    assert ("attach", replacement["spheres_actor_local"]) in events
+    assert set(receipt["disabled_own_target_shapes"]) == set(model["target_obstacle_names"])
+    assert receipt["seed_reset"] is True and ("seed_reset",) in events
+    # The same native storage now serves the other arm's target. Its permission
+    # layer follows the newly validated actor, while the previous one returns.
+    peer_model = deepcopy(replacement)
+    peer_model.update(target_actor_name="peer", target_obstacle_names=["scene::peer::shape_0"])
+    state["attachment"]["obstacle_names"] = peer_model["target_obstacle_names"]
+    receipt = session.update({"robot_cfg": robot, "world": world,
+        "payload_model": peer_model, "payload_state": state, "reset_seed": True})
+    assert receipt["disabled_own_target_shapes"] == ["scene::peer::shape_0"]
+    assert all(("enable", name, True) in events for name in model["target_obstacle_names"])
+    assert session.payload_model == peer_model
+    events.clear()
+    receipt = session.update({"robot_cfg": robot, "world": world,
+        "payload_model": model, "payload_state": worker_module.empty_payload_state()})
+    assert receipt["snapshot_id"] == 3 and receipt["disabled_own_target_shapes"] == []
+    assert session.payload_model == model
+    assert ("detach", {"link_name": worker_module.PAYLOAD_LINK}) in events
+    assert all(("enable", name, True) in events for shapes in world.values() for name in shapes)
