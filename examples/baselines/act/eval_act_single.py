@@ -19,6 +19,7 @@ Usage:
 """
 
 import argparse
+from functools import partial
 import json
 from collections import defaultdict
 from datetime import datetime
@@ -26,6 +27,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
+import cv2
+import gymnasium as gym
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -52,7 +55,7 @@ from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 from mani_skill.envs.tasks.tabletop.utils import L0_L3_utils
 from mani_skill.utils import common
 
-from train_act_single import ACTSingleTaskAgent, TrainingArgs
+from examples.baselines.act.train_act_single import ACTSingleTaskAgent, TrainingArgs, _dataset_fps
 
 L0_L3_utils.set_lr_mirror_enabled(False)
 L0_L3_utils.set_lr_mirror_robot_pose_enabled(False)
@@ -63,14 +66,40 @@ IMAGENET_STD  = torch.tensor([0.229, 0.224, 0.225])
 _EVAL_TAG = "act_single"
 
 
+class SingleTaskRGBObservationWrapper(gym.ObservationWrapper):
+    """Select one policy RGB camera and physical left/right Panda qpos only."""
+
+    def __init__(self, env, camera: str, image_size: tuple[int, int] = (224, 224), fps: float = 20.):
+        super().__init__(env)
+        self.camera, self.image_size = camera, tuple(image_size)
+        self.keys = tuple(env.unwrapped.agent.agents_dict)
+        if len(self.keys) != 2:
+            raise ValueError("Single-camera qpos evaluation requires two robot agents")
+        if env.unwrapped.control_freq != fps:
+            raise ValueError("Environment control frequency differs from the recorded training fps")
+        env.unwrapped.update_obs_space(self.observation(env.unwrapped._init_raw_obs))
+
+    def observation(self, observation: Dict) -> Dict[str, torch.Tensor]:
+        rgb = torch.as_tensor(observation["sensor_data"][self.camera]["rgb"])
+        state = torch.cat([torch.as_tensor(observation["agent"][key]["qpos"])
+                           for key in self.keys], dim=-1).float()
+        if rgb.ndim != 4 or rgb.shape[-1] != 3 or rgb.dtype != torch.uint8 or state.shape != (len(rgb), 18):
+            raise ValueError("Expected batched uint8 RGB (B,H,W,3) and 18 physical Panda qpos")
+        if tuple(rgb.shape[1:3]) != self.image_size:
+            rgb = torch.stack([torch.from_numpy(cv2.resize(frame.cpu().numpy(),
+                (self.image_size[1], self.image_size[0]), interpolation=cv2.INTER_LINEAR))
+                for frame in rgb]).to(rgb.device)
+        return {"rgb": rgb.permute(0, 3, 1, 2).float() / 255., "state": state}
+
+
 # =============================================================================
 # Normalizer
 # =============================================================================
 
 class SingleTaskNormalizer:
     """
-    Loads normalization statistics from disk via LeRobotDatasetMetadata —
-    identical to evaluate_processor._load_sim_normalizer().
+    Use saved training statistics when supplied. Legacy calls retain metadata
+    loading and ImageNet normalization; --camera uses the training RGB range.
 
     Args:
         sub_config:  path to the sub-config JSON  [{repo_id, root, ...}, ...]
@@ -92,12 +121,15 @@ class SingleTaskNormalizer:
         state_type: str = "qpos",
         single_arm: bool = False,
         normalization_method: str = "bounds_q99",
+        dataset_stats: Optional[List[Dict]] = None,
+        normalize_images: bool = True,
     ):
         import json, os
         from examples.baselines.lerobot_dataset.lerobot_dataset import LeRobotDatasetMetadata
 
         self.normalizer = ActionNormalizer()
         self.method = normalization_method
+        self.normalize_images = normalize_images
 
         state_key, action_key = self._STATE_ACTION_KEYS.get(
             state_type,
@@ -110,11 +142,17 @@ class SingleTaskNormalizer:
         for idx, ds_cfg in enumerate(dataset_configs):
             repo_id = ds_cfg.get("repo_id")
             ds_root = os.path.join(sim_root, ds_cfg.get("root"))
-            meta    = LeRobotDatasetMetadata(repo_id=repo_id, root=ds_root)
+            if dataset_stats is None:
+                stats = LeRobotDatasetMetadata(repo_id=repo_id, root=ds_root).stats
+            else:
+                records = [record for record in dataset_stats if record["repo_id"] == repo_id]
+                if len(records) != 1:
+                    raise ValueError(f"Checkpoint needs one saved training normalizer for {repo_id}")
+                stats = records[0]["stats"]
             self.normalizer.add_dataset_stats(
                 dataset_idx=idx,
                 repo_id=repo_id,
-                stats=meta.stats,
+                stats=stats,
                 state_key=state_key,
                 action_key=action_key,
                 single_arm=single_arm,
@@ -141,6 +179,8 @@ class SingleTaskNormalizer:
         return self.normalizer.normalize_state(state, dataset_idx, method=self.method)
 
     def normalize_rgb(self, rgb: torch.Tensor) -> torch.Tensor:
+        if not self.normalize_images:
+            return rgb
         mean = IMAGENET_MEAN.to(rgb.device)[None, :, None, None]
         std  = IMAGENET_STD.to(rgb.device)[None, :, None, None]
         return (rgb - mean) / std
@@ -206,7 +246,7 @@ def evaluate_episode(
 
     agent.eval()
     eval_metrics    = defaultdict(list)
-    obs, info       = eval_envs.reset()
+    obs, info       = eval_envs.reset(seed=args.seed)
     ts, eps_count   = 0, 0
     actions_to_take = None
 
@@ -259,13 +299,14 @@ def evaluate_episode(
                     success_steps[_new_s] = ts
 
             if truncated.any():
-                if isinstance(info["final_info"], dict):
-                    for k, v in info["final_info"]["episode"].items():
-                        eval_metrics[k].append(v.float().cpu().numpy())
+                final_info = info.get("final_info", info)
+                if isinstance(final_info, dict):
+                    for k, v in final_info["episode"].items():
+                        eval_metrics[k].append(np.atleast_1d(common.to_numpy(v)))
                 else:
-                    for fi in info["final_info"]:
+                    for fi in final_info:
                         for k, v in fi["episode"].items():
-                            eval_metrics[k].append(v)
+                            eval_metrics[k].append(np.atleast_1d(common.to_numpy(v)))
 
                 if compute_dtw:
                     _fi = info.get("final_info", {})
@@ -338,23 +379,25 @@ def evaluate_single_env(
     obs_mode = "rgbd" if args.include_depth else "rgb"
     set_l_level(level)
     try:
-        eval_envs = make_eval_envs_with_level(
-            base_env_name=base_env_name,
-            level=level,
+        eval_envs = make_eval_envs(
+            env_id=base_env_name,
+            l_level=level,
             num_envs=args.num_envs,
             sim_backend=args.sim_backend,
             env_kwargs=dict(
                 control_mode=args.control_mode,
-                reward_mode="dense",
+                reward_mode="none" if args.camera else "dense",
                 obs_mode=obs_mode,
                 render_mode="rgb_array",
                 max_episode_steps=args.max_episode_steps, 
                 sensor_configs=dict(shader_pack="rt-fast"), 
                 human_render_camera_configs=dict(shader_pack="rt-fast"),
+                **({"sim_backend": "physx_cpu"} if args.sim_backend == "physx_cpu" else {}),
             ),
             other_kwargs=dict(obs_horizon=train_args.obs_horizon),
             video_dir=str(output_dir / "videos" / env_id),
-            wrappers=[FlattenRGBDObservationWrapper],
+            wrappers=[partial(SingleTaskRGBObservationWrapper, camera=args.camera,
+                image_size=tuple(train_args.image_size), fps=args.recorded_fps)] if args.camera else [FlattenRGBDObservationWrapper],
         )
     except Exception as exc:
         clear_l_level()
@@ -418,7 +461,7 @@ def evaluate_single_env(
 # Argument parsing
 # =============================================================================
 
-def parse_args():
+def parse_args(argv=None):
     p = argparse.ArgumentParser("eval_act_single")
     p.add_argument("--checkpoint",   required=True)
     p.add_argument("--sub-config",   required=True,
@@ -437,11 +480,13 @@ def parse_args():
     p.add_argument("--obs-horizon",  type=int, default=None,
                    help="Override obs_horizon from checkpoint")
     p.add_argument("--include-depth", action="store_true", default=False)
-    p.add_argument("--compute-dtw",   action="store_true", default=True)
+    p.add_argument("--compute-dtw",   action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--dtw-band-ratio", type=float, default=0.15)
     p.add_argument("--output-dir",   required=True)
     p.add_argument("--device",       default="cuda")
-    return p.parse_args()
+    p.add_argument("--camera", help="Opt in to one recorded RGB camera and 18 physical Panda qpos")
+    p.add_argument("--seed", type=int, default=None, help="Optional deterministic initial seed")
+    return p.parse_args(argv)
 
 
 # =============================================================================
@@ -464,11 +509,23 @@ def main():
     print(f"\n📦 Loading checkpoint: {args.checkpoint}")
     agent, train_args = load_checkpoint(args.checkpoint, args, device)
     agent.to(device)
+    saved = torch.load(args.checkpoint, map_location="cpu", weights_only=False) if args.camera else {}
+    if args.camera:
+        contract = saved.get("data_contract", {})
+        if (train_args.state_type != "qpos" or train_args.state_dim != 18 or train_args.action_dim != 16
+                or train_args.single_arm or train_args.cameras != [args.camera] or args.include_depth
+                or args.control_mode != "pd_joint_pos"):
+            raise ValueError("--camera requires matching single-camera qpos18/action16 dual-Panda training")
+        if not saved.get("dataset_stats") or contract.get("fps") != _dataset_fps(args.sim_root, args.sub_config):
+            raise ValueError("--camera requires saved training statistics and the recorded dataset fps")
+        args.recorded_fps = contract["fps"]
     normalizer = SingleTaskNormalizer(
         sub_config=args.sub_config,
         sim_root=args.sim_root,
         state_type=train_args.state_type,
         single_arm=getattr(train_args, "single_arm", False),
+        dataset_stats=saved.get("dataset_stats") if args.camera else None,
+        normalize_images=not bool(args.camera),
     )
     print(f"   pred_horizon={train_args.pred_horizon}  state_type={train_args.state_type}")
 

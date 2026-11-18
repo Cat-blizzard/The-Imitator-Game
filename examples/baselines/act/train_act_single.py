@@ -9,7 +9,7 @@ unmodified — the 1-D projection is essentially inert.
 Architecture:
   obs_encoder   →  obs_feat   (obs_latent_dim)
   state_encoder →  state_feat (state_latent_dim)
-  [obs_feat ; state_feat]  →  DETRVAE (video_feature = zeros(B, 1))
+  [obs_feat ; state_feat]  →  obs_proj → DETRVAE (video_feature = zeros(B, 1))
 
 Usage:
   python train_act_single.py \
@@ -30,7 +30,6 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -43,7 +42,7 @@ from examples.baselines.lerobot_dataset.lerobot_dataloader import (
 )
 from examples.baselines.encoders.obs_encoder import ObservationEncoder, ObsEncoderConfig
 from examples.baselines.encoders.state_encoder import StateEncoder, StateEncoderConfig
-from examples.baselines.act.act.detr.detr_vae import (
+from examples.baselines.act.act.detr_video.detr_vae import (
     DETRVAE,
     build_encoder,
     build_transformer,
@@ -74,6 +73,7 @@ class TrainingArgs:
     include_depth: bool = False
     single_arm:    bool = False
     image_size:    List[int] = field(default_factory=lambda: [224, 224])
+    enable_augmentation: bool = True
 
     # ── Model dims ────────────────────────────────────────────────────────────
     state_dim:           int = 18
@@ -188,13 +188,13 @@ class ACTSingleTaskAgent(nn.Module):
             hidden_dim=args.hidden_dim,
             num_queries=args.pred_horizon,
             action_dim=args.action_dim,
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
         )
         self.model = DETRVAE(
             backbones=None,
             transformer=build_transformer(act_cfg),
             encoder=build_encoder(act_cfg),
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
             action_dim=args.action_dim,
             num_queries=args.pred_horizon,
             video_feature_dim=1,             # dummy 1-D task feature (always zero)
@@ -223,7 +223,7 @@ class ACTSingleTaskAgent(nn.Module):
 
         obs_feat,   _ = self.obs_encoder(obs_in)           # (B, obs_latent_dim)
         state_feat, _ = self.state_encoder(state[:, :T])   # (B, state_latent_dim)
-        return torch.cat([obs_feat, state_feat], dim=-1)
+        return self.obs_proj(torch.cat([obs_feat, state_feat], dim=-1))
 
     # ------------------------------------------------------------------
     def compute_loss(self, batch: Dict) -> torch.Tensor:
@@ -236,12 +236,17 @@ class ACTSingleTaskAgent(nn.Module):
         obs_for_model = self._encode_obs(rgb, state)  # (B, hidden_dim)
         video_feature = torch.zeros(B, 1, device=self.device)
 
+        is_pad = batch.get("action_is_pad")
+        if is_pad is None:
+            is_pad = torch.zeros(action.shape[:2], dtype=torch.bool, device=self.device)
+        else:
+            is_pad = is_pad.to(self.device, dtype=torch.bool)
         a_hat, (mu, log_var) = self.model(
-            obs_for_model, actions=action, video_feature=video_feature
+            obs_for_model, actions=action, video_feature=video_feature, action_is_pad=is_pad
         )
 
         # L1 reconstruction + KL
-        l1_loss = F.l1_loss(a_hat, action)
+        l1_loss = masked_l1(a_hat, action, is_pad)
         kl_loss = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).mean()
         return l1_loss + self.kl_weight * kl_loss
 
@@ -259,6 +264,15 @@ class ACTSingleTaskAgent(nn.Module):
 # =============================================================================
 # Dataset / DataLoader
 # =============================================================================
+
+def masked_l1(prediction: torch.Tensor, target: torch.Tensor, is_pad: torch.Tensor) -> torch.Tensor:
+    """Average real action elements, excluding the repeated terminal tail."""
+    if prediction.shape != target.shape or prediction.ndim != 3 or is_pad.shape != prediction.shape[:2]:
+        raise ValueError("Expected prediction/target (B,H,D) and padding mask (B,H)")
+    valid = ~is_pad.bool()
+    if not valid.any():
+        raise ValueError("An ACT batch must contain at least one real action")
+    return ((prediction - target).abs() * valid.unsqueeze(-1)).sum() / (valid.sum() * prediction.shape[-1])
 
 def _auto_detect_cameras(sim_root, dataset_file, fallback):
     try:
@@ -302,7 +316,10 @@ def _dataset_fps(sim_root: str, dataset_file: str) -> int:
 
 
 def build_dataloader(args: TrainingArgs):
-    cameras = _auto_detect_cameras(args.sim_root, args.sub_config, args.cameras)
+    cameras = list(args.cameras)
+    if cameras == TrainingArgs().cameras:
+        cameras = _auto_detect_cameras(args.sim_root, args.sub_config, cameras)
+    args.cameras = cameras
     cfg = LeRobotDataConfig(
         source_type="sim",
         root=args.sim_root,
@@ -318,7 +335,7 @@ def build_dataloader(args: TrainingArgs):
         fps=_dataset_fps(args.sim_root, args.sub_config),
         video_backend="torchcodec",
         tolerance_s=0.05,
-        enable_augmentation=True,
+        enable_augmentation=args.enable_augmentation,
     )
     dataset = build_lerobot_dataset(cfg)
     print(f"  Dataset size: {len(dataset)} samples")
@@ -328,7 +345,7 @@ def build_dataloader(args: TrainingArgs):
         shuffle=True,
         num_workers=args.num_workers,
         pin_memory=True,
-        drop_last=True,
+        drop_last=False,
     )
     return loader, dataset
 
@@ -370,10 +387,12 @@ def train(args: TrainingArgs):
         {"params": other_params,    "lr": args.lr},
     ], weight_decay=args.weight_decay)
 
-    scaler = torch.amp.GradScaler("cuda")
+    scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
     losses = defaultdict(list)
 
     steps_per_epoch = len(dataloader)
+    if not steps_per_epoch or args.total_epochs < 1:
+        raise ValueError("Training requires a nonempty loader and a positive epoch budget")
     print(f"\n🚀 Training {run_name} for {args.total_epochs} epochs "
           f"({steps_per_epoch} steps/epoch)\n")
     agent.train()
@@ -385,7 +404,7 @@ def train(args: TrainingArgs):
         for batch in dataloader:
             global_step += 1
             optimizer.zero_grad(set_to_none=True)
-            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+            with torch.amp.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 loss = agent.compute_loss(batch)
 
             scaler.scale(loss).backward()
@@ -417,6 +436,10 @@ def train(args: TrainingArgs):
                 "agent_state_dict": agent.state_dict(),
                 "optimizer":        optimizer.state_dict(),
                 "args":             vars(args),
+                "data_contract": {"fps": _dataset_fps(args.sim_root, args.sub_config),
+                    "cameras": list(args.cameras), "image_size": list(args.image_size),
+                    "rgb": "float32_CHW_0_1", "state_dim": args.state_dim,
+                    "action_dim": args.action_dim, "control_mode": "pd_joint_pos"},
                 "dataset_stats":    [
                     {
                         "dataset_idx": idx,

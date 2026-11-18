@@ -248,6 +248,7 @@ class LeRobotSimDataset(Dataset):
                 sub_ds.hf_dataset = sub_ds.hf_dataset.remove_columns(cols_to_remove)
 
         self.lerobot_dataset = ConcatDataset(sub_datasets)
+        self.sub_datasets = sub_datasets
         self.main_dataset = sub_datasets[0]  # For dimensions and stats fallback
 
         # Initialize ActionNormalizer and populate with dataset stats
@@ -552,6 +553,9 @@ class LeRobotSimDataset(Dataset):
         ret_dict = {
             "states": state.float(),
             "actions": action_sequence.float(),
+            "action_is_pad": torch.as_tensor(
+                frames[-1].get(f"{self.action_key}_is_pad", torch.zeros(self.horizon)), dtype=torch.bool
+            ),
             "task_name": re.sub(r"^L[0-9]_", "", repo_id),
             "repo_id": repo_id,
             "task_descriptions": str(task_description),

@@ -65,7 +65,7 @@ class DETRVAE(nn.Module):
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim) # project latent sample to embedding
         self.additional_pos_embed = nn.Embedding(3, hidden_dim) # learned position embedding for video feature, state and proprio
 
-    def forward(self, obs, actions=None, video_feature=None):
+    def forward(self, obs, actions=None, video_feature=None, action_is_pad=None):
         is_training = actions is not None
         state = obs['state'] if self.backbones is not None else obs
         bs = state.shape[0]
@@ -80,8 +80,15 @@ class DETRVAE(nn.Module):
             # concat them together to form an input to the CVAE encoder
             encoder_input = torch.cat([cls_embed, state_embed, action_embed], axis=1) # (bs, seq+2, hidden_dim)
             encoder_input = encoder_input.permute(1, 0, 2) # (seq+2, bs, hidden_dim)
-            # no masking is applied to all parts of the CVAE encoder input
-            is_pad = torch.full((bs, encoder_input.shape[0]), False).to(state.device) # False: not a padding
+            # CLS and condition are real; padded action labels are not observed.
+            if action_is_pad is None:
+                action_is_pad = torch.zeros(actions.shape[:2], dtype=torch.bool, device=state.device)
+            if action_is_pad.shape != actions.shape[:2]:
+                raise ValueError("action_is_pad must have shape (batch, action horizon)")
+            is_pad = torch.cat([
+                torch.zeros((bs, 2), dtype=torch.bool, device=state.device),
+                action_is_pad.to(device=state.device, dtype=torch.bool),
+            ], dim=1)
             # obtain position embedding
             pos_embed = self.pos_table.clone().detach()
             pos_embed = pos_embed.permute(1, 0, 2)  # (seq+2, 1, hidden_dim)
