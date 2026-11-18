@@ -1,5 +1,6 @@
 """Robot import contracts that do not require SAPIEN/GPU initialization."""
 import importlib.util
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 import xml.etree.ElementTree as ET
@@ -18,6 +19,10 @@ _SPEC.loader.exec_module(prepare)
 @pytest.mark.parametrize("robot_cls", [Piper, ARXX5, UR5WSG])
 def test_named_joint_keyframe_and_static(robot_cls):
     agent = object.__new__(robot_cls)
+    # This fixture covers named keyframes/controller values without physics.
+    # The native coupled coordinate has separate real CPU dynamics coverage.
+    agent.embodiment_profile = replace(robot_cls.embodiment_profile,
+                                       coupled_gripper_joints=None)
     names = list(reversed(robot_cls.arm_joint_names + robot_cls.gripper_joint_names))
     qvel = torch.zeros((2, 8))
     qvel[0, 0] = 5  # Finger speed must not be confused with arm speed.

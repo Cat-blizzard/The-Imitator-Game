@@ -1,18 +1,18 @@
 """CPU contracts for the original pill task with a selectable robot pair."""
 from __future__ import annotations
 
-import ast
 from copy import deepcopy
-import hashlib
 import json
-from pathlib import Path
 from types import SimpleNamespace as NS
 
 import h5py
 import numpy as np
 import pytest
+import torch
 
 from mani_skill.agents.robots.parallel_gripper import Piper
+from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+from mani_skill.envs.tasks.tabletop.dual_tasks import _031_pick_pillbottle_to_regions as pill_env
 from mani_skill.examples.motionplanning.dual import two_robot_run as runner
 from mani_skill.examples.motionplanning.dual.sync import phase_kinematics as timing
 from mani_skill.examples.motionplanning.dual.sync import physical_observation as contacts
@@ -22,20 +22,6 @@ from mani_skill.examples.motionplanning.dual.sync.solve import phase_sequence
 from mani_skill.examples.motionplanning.planner import Planner
 
 TASK = "TwoRobotPickPillToRegions-v1"
-
-
-def _semantic_ast(node):
-    """Canonical fields across Python versions that add empty AST attributes."""
-    if isinstance(node, ast.AST):
-        return (type(node).__name__, tuple((key, _semantic_ast(value))
-            for key, value in ast.iter_fields(node) if value is not None and value != []))
-    if isinstance(node, list):
-        return tuple(_semantic_ast(value) for value in node)
-    return node
-
-
-def _ast_receipt(node):
-    return hashlib.sha256(repr(_semantic_ast(node)).encode()).hexdigest()
 
 
 def test_piper_sync_selection_reaches_environment_with_the_selected_pair(monkeypatch):
@@ -223,50 +209,137 @@ def test_real_six_joint_topp_reconstruction_and_continuous_retiming():
         timing.compact_topp_reconstruction(points, np.full(7, .7), np.full(7, 1.1), .05, native)
 
 
-def test_original_pill_success_horizon_assets_sampling_and_camera_contract_are_unchanged():
-    """AST receipts were independently taken from the pre-adaptation task.
+def test_original_pill_success_depends_on_both_regions_with_static_as_diagnostic():
+    task = pill_env.TwoRobotPickPillToRegionsEnv
+    # Preserve the original origin-only boundary and upper height predicate.
+    positions = torch.tensor([[0., 0., .1], [.080001, 0., .1], [0., 0., .1],
+                              [.08, .08, .2], [0., 0., .200001]], dtype=torch.float64)
+    other = torch.tensor([[0., 0., .1], [0., 0., .1], [0., -.080001, .1],
+                          [.08, -.08, .2], [0., 0., .1]], dtype=torch.float64)
+    count = len(positions)
+    moving_grasped = NS(is_grasping=lambda _: torch.ones(count, dtype=torch.bool),
+                        is_static=lambda _: torch.zeros(count, dtype=torch.bool))
+    raw = NS(pill_a=NS(pose=NS(p=positions)), pill_b=NS(pose=NS(p=other)),
+        region_a=NS(pose=NS(p=torch.zeros_like(positions))),
+        region_b=NS(pose=NS(p=torch.zeros_like(other))),
+        region_half_size=task.region_half_size, region_height_threshold=task.region_height_threshold,
+        left_agent=moving_grasped, right_agent=moving_grasped)
+    raw._is_in_region = task._is_in_region.__get__(raw)
+    result = task.evaluate(raw)
+    assert result['pill_a_in_region'].tolist() == [True, False, True, True, False]
+    assert result['pill_b_in_region'].tolist() == [True, True, False, True, True]
+    assert result['success'].tolist() == [True, False, False, True, False]
+    assert not result['is_robot_static'].any()
+    assert result['is_pill_a_grasped'].all() and result['is_pill_b_grasped'].all()
+    assert runner.gym.spec(TASK).max_episode_steps == 200
 
-    These digests cover semantic syntax without comments/formatting and do not
-    require historical commits to exist in the checkout running this test.
-    Only the new Piper mount initialization is removed for the comparison.
-    """
-    path = Path(__file__).parents[3] / "mani_skill/envs/tasks/tabletop/dual_tasks/_031_pick_pillbottle_to_regions.py"
-    task = next(node for node in ast.parse(path.read_text()).body if isinstance(node, ast.ClassDef))
-    registration = next(dec for dec in task.decorator_list if isinstance(dec, ast.Call)
-                        and isinstance(dec.func, ast.Name) and dec.func.id == "register_env")
-    assert ast.literal_eval(registration.args[0]) == TASK
-    assert {kw.arg: ast.literal_eval(kw.value) for kw in registration.keywords} == {"max_episode_steps": 200}
-    expected = {
-        "_is_in_region": "4c8ad4e854b284d8dcb40d4499cc4603279810a6598961bd5ff742bf994021ca",
-        "evaluate": "a0880ef5a3bafb9d11e9f92cf37264343a75160f243880aa55559f738e91e9e3",
-        "_after_reconfigure": "820618300eb45ff42d56fc78641d58fe6c2c6b2823c60241f88446b0418b40d8",
-        "_default_sensor_configs": "bac33e66ae88640b725dfcb6c439cba86df050bb0fcf75dcdbf751a441a3b876",
-        "_default_human_render_camera_configs": "3dc71db7d2567819e360e8a6983cf0c9c350f6613313a37b11d397a215158739",
-        "_initialize_episode": "4bdd18b7541e2228ea13aefa2b9c6ae7b051378384687367602323e90cef505c",
-        "_load_scene": "c0850537ec977043b76e2f83ed4f2c93522ca82b1c76f97b429b393a559ae7cb",
-    }
-    for name, receipt in expected.items():
-        node = deepcopy(next(node for node in task.body if isinstance(node, ast.FunctionDef) and node.name == name))
-        for parent in ast.walk(node):
-            if hasattr(parent, "body") and isinstance(parent.body, list):
-                parent.body[:] = [statement for statement in parent.body
-                    if not (isinstance(statement, ast.If)
-                            and ast.dump(statement.test) == ast.dump(ast.parse('self.robot_uids == ("piper", "piper")', mode="eval").body))]
-        assert _ast_receipt(node) == receipt, name
-    init = next(node for node in task.body if isinstance(node, ast.FunctionDef) and node.name == "__init__")
-    calls = [node for node in ast.walk(init) if isinstance(node, ast.Call)
-             and isinstance(node.func, ast.Name) and node.func.id == "apply_l2_robotwin_model"]
-    model_ast = ast.Module(body=[ast.Expr(value=node) for node in calls], type_ignores=[])
-    assert _ast_receipt(model_ast) == (
-        "c4ce2e8807ab3df275d65d297762621ef361aa4a0186e7967bee48f0bdaf3620")
-    constants = {node.targets[0].id: ast.literal_eval(node.value)
-                 for node in task.body if isinstance(node, ast.Assign)
-                 and isinstance(node.targets[0], ast.Name) and node.targets[0].id in {
-                     "PILL_MODEL_NAME", "pill_a_xy", "pill_b_xy", "region_a_xy", "region_b_xy",
-                     "region_half_size", "region_height_threshold", "pill_scale"}}
-    assert constants == {"PILL_MODEL_NAME": "080_pillbottle", "pill_a_xy": (-.25, -.15),
-        "pill_b_xy": (-.25, .15), "region_a_xy": (.10, -.20), "region_b_xy": (.10, .20),
-        "region_half_size": (.08, .08, .005), "region_height_threshold": .20, "pill_scale": 1.}
+
+def _original_pill_scene(monkeypatch, robot='panda_wristcam'):
+    task = pill_env.TwoRobotPickPillToRegionsEnv
+    fields = ('PILL_MODEL_NAME', 'pill_a_xy', 'pill_b_xy', 'region_a_xy', 'region_b_xy',
+              'region_half_size', 'region_height_threshold', 'pill_scale')
+    raw = NS(**{name: getattr(task, name) for name in fields},
+        robot_uids=(robot, robot), robot_init_qpos_noise=.02, scene=object(),
+        embodiment_profile=get_task_profile(TASK, robot),
+        pill_a_modelname='080_pillbottle', pill_a_model_id=1,
+        pill_b_modelname='080_pillbottle', pill_b_model_id=5)
+    creations = []
+
+    def actor(pose):
+        result = NS(pose=pose)
+        result.set_pose = lambda value: setattr(result, 'pose', value)
+        return result
+
+    monkeypatch.setattr(pill_env, 'TableSceneBuilder',
+        lambda **_: NS(build=lambda: None, initialize=lambda _: None))
+    monkeypatch.setattr(pill_env, 'is_l3_enabled', lambda: False)
+    monkeypatch.setattr(pill_env.actors, 'build_box',
+        lambda scene, **kwargs: actor(kwargs['initial_pose']))
+    monkeypatch.setattr(pill_env, 'get_model_id', lambda name, model_id: model_id)
+
+    def create(**kwargs):
+        creations.append(kwargs)
+        return NS(actor=actor(kwargs['pose']))
+
+    monkeypatch.setattr(pill_env, 'create_actor', create)
+    task._load_scene(raw, {})
+    return raw, creations
+
+
+def test_original_pill_assets_region_sizes_and_panda_mounts_are_preserved(monkeypatch):
+    raw, models = _original_pill_scene(monkeypatch)
+    assert raw.PILL_MODEL_NAME == '080_pillbottle'
+    assert raw.pill_a_xy == (-.25, -.15) and raw.pill_b_xy == (-.25, .15)
+    assert raw.region_a_xy == (.10, -.20) and raw.region_b_xy == (.10, .20)
+    assert raw.region_half_size == (.08, .08, .005) and raw.region_height_threshold == .20
+    assert raw.pill_scale == 1.
+    assert len(models) == 2
+    for index, model in enumerate(models):
+        assert model['modelname'] == '080_pillbottle'
+        assert model['model_id'] == (1, 5)[index]
+        assert model['mass'] == .5 and model['scale'] == (1., 1., 1.)
+        assert model['convex'] is True and model['_idx_if_repeat'] == index+1
+        np.testing.assert_allclose(model['pose'].p,
+            [raw.pill_a_xy, raw.pill_b_xy][index]+(0.,), atol=1e-7)
+    profile = get_task_profile(TASK, 'panda_wristcam')
+    assert tuple(mount.position for mount in profile.mount_poses) == ((-.60, -.35, 0.), (-.60, .35, 0.))
+    assert all(mount.quaternion == (1., 0., 0., 0.) for mount in profile.mount_poses)
+
+
+@pytest.mark.parametrize('robot', ['panda_wristcam', 'piper'])
+def test_original_pill_sampling_uses_the_same_random_offsets_and_object_heights(monkeypatch, robot):
+    raw, _ = _original_pill_scene(monkeypatch, robot)
+    raw.device, raw.num_envs = 'cpu', 3
+    raw.reward_tracker = NS(reset=lambda _: None)
+    raw._pill_a_z, raw._pill_b_z = torch.tensor([.047]), torch.tensor([.052])
+    measured_mounts = []
+    raw.agent = NS(agents=[NS(keyframes={'rest': NS(qpos=np.zeros(8))}, reset=lambda _: None,
+        robot=NS(set_pose=lambda pose: measured_mounts.append(pose))) for _ in range(2)])
+    offsets = []
+    monkeypatch.setattr(pill_env, 'apply_l1_offset_xy',
+        lambda value, offset: offsets.append(offset) or value)
+    # Independent generator preserves the original four RNG draws and keeps
+    # the test from depending on other tests' global randomization settings.
+    generator = torch.Generator().manual_seed(723)
+    region_a, region_b, pill_a, pill_b = [torch.rand((3, 2), generator=generator) for _ in range(4)]
+    with torch.random.fork_rng(devices=[]):
+        torch.manual_seed(723)
+        pill_env.TwoRobotPickPillToRegionsEnv._initialize_episode(raw, torch.arange(3), {})
+    for actual, xy, draw in ((raw.region_a, raw.region_a_xy, region_a),
+                              (raw.region_b, raw.region_b_xy, region_b)):
+        expected = torch.tensor([*xy, .005]).repeat(3, 1)
+        expected[:, :2] += draw*.02
+        torch.testing.assert_close(actual.pose.p, expected)
+    for actual, xy, draw, z in ((raw.pill_a, raw.pill_a_xy, pill_a, .047),
+                                 (raw.pill_b, raw.pill_b_xy, pill_b, .052)):
+        expected = torch.tensor([*xy, z]).repeat(3, 1)
+        expected[:, :2] += (draw-.5)*.02
+        torch.testing.assert_close(actual.pose.p, expected)
+        np.testing.assert_allclose(actual.pose.q[0], [np.sqrt(.5), np.sqrt(.5), 0., 0.], atol=1e-7)
+    assert offsets == [(.05, -.1), (.05, .1)]
+    for actual, mount in zip(measured_mounts, raw.embodiment_profile.mount_poses):
+        np.testing.assert_allclose(actual.p, mount.position, atol=1e-7)
+        np.testing.assert_allclose(actual.q, mount.quaternion, atol=1e-7)
+    assert len(measured_mounts) == 2
+
+
+def test_original_external_cameras_keep_resolution_fov_and_view_direction():
+    task = pill_env.TwoRobotPickPillToRegionsEnv
+    low = task._default_sensor_configs.fget(NS(hi_res=False))
+    assert len(low) == 1 and low[0].uid == 'zed2i'
+    assert (low[0].width, low[0].height) == (224, 224)
+    assert low[0].fov == np.pi*1.1/2 and (low[0].near, low[0].far) == (.01, 100)
+    np.testing.assert_allclose(low[0].pose.p[0], [-.4, 0., .6], atol=1e-7)
+    np.testing.assert_allclose(low[0].pose.to_transformation_matrix()[0, :3, 0],
+                               np.array([1., 0., -1.])/np.sqrt(2), atol=1e-6)
+    high = task._default_sensor_configs.fget(NS(hi_res=True))
+    assert [(camera.uid, camera.width, camera.height) for camera in high] == [
+        ('cam1', 640, 480), ('cam2', 640, 480), ('cam3', 640, 480), ('zed2i', 1280, 720)]
+    np.testing.assert_allclose(high[-1].pose.raw_pose, low[0].pose.raw_pose)
+    render = task._default_human_render_camera_configs.fget(NS())
+    assert (render.uid, render.width, render.height, render.fov, render.near, render.far) == (
+        'render_camera', 512, 512, 1, .01, 100)
+    np.testing.assert_allclose(render.pose.p[0], [.8, 0., .75], atol=1e-7)
 
 
 if __name__ == "__main__":
