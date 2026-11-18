@@ -1,30 +1,31 @@
 # Fixed-base robot integration
 
-This example adds Piper, ARX X5 and UR5 with WSG to the existing ManiSkill
-agent interface. A shared pick/place task runs on five homogeneous robot pairs
-with the same MPLib planning adapter, synchronous executor and recording format.
-Each pair contains two instances of the selected robot.
+Five homogeneous robot pairs use the same MPLib planning adapter, synchronous
+executor and recording format. Each pair contains two instances of the selected
+robot. All five support the original pill-sorting task and a shared cube
+pick/place task.
 
 ## Current capabilities
 
 | Agent UID | Native action / physical qpos per arm | Basic control and RGB | Expert task | Recording and action replay | LeRobot conversion | ACT policy evaluation |
 | --- | ---: | --- | --- | --- | --- | --- |
-| `panda` | 8 / 9 | Verified | Verified | Verified | Verified | Evaluated: 4/5 |
-| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | Retrained: 3/5 fresh seeds; 1/5 historical-seed regression |
-| `arx_x5` | 7 / 8 | Verified | Verified | Verified | Verified: one episode | Not tested |
-| `ur5_wsg` | 7 / 8 | Verified | Verified | Verified | Verified: one coupled episode | Not tested |
-| `xarm6_robotiq` | 7 / 12 | Verified | Verified | Verified | Verified: one episode | Not tested |
+| `panda` | 8 / 9 | Verified | Original pill | Verified | Verified | Pill: 5/5 |
+| `piper` | 7 / 8 | Verified | Original pill; baskets | Verified | Verified | Pill: 4/5 |
+| `arx_x5` | 7 / 8 | Verified | Original pill | Verified | Verified | Pill: 5/5 |
+| `ur5_wsg` | 7 / 8 | Verified | Original pill | Verified | Verified | Pill: 4/5 |
+| `xarm6_robotiq` | 7 / 12 | Verified | Original pill | Verified | Verified | Pill: 5/5 |
 
-Task verification refers to `DualArmPickPlace-v1`, a shared cube pick/place
-integration task. It does not establish compatibility with all TIG tasks. The
-original pill task supports Panda wrist-camera, Piper and UR5+WSG pairs through
+The table reports original-task coverage. Each pill policy uses twenty training
+episodes and five reserved independent evaluation initial states. These small
+results demonstrate the interfaces; they are not general success-rate estimates
+or an embodiment comparison. Cube-task usage is described below.
+The original pill task supports all five pairs through
 the [original entry](dual-arm-sync.md). Piper also supports the original
-apple/banana basket task. ARX and xArm have not been adapted to those original
-tasks. Realman and mixed-model pairs are outside this integration's current scope.
-The basket integration is preliminary: its fixed three-seed regression has
-three official successes, two completed generations and one accepted
-generation-plus-replay pair. See the original-entry documentation for the
-retained retreat-contact and replay-geometry failures.
+apple/banana basket task. Realman and mixed-model pairs are outside this
+integration's current scope. Corrected Piper basket generation and original-action
+replay pass on six fixed initial states; its earlier failures remain documented
+separately. This is task-specific coverage, not automatic compatibility with
+every TIG task.
 
 ## Prepare assets
 
@@ -58,6 +59,14 @@ The upstream [current gripper description](https://github.com/agilexrobotics/agx
 describes two fingers driven by one opening coordinate. Its meshes and coordinate
 signs differ from the imported RoboTwin asset; the import does not replace that
 asset with the newer geometry.
+
+These are simulation models, not calibrated hardware twins. The distributed
+[xArm asset](https://github.com/haosulab/ManiSkill-XArm6/blob/v0.1.1/xarm6_robotiq.urdf)
+inherits link2/link3 inertias whose principal values are positive
+but violate the rigid-body triangle inequality. Its finger masses/inertias are
+computed from collision geometry by the loader. This integration preserves that
+upstream model; successful task runs do not validate hardware dynamics, torque
+ratings or those source inertias.
 
 ## Check loading and control
 
@@ -137,7 +146,9 @@ replan, add settling actions or impose recorded states on later frames.
 python -m pytest -q tests/agents/test_parallel_gripper.py \
   tests/agents/test_parallel_gripper_dynamics.py \
   tests/agents/test_embodiment_profiles.py tests/test_embodiment_smoke.py \
+  tests/agents/test_robotiq_outer_coupling.py \
   tests/motionplanning/dual_sync tests/baselines/test_act_single_pipeline.py \
+  tests/baselines/test_act_physical_events.py \
   tests/baselines/test_pill_native_conversion.py \
   tests/baselines/test_h5_episode_manifest.py \
   tests/baselines/test_pick_place_collection.py tests/baselines/test_image_statistics.py
@@ -149,138 +160,125 @@ python -m mani_skill.examples.embodiments.check_sync_collision \
 The collision negative test overlaps only private planning models, requires
 inter-robot collisions, restores the models, and verifies that the physical
 environment did not move. Synchronous pill generation and action replay support
-Panda wrist-camera, Piper or UR5+WSG pairs through the [original entry](dual-arm-sync.md),
+all five supported pairs through the [original entry](dual-arm-sync.md),
 with the original 200-step task horizon. The cube integration remains at 400 steps.
 The original apple/banana basket task supports a Piper pair with the same
 200-step horizon. The original Panda serial solutions remain available.
 
-## Dataset conversion and policy baseline
+## Collect and learn an original task
 
-Use a separate dataset and model for each robot pair. The shared task records
-native joint-position targets, both arms' physical joint states and `base_camera`
-RGB at 20 Hz. Dual Piper has 14 actions and 16 joint states; dual Panda has 16
-and 18. Controller keys, joint order and rendering settings remain in the converted
-dataset's `native_data_contract` and the trained checkpoint.
+The bounded collector also uses the original synchronous task entry. Select the
+task explicitly; omitting `--tasks` retains the shared cube-task default. Each
+robot has a separate data version and policy. The original pill task uses
+`zed2i` RGB, 20 Hz control and its original 200-step horizon.
 
-Create a seed file before collection with `schema_version: 1` and disjoint
-`seed_splits` named `train`, `development` and `evaluation`. For example, use
-1000–1029 for a bounded training pool, 2000–2004 for development and 4000–4004
-for independent policy evaluation. Do not collect evaluation seeds into the
-training dataset.
+Create a seed file with `schema_version: 1` and disjoint `seed_splits` named
+`train`, `development` and `evaluation`. Declare enough training candidates
+for the attempt limit, and keep evaluation seeds out of expert collection.
 
 ```bash
 python scripts/collect_data.py --robot piper \
-  --seed-splits path/to/seed-splits.json --split train \
-  --target-episodes 20 --max-attempts 30 --demos-dir outputs/piper-raw-v2
+  --tasks TwoRobotPickPillToRegions-v1 --seed-splits path/to/seed-splits.json \
+  --split train --target-episodes 20 --max-attempts 50 \
+  --demos-dir outputs/piper-pill-raw-v1
 
 python scripts/collect_data.py --robot piper \
-  --seed-splits path/to/seed-splits.json --split development \
-  --target-episodes 3 --max-attempts 5 --demos-dir outputs/piper-raw-v2
+  --tasks TwoRobotPickPillToRegions-v1 --seed-splits path/to/seed-splits.json \
+  --split development --target-episodes 3 --max-attempts 5 \
+  --demos-dir outputs/piper-pill-raw-v1
 
 python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
-  --episode-manifest outputs/piper-raw-v2/episode_manifest.json \
-  --output-dir outputs/datasets --name dual-piper-coupled-v2 \
+  --episode-manifest outputs/piper-pill-raw-v1/episode_manifest.json \
+  --output-dir outputs/datasets --name piper-pill-v1 \
   --fps 20 --drop-terminal-frame --no-gpu --n-jobs 1
 ```
 
-Collection retains failed attempts and resumes from its attempt log. The manifest
-selects usable source episodes without moving seeds between pools. Conversion
-writes `train` and `validation` episode indices to `meta/info.json` and preserves
-source mapping in `meta/source_episodes.json`. Use a new dataset name for a new
-version. T actions and T+1 observations become T supervised rows; the terminal
-observation has no action label. Video decoding uses exact frame seeking.
-The saved collection configuration includes the robot profile, including finger
-coupling. Resuming requires the same configuration. Older collection directories
-without that field require a new output directory; their existing data remain
-readable, convertible and replayable. Do not mix uncoupled and coupled runs in
-one collection version.
+Collection resumes from the same attempt log and frozen configuration. Each
+launched seed counts toward the attempt limit, including interrupted workers.
+All failed attempts remain in their own directories. The collector reports
+official outcome, execution, selected quality and recording facts separately;
+exhausting the pool returns a partial-data result rather than replacing failures.
+Omitting `--robot` retains the original collection script's behavior.
 
-Create `piper-datasets.json`:
+Create `piper-pill-datasets.json`:
 
 ```json
-[{"repo_id": "dual-piper-coupled-v2", "root": "dual-piper-coupled-v2", "env_id": "DualArmPickPlace-v1"}]
+[{"repo_id": "piper-pill-v1", "root": "piper-pill-v1", "env_id": "TwoRobotPickPillToRegions-v1"}]
 ```
-
-Then use the existing single-task ACT entries:
 
 ```bash
 python -m examples.baselines.act.train_act_single \
-  --sub-config piper-datasets.json --sim-root outputs/datasets \
-  --cameras base_camera --state-dim 16 --action-dim 14 \
-  --batch-size 16 --num-workers 2 --max-updates 1000 \
-  --output-dir outputs/piper-act-v2
+  --sub-config piper-pill-datasets.json --sim-root outputs/datasets \
+  --cameras zed2i --state-dim 16 --action-dim 14 \
+  --batch-size 16 --num-workers 2 --max-updates 6000 \
+  --output-dir outputs/piper-pill-act-v1
 
 python -m examples.baselines.act.eval_act_single \
   --checkpoint path/to/checkpoint_epoch_XXXX.pt \
-  --sub-config piper-datasets.json --env-id DualArmPickPlace-v1 --robot piper \
-  --seeds-file outputs/piper-raw-v2/episode_manifest.json --seed-split evaluation \
-  --max-episode-steps 400 --fps 20 --execute-steps 8 \
-  --save-video --output-dir outputs/piper-policy-eval-v2
+  --sub-config piper-pill-datasets.json --robot piper \
+  --seeds-file path/to/seed-splits.json --seed-split evaluation \
+  --max-episode-steps 200 --fps 20 --execute-steps 8 \
+  --save-video --output-dir outputs/piper-pill-evaluation-v1
 ```
 
-`training_summary.json` identifies the final checkpoint. To check a few episodes
-can be fitted, use a separate dataset configuration with `train: [0]` or
-`train: [0, 1]`, a finite update budget and a separate output directory. A small
-fit check does not establish performance on unseen states.
+Use training/development runs to choose the update budget and executed chunk
+length, then fix the model and settings before independent evaluation. Short
+chunks can repeatedly predict an early action prefix; a completed training run
+alone does not establish that a policy can finish the task. Only public camera
+and recorded-order joint observations enter the policy. Training statistics are
+computed from training rows and saved in the checkpoint; evaluation reloads
+those exact statistics and model weights.
 
-State and action normalization is computed from the selected training rows, including when loading
-validation. Evaluation uses the exact saved training statistics and strict model
-reload. It renders with the expert's shader and source image resolution, then
-uses the same image resize as training. Only predicted native actions drive the
-robot; no expert planner or intermediate state restoration is used. Results
-separate task success, timeout, grasp/release observations and failure stage.
-Predictions are clipped to native controller bounds; clipped-step counts are
-reported separately from execution failures.
-For Panda, change the robot, dataset configuration and model dimensions to 18
-state values and 16 actions. This baseline does not imply that one policy's
-weights transfer between embodiments.
+The validated small pill baselines use twenty training episodes per pair,
+ResNet18, batch size 16, a sixteen-action prediction horizon and eight executed
+actions per query. Panda/UR5/xArm use 3,000 updates; Piper/ARX use 6,000. Each
+model is selected using development states before five independent initial
+states are evaluated within the original 200-step horizon.
+
+For near-constant numeric features, ACT offers an explicit
+`--normalization-min-range` in each feature's native units. The default is zero
+and retains existing scaling. A positive value expands narrow bounds about their
+midpoint for both normalization and inversion; raw training statistics stay
+unchanged. The chosen value is saved and reloaded with the checkpoint. The ARX
+pill baseline uses `--normalization-min-range 0.01`; the other four use zero.
+
+Panda pill recordings use wrist-camera Panda agents (18 states, 16 actions).
+Piper, ARX and UR5 use 16 states and 14 actions. xArm retains all passive gripper
+joints (24 states, 14 actions). `--robot panda` resolves to the original pill
+task's Panda wrist-camera pair; evaluation otherwise reconstructs the recorded
+pair automatically. This does not transfer one policy's weights across bodies.
+
+New original-task recordings preserve task and robot profiles through
+`native_data_contract` into checkpoints, including task-specific effort and
+physical coupling settings. Evaluation checks settings that affect the live
+environment when present; changing only expert grasp or retreat proposals does
+not block policy evaluation in otherwise identical physics. Older datasets
+without these fields remain readable. Source versions
+with different physical settings require separate collection directories.
+
+Policy reports preserve official success and timeout. They also report sampled
+grasp transitions and whether both objects finish in their regions ungrasped.
+The legacy `release_observed` field means only that both objects were once
+grasped and finish ungrasped; a dropped object can satisfy it. These observations
+do not establish a controlled release or continuous collision safety.
+
+## Shared cube-task baseline
+
+`DualArmPickPlace-v1` remains a control and executor regression task. Use the
+same collection, conversion and learning entries above, with these differences:
+
+- Omit `--tasks` or select `--tasks DualArmPickPlace-v1` when collecting.
+- Use a separate raw directory, dataset name and model for this task.
+- Select `--cameras base_camera` for training instead of `zed2i`.
+- Evaluate with `--env-id DualArmPickPlace-v1 --max-episode-steps 400`.
+
+Native state/action widths stay the same for each robot. Its 400-step integration
+budget does not change the original TIG tasks' 200-step horizons.
+Earlier cube learning runs used different physics versions, data and initial
+states; their outcomes are retained with the historical artifacts. They do not
+replace the original pill results in the capability table.
 
 Images use division by 255 in both training and evaluation. Exported image
-statistics now accumulate floating-point second moments in the default and
-streaming writers, avoiding uint8 square overflow. Their metadata aggregation
-still covers all converted episodes; these statistics are not used by this ACT
-image path and do not constitute train-only image normalization.
-
-The initial baseline, before the Piper finger-coupling correction, used
-20 training and 3 development episodes per embodiment,
-with five reserved evaluation seeds (3000–3004). Each separate ACT model used
-1,000 updates, the default ResNet18 and transformer configuration, a 16-action
-prediction horizon, and 8 predicted actions per query. Chunk execution was
-selected on development seeds; querying every control tick caused the Panda
-policy to stall. Independent evaluation was run after this choice was fixed.
-
-| Pair | Training / development rows | Independent final successes | Unsuccessful horizon runs | Failure stage |
-| --- | ---: | ---: | ---: | --- |
-| Panda | 4475 / 672 | 4/5 | 1/5 | Placement incomplete |
-| Piper | 4402 / 658 | 4/5 | 1/5 | Right grasp not observed |
-
-These are small-sample results on this integration task. They establish an
-actual generation-to-policy-control baseline, not general success rates or
-transfer to other TIG tasks. Both successful and failed policy runs were
-retained. Source H5 arrays, converted rows, frame timing and train-only
-normalization were checked independently; detailed runs, datasets and models
-remain outside the source repository.
-
-After correcting Piper's symmetric finger dynamics, the unchanged initial
-Piper checkpoint was run on the same five evaluation seeds with the same
-8-action execution setting. It succeeded in 1/5 episodes, with four timeouts.
-This is a cross-version regression on previously evaluated seeds, not a fresh
-independent benchmark. The earlier dataset, checkpoint and 4/5 result remain
-separate historical artifacts.
-
-A separate dataset for the corrected Piper dynamics contains 20 newly generated
-training and three development episodes (4,402/658 supervised rows). The new ACT
-model retains the same architecture, 1,000-update budget, seed 1, batch size 16
-and 8-action execution setting. Its final checkpoint was fixed before evaluation.
-
-| Seed group | Final successes | Unsuccessful horizon runs | Purpose |
-| --- | ---: | ---: | --- |
-| 2000–2002 | 1/3 | 2/3 | Development; no parameter reselection |
-| 4000–4004 | 3/5 | 2/5 | Fresh, reserved evaluation initial states |
-| 3000–3004 | 1/5 | 4/5 | Historical-seed regression |
-
-The new 3/5 and previous 1/5 use different seed groups and do not establish a
-paired improvement. The retrained model also scores 1/5 on the historical group.
-This is an actual generation-to-learning baseline with limited reliability;
-broader learning performance remains unresolved. Original pill and basket
-integrations are verified with experts and action replay, not learned policies.
+statistics use floating-point second moments to avoid uint8 square overflow.
+Their aggregation covers all converted episodes; this ACT image path does not
+consume them as train-only image normalization.

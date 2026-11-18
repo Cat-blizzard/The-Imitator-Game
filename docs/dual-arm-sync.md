@@ -5,8 +5,8 @@
 
 | Original task | Supported sync pair |
 | --- | --- |
-| `TwoRobotPickPillToRegions-v1` | Panda wrist-camera (default), Piper, UR5+WSG |
-| `TwoRobotPickAppleBananaToBaskets-v1` | Piper, initial integration |
+| `TwoRobotPickPillToRegions-v1` | Panda wrist-camera (default), Piper, ARX X5, UR5+WSG, xArm6+Robotiq |
+| `TwoRobotPickAppleBananaToBaskets-v1` | Piper |
 
 The implementation uses one environment, CPU physics and absolute `pd_joint_pos`
 commands. Rendering still requires the normal TIG rendering setup.
@@ -27,7 +27,8 @@ Omit `--execution-mode sync` to use the original serial solution. Original
 solution scripts and the Panda planner are unchanged. Sync does not import
 cuRobo or require a worker process.
 
-Add `--robot piper` or `--robot ur5_wsg` to the command above to use that pair on
+Add `--robot piper`, `--robot arx_x5`, `--robot ur5_wsg` or
+`--robot xarm6_robotiq` to the command above to use that pair on
 the same pill objects and regions. `--robot panda` is an alias for `panda_wristcam` on
 this entry. Selecting another robot with the serial mode, or selecting an
 unsupported task/robot combination, reports an error before creating a simulator.
@@ -128,8 +129,13 @@ stored actions. It does not force recorded states during playback.
 H5 stores `T` actions and `T+1` observations/states. Arm order is left then right:
 each action has seven arm radians plus one normalized gripper command (16
 values total); observed qpos has nine joints per arm (18 values total).
-For Piper and UR5, each arm has six arm radians plus one normalized gripper command
+For Piper, ARX and UR5, each arm has six arm radians plus one normalized gripper command
 (14 actions total), and eight physical joint coordinates (16 states total).
+For xArm, each arm has six arm radians and one native angular gripper target
+(0=open, 0.81=closed), with twelve physical state coordinates including passive
+gripper joints. Replay submits saved native actions directly; it applies no
+second open/close mapping. Rotary grasp stability uses the same measured
+TCP-local finger-link distances as generation.
 Native action keys and sizes are saved explicitly. New replay reads those
 sizes and continues to accept the original Panda archives.
 New recordings also save the measured controller joint order, physical state
@@ -167,11 +173,30 @@ and conversion timing. The fixed UR5 pill regression passes at 183/184/184
 steps, and the default Panda/Piper pill regressions retain 171/194-step
 completion. These are small task integration checks; broader task/seed coverage
 is needed before claiming general success rates.
-Piper basket development seed 401 completes generation and replay in 188 steps.
-In the fixed three-seed basket regression, all three reach official success,
-two complete generation, and one completes both generation and replay. One
-run stops on measured fingertip contact during retreat; another completes
-generation but its replay is refused by the geometry check. The latter is a
-proxy refusal, not a recorded physical collision. Basket integration remains
-preliminary, and these failures are retained separately from official success.
+The corrected Piper basket landing proposal chooses free space beside the
+pre-existing fruit instead of always preferring the basket center. Six fixed
+initial states complete generation and original-action replay in
+191/189/188/187/187/188 steps. Earlier three-seed results (three official
+successes, two complete generations, one accepted generation-plus-replay pair)
+remain separate. Diagnostic replay identified a residual finger contact at the
+release-to-retreat boundary in one old archive; the old trajectory is not
+relabelled as passing.
+
+Pill task profiles also describe robot-specific grasp/pregrasp offsets, positive
+release clearance, optional gripper effort, held-motion acceleration and retreat
+offsets. Default Panda values retain the existing behavior. xArm uses a side
+grasp, a task-specific 0.5 Nm gripper drive limit and 2 rad/s² held acceleration;
+its global agent/cube drive default remains 0.1 Nm. These are model settings,
+not a hardware calibration or an equal-speed planner comparison.
+
+Initial tabletop contact is checked against all actual convex pieces, the
+finite table, existing depth/growth limits and permanent measured source
+departure. The former fixed vertical-pick displacement/rotation window is
+diagnostic; exceeding it alone does not prove a forbidden collision. Actual
+forbidden contacts remain failures. Failure reports retain the collision pair
+already found, and native forbidden events preserve their existing contact
+points and substep index without adding another scan.
+
+For bounded original-task collection, conversion and separate per-robot ACT
+training/evaluation, see [the multi-embodiment guide](multi-embodiment.md#collect-and-learn-an-original-task).
 Tested runtime: Python 3.12, SAPIEN 3.0.3, MPLib 0.1.1, NumPy 1.26.4.
