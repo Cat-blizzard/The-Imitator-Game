@@ -109,7 +109,8 @@ H5 stores `T` actions and `T+1` observations/states. Arm order is left then righ
 each action has seven arm radians plus one normalized gripper command (16
 values total); observed qpos has nine joints per arm (18 values total).
 Action `t` pairs with observation `t` and advances it to observation `t+1`.
-Sampling is 20 Hz, or 0.05 s per control step.
+Sampling is 20 Hz, or 0.05 s per control step; conversion and training must use
+that recorded frequency.
 
 ```bash
 python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
@@ -119,11 +120,9 @@ python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
 
 `--drop-terminal-frame` produces `T` supervised rows and preserves the terminal
 observation in the source H5. Without the flag, the converter retains its old
-`T+1` rows with the final action duplicated. Single-task ACT now reads sampling
-frequency from selected datasets' `meta/info.json` and rejects mixed rates.
-The converter's original train/test split may leave a one-episode dataset's
-training split empty; select episode 0 explicitly for a smoke test. Conversion
-compatibility does not by itself establish policy learning performance.
+`T+1` rows with the final action duplicated. To train and evaluate a policy from
+the converted data, follow the [single-task ACT guide](../examples/baselines/act/README.md#single-task-simulation-data),
+which covers dataset selection, timing and checkpoint reuse.
 
 ## Validation
 

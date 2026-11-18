@@ -56,9 +56,7 @@ variable alone does not change the default MPLib route. Invalid mode/backend
 combinations are rejected before an environment is created. Backend failures
 are reported through the selected route; they do not silently select MPLib.
 
-The worker starts and warms the GPU planner before handling its planning
-requests. Record startup, scene updates and planning separately when comparing
-costs. Selecting the backend does not establish a performance advantage.
+## Planner lifetime and reuse
 
 With `-n 1`, each arm reuses one approach planner for pregrasp/descend, then
 retires it and constructs a transport planner with measured held-object
@@ -74,16 +72,17 @@ permissions replace the previous query's state. Both resulting paths still
 execute together through the common executor. Compatible profiles reuse GPU
 allocations and warmup. The complete covers of both held objects determine
 reserved capacity; topology or capacity changes rebuild the affected profile.
-Separate collection commands still pay their own startup cost.
 
 The environment seed increments normally. A shared session keeps the first
-episode's planner seed and resets native samplers before each arm query;
-`episode_seed` and `planner_seed` are recorded separately. Compare fresh and
-reused planners with the same planner seed when measuring reuse. Candidate counts,
-motion limits and collision acceptance do not change to reduce startup time.
-Shared mode records `shared_per_query_seed_reset`; its sampling sequence is
-different from the independent one-episode arm planners.
-The session closes its worker on completion or collection errors.
+episode's planner seed and resets native samplers before each arm query.
+Metadata records `episode_seed`, `planner_seed`, and
+`shared_per_query_seed_reset`; this sampling sequence differs from independent
+one-episode arm planners. Reuse preserves candidate counts, motion limits and
+collision acceptance. The session closes its worker on completion or errors.
+
+When measuring reuse, compare the same planner seed and report cold startup,
+scene updates, planning and total collection time separately. Warmup and
+construction are paid again by each separate collection command.
 
 ## Record and reuse trajectories
 
@@ -102,45 +101,11 @@ python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
   --fps 20 --drop-terminal-frame --no-gpu --n-jobs 1
 ```
 
-The original task success rule and 200-step horizon apply to either backend.
-Collision, grasp, release and selected quality checks belong to the shared
-execution workflow described in [synchronous generation](dual-arm-sync.md).
-The two arms are planned separately and executed together; this is not a
-combined 14-DoF search.
+See [synchronous generation](dual-arm-sync.md) for the action/observation
+contract, collision and quality settings, and independent result fields.
+The converted data can use the [single-task ACT training and rollout guide](../examples/baselines/act/README.md#single-task-simulation-data).
 
-## Use the single-task ACT baseline
-
-The converted dataset uses the existing baseline entries. For a small interface
-check, save the following as `pill-datasets.json`:
-
-```json
-[{"repo_id": "TwoRobotPickPillToRegions-v1", "root": "TwoRobotPickPillToRegions-v1", "train": "[0]"}]
-```
-
-Then train and reload the checkpoint for an actual simulation rollout:
-
-```bash
-python -m examples.baselines.act.train_act_single \
-  --sub-config pill-datasets.json --sim-root imitator_data \
-  --cameras zed2i --state-dim 18 --action-dim 16 \
-  --obs-horizon 1 --pred-horizon 16 --batch-size 8 --num-workers 0 \
-  --total-epochs 1 --save-freq-epochs 1 --no-enable-augmentation \
-  --output-dir act-pill
-
-python -m examples.baselines.act.eval_act_single \
-  --checkpoint act-pill/checkpoint_epoch_0001.pt \
-  --sub-config pill-datasets.json --sim-root imitator_data \
-  --camera zed2i --seed 402 --num-envs 1 --num-episodes 1 \
-  --max-episode-steps 200 --sim-backend physx_cpu --no-compute-dtw \
-  --output-dir act-pill-eval
-```
-
-The camera selection preserves training's RGB range, saved training statistics,
-18 physical joint coordinates and 16 action coordinates. Evaluation checks the
-recorded frequency against the environment. One episode and one training epoch
-check the interface; they do not establish a learned-policy success rate.
-
-## Validation
+## Validation and current scope
 
 CPU tests cover backend dispatch, interpreter selection, independent finger
 updates, held-object geometry, shared-session reset and cleanup, failure
@@ -151,16 +116,19 @@ importing the default routes without cuRobo or CUDA initialization:
 python -m pytest -q tests/motionplanning/dual_sync tests/baselines
 ```
 
+The arms are planned separately and executed together, without a combined
+14-DoF search or automatic recovery. The original task success rule and
+200-step horizon apply to either backend.
+
 Native validation of the pill workflow at seed 401 completed in 194 of 200
 control steps, including physical release, retreat and final stability. Action
 replay from the recorded initial state completed the same task in 194 steps.
 The default MPLib route retained its 171-step action sequence in the regression
-case. These are functional checks of one initial seed, not a comparative
-success-rate or throughput benchmark.
+case. These functional checks do not establish comparative success rates or
+throughput advantages.
 
 The same recording converted to 194 real training samples at 20 Hz. A one-epoch
-ACT interface check performed 25 optimizer updates and reproduced fixed-input
-predictions exactly after strict checkpoint reload. The resulting policy ran
-for 200 steps at seed 402 but timed out without completing the task. Dataset,
-training and rollout interfaces are connected; policy learning is unproven by
-this small check.
+ACT check reproduced fixed-input predictions after strict checkpoint reload,
+but the policy timed out at seed 402 after 200 steps. This verifies the data,
+training and rollout interfaces; a successful learned policy remains to be
+demonstrated.

@@ -50,7 +50,7 @@ External GLB assets (Sketchfab, Hunyuan-generated meshes, [Objaverse](https://ob
 
 ## IG-10K Dataset
 
-The dataset is in `LeRobot-0.5.0` format. See [`examples/baselines/lerobot_dataset/README.md`](examples\baselines\lerobot_dataset\README.md) for the dataset layout, observation features (RGB/depth cameras, MANO hand pose, segmentation masks), and the imitative level handling of the paired human/robot data.
+The dataset is in `LeRobot-0.5.0` format. See [`examples/baselines/lerobot_dataset/README.md`](examples/baselines/lerobot_dataset/README.md) for the dataset layout, observation features (RGB/depth cameras, MANO hand pose, segmentation masks), and the imitative level handling of the paired human/robot data.
 
 ```bash
 # Hugging Face
@@ -70,7 +70,7 @@ The-Imitator-Game/
 
 ### Collect new data in simulation
 
-See [`scripts/collect_data.py`](scripts/collect_data.py) for collecting simulation motion-planning demonstrations in ManiSkill hdf5-format, and [examples/baselines/lerobot_dataset/h5_to_lerobot.py](examples/baselines/lerobot_dataset/h5_to_lerobot.py ) for converting `.h5` trajectories to `LeRobot-0.5.0` format. An example script for data collection: 
+See [`scripts/collect_data.py`](scripts/collect_data.py) for collecting simulation motion-planning demonstrations in ManiSkill hdf5-format, and [examples/baselines/lerobot_dataset/h5_to_lerobot.py](examples/baselines/lerobot_dataset/h5_to_lerobot.py) for converting `.h5` trajectories to `LeRobot-0.5.0` format. An example script for data collection:
 
 ```bash
 python -m mani_skill.examples.motionplanning.dual.two_robot_run --shader "rt-fast" -n 50 -e "Task name" --save-video
@@ -81,7 +81,8 @@ solution is available for `TwoRobotPickPillToRegions-v1`; see
 [synchronous dual-arm generation](docs/dual-arm-sync.md) for generation,
 recording, configuration, replay, and 20 Hz dataset conversion.
 An optional [cuRobo 0.9.0 backend](docs/curobo-backend.md) uses the same
-synchronous entry and executor.
+synchronous entry and executor. Converted robot demonstrations can use the
+[single-task ACT training and rollout guide](examples/baselines/act/README.md#single-task-simulation-data).
 
 ## Benchmark
 
