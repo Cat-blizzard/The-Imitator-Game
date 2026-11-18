@@ -80,6 +80,8 @@ The default solutions execute arms serially. An optional MPLib synchronous
 solution is available for `TwoRobotPickPillToRegions-v1`; see
 [synchronous dual-arm generation](docs/dual-arm-sync.md) for generation,
 recording, configuration, replay, and 20 Hz dataset conversion.
+Panda wrist-camera arms remain the default; add `--robot piper` with sync mode
+to use the supported Piper pair on that task.
 
 For five fixed-base robot pairs and a shared pick/place task using the same
 synchronous executor, see [multi-embodiment integration](docs/multi-embodiment.md).

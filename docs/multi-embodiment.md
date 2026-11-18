@@ -10,15 +10,16 @@ Each pair contains two instances of the selected robot.
 | Agent UID | Native action / physical qpos per arm | Basic control and RGB | Expert task | Recording and action replay | LeRobot conversion | ACT policy evaluation |
 | --- | ---: | --- | --- | --- | --- | --- |
 | `panda` | 8 / 9 | Verified | Verified | Verified | Verified | Evaluated: 4/5 |
-| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | Evaluated: 4/5 |
+| `piper` | 7 / 8 | Verified | Verified | Verified | Verified | Frozen-policy regression: 1/5 after coupling correction |
 | `arx_x5` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
 | `ur5_wsg` | 7 / 8 | Verified | Verified | Verified | Not tested | Not tested |
 | `xarm6_robotiq` | 7 / 12 | Verified | Verified | Verified | Not tested | Not tested |
 
 Task verification refers to `DualArmPickPlace-v1`, a shared cube pick/place
 integration task. It does not establish compatibility with all TIG tasks. The
-original pill task continues to support its Panda wrist-camera pair through the
-original entry; other robot pairs have not been adapted to that task. Realman
+original pill task supports Panda wrist-camera and Piper pairs through the
+[original entry](dual-arm-sync.md), selecting `--robot piper` for Piper.
+ARX, UR5 and xArm have not been adapted to that task. Realman
 and mixed-model pairs are outside this integration's current scope.
 
 ## Prepare assets
@@ -42,6 +43,15 @@ The UR5 import reverses the left finger's coordinate and axis together, preservi
 physical motion while letting both fingers use one opening command. Invalid SRDF
 references to a different gripper are removed. Piper starts from an unfolded rest
 configuration; its source zero configuration has a physical self-contact.
+Piper also uses a finite-stiffness physical tendon for its single symmetric
+opening coordinate (`joint7 = joint8` in the imported coordinates). Sending the
+same drive target to two independent fingers does not impose this relation.
+The tendon uses ManiSkill's existing sibling-mimic construction; finger drive
+force limits, friction and task acceptance settings retain their prior values.
+The upstream [current gripper description](https://github.com/agilexrobotics/agx_arm_urdf/blob/main/piper/urdf/piper_with_gripper_description.xacro)
+describes two fingers driven by one opening coordinate. Its meshes and coordinate
+signs differ from the imported RoboTwin asset; the import does not replace that
+asset with the newer geometry.
 
 ## Check loading and control
 
@@ -78,8 +88,14 @@ uses named joints and verifies actual TCP endpoints. A native IK/RRTConnect path
 is available when a straight screw path cannot connect a rest pose to its goal.
 Combined checks include both robots, the measured scene and carried objects.
 
-The robot profiles in `mani_skill/envs/tasks/tabletop/dual_pick_place.py` specify
-mounting, reachable object positions, grasp orientation and approach distances.
+Robot profiles in `mani_skill/agents/robots/embodiment_profiles.py` provide joint
+names, TCP, native gripper mapping, finger links, units and rest poses to the agents.
+Task profiles in `mani_skill/envs/tasks/tabletop/dual_arm_profiles.py` specify
+mounting, sampled object workspaces, grasp orientation and approach distances.
+`get_task_profile(task_id, robot_uid)` resolves declared combinations; unsupported
+combinations report their supported choices. `dual_pick_place.PROFILES` remains
+available for existing callers. The sampling rectangles describe the configured
+task arrangement, not a complete kinematic workspace certificate.
 Piper and ARX use raised mounts; robot-specific grasp-height offsets account
 for actual finger geometry. Piper's equivalent top-down grasp avoids placing
 its finite-range wrist near the +/-pi branch boundary. xArm opts into choosing
@@ -113,7 +129,10 @@ replan, add settling actions or impose recorded states on later frames.
 
 ```bash
 python -m pytest -q tests/agents/test_parallel_gripper.py \
-  tests/test_embodiment_smoke.py tests/motionplanning/dual_sync
+  tests/agents/test_parallel_gripper_dynamics.py \
+  tests/agents/test_embodiment_profiles.py tests/test_embodiment_smoke.py \
+  tests/motionplanning/dual_sync tests/baselines/test_act_single_pipeline.py \
+  tests/baselines/test_pill_native_conversion.py
 
 python -m mani_skill.examples.embodiments.check_sync_collision \
   --robot piper --output outputs/piper-collision-check.json
@@ -121,8 +140,9 @@ python -m mani_skill.examples.embodiments.check_sync_collision \
 
 The collision negative test overlaps only private planning models, requires
 inter-robot collisions, restores the models, and verifies that the physical
-environment did not move. The existing synchronous pill generation and action
-replay remain available through the [original entry](dual-arm-sync.md).
+environment did not move. Synchronous pill generation and action replay support
+Panda wrist-camera or Piper pairs through the [original entry](dual-arm-sync.md),
+with the original 200-step task horizon. The cube integration remains at 400 steps.
 
 ## Dataset conversion and policy baseline
 
@@ -200,7 +220,8 @@ For Panda, change the robot, dataset configuration and model dimensions to 18
 state values and 16 actions. This baseline does not imply that one policy's
 weights transfer between embodiments.
 
-The initial baseline used 20 training and 3 development episodes per embodiment,
+The initial baseline, before the Piper finger-coupling correction, used
+20 training and 3 development episodes per embodiment,
 with five reserved evaluation seeds (3000–3004). Each separate ACT model used
 1,000 updates, the default ResNet18 and transformer configuration, a 16-action
 prediction horizon, and 8 predicted actions per query. Chunk execution was
@@ -218,3 +239,12 @@ transfer to other TIG tasks. Both successful and failed policy runs were
 retained. Source H5 arrays, converted rows, frame timing and train-only
 normalization were checked independently; detailed runs, datasets and models
 remain outside the source repository.
+
+After correcting Piper's symmetric finger dynamics, the unchanged initial
+Piper checkpoint was run on the same five evaluation seeds with the same
+8-action execution setting. It succeeded in 1/5 episodes, with four timeouts.
+This is a cross-version regression on previously evaluated seeds, not a fresh
+independent benchmark. The earlier dataset, checkpoint and 4/5 result remain
+separate historical artifacts. Regenerating Piper training data and training
+a baseline for the corrected dynamics remain future work; the original pill
+integration is currently verified with expert generation and action replay.

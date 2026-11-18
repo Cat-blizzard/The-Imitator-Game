@@ -42,14 +42,14 @@ REWARD_PHASES = [
 class TwoRobotPickPillToRegionsEnv(BaseEnv):
     """
     **Task Description:**
-    Two panda_wristcam robots operate on a table.
+    Two supported robot arms operate on a table (Panda wrist-camera by default).
     1) Pick pill A and place it into region A-1.
     2) Pick pill B and place it into region B-1.
 
     **Success Conditions:**
     - Pill A is in region A-1.
     - Pill B is in region B-1.
-    - Both robots are static.
+    Robot static status is reported separately as a diagnostic.
     """
 
     SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam"), ("piper", "piper")]

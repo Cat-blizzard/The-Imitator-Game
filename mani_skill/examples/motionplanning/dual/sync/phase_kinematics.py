@@ -88,7 +88,7 @@ def compact_route_positions(current_xyz: Any, release_xyz: Any, *, route: str) -
 
 def compact_kinematic_audit(result: Any, *, velocity_limit: float,
                              acceleration_limit: float) -> dict[str, Any]:
-    """Check native TOPP velocity/acceleration arrays[N,7] without retiming."""
+    """Check native TOPP velocity/acceleration arrays[N,J] without retiming."""
     if not isinstance(result, dict) or result.get("status") != "Success":
         raise ValueError("Native planner did not return a successful trajectory")
     times = np.asarray(result.get("time"), dtype=float)
@@ -302,7 +302,7 @@ def compact_retime_pair(results: tuple[Any, Any], traces: tuple[Any, Any], *,
 def attach_topp_capture(solver: Any) -> None:
     """Retain the latest native result and its continuous path parameterization.
 
-    Install once after constructing an ordinary Panda planner. The planner's
+    Install once after constructing a named-arm planner. The planner's
     actual TOPP result is returned unchanged; reconstruction supplies the cubic
     path/velocity data needed for analytic phase retiming. No files are written.
     """

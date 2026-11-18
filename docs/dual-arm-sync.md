@@ -2,7 +2,7 @@
 
 `two_robot_run` retains the original serial solutions by default. The optional
 `--execution-mode sync` currently supports **TwoRobotPickPillToRegions-v1**,
-two Panda wrist-camera arms, one environment, CPU physics, and absolute
+two Panda wrist-camera arms (the default) or two Piper arms, one environment, CPU physics, and absolute
 `pd_joint_pos` commands. Rendering still requires the normal TIG rendering setup.
 Other tasks reject explicit sync selection before creating an environment.
 
@@ -20,6 +20,17 @@ python -m mani_skill.examples.motionplanning.dual.two_robot_run \
 Omit `--execution-mode sync` to use the original serial solution. Original
 solution scripts and the Panda planner are unchanged. Sync does not import
 cuRobo or require a worker process.
+
+Add `--robot piper` to the command above to use two Piper arms on the same
+pill objects and regions. `--robot panda` is an alias for `panda_wristcam` on
+this entry. Selecting another robot with the serial mode, or selecting an
+unsupported task/robot combination, reports an error before creating a simulator.
+Piper uses raised, robot-specific mounts; object geometry, masses, scene
+sampling, region tests, external cameras and the official 200-step horizon are
+unchanged. Its native controller has seven actions per arm. It has no wrist
+camera; use the original external `zed2i` view.
+Initial Piper validation covers the default pill scene; L1--L3 scene variants
+need their own task/robot validation.
 
 The synchronous solution uses `solve(env, seed=None, debug=False, vis=False)`
 and operates on the supplied environment. It neither creates a second simulator
@@ -94,6 +105,16 @@ stored actions. It does not force recorded states during playback.
 H5 stores `T` actions and `T+1` observations/states. Arm order is left then right:
 each action has seven arm radians plus one normalized gripper command (16
 values total); observed qpos has nine joints per arm (18 values total).
+For Piper, each arm has six arm radians plus one normalized gripper command
+(14 actions total), and eight physical joint coordinates (16 states total).
+Native action keys and sizes are saved explicitly. New replay reads those
+sizes and continues to accept the original Panda archives.
+New recordings also save the measured controller joint order, physical state
+joint order and native gripper endpoints in `motion_planning.native_action_layout`.
+The converter reads this description for either robot pair. Earlier Piper pill
+archives that lack this description remain replayable; conversion requires a
+recording with an explicit native layout instead of inferring joint semantics
+from its action width. Earlier Panda archives retain their original fallback.
 Action `t` pairs with observation `t` and advances it to observation `t+1`.
 Sampling is 20 Hz, or 0.05 s per control step.
 
