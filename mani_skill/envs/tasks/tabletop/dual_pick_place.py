@@ -5,13 +5,12 @@ and recording share the same task. Units: metres, radians, WXYZ quaternions.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 import sapien
 import torch
 
 from mani_skill.envs.sapien_env import BaseEnv
+from .dual_arm_profiles import PickPlaceProfile, PICK_PLACE_PROFILES, get_task_profile
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
@@ -20,32 +19,8 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import SimConfig
 
 
-@dataclass(frozen=True)
-class PickPlaceProfile:
-    base_x: float
-    arm_separation: float
-    source_x: float
-    destination_x: float
-    grasp_height_offset: float = 0.
-    base_height: float = 0.
-    grasp_quaternion: tuple[float, float, float, float] = (0., 1., 0., 0.)
-    approach_height: float = .10
-    carry_height: float = .16
-
-
-PROFILES = {
-    # The equivalent top-down grasp keeps joint6 away from its +/-pi limits.
-    "piper": PickPlaceProfile(-.36, .48, -.04, .06,
-                             grasp_height_offset=.012, base_height=.16,
-                             grasp_quaternion=(0., 0., 1., 0.)),
-    "panda": PickPlaceProfile(-.60, .60, -.08, .12),
-    "arx_x5": PickPlaceProfile(-.40, .60, -.04, .08,
-                              grasp_height_offset=.022, base_height=.16,
-                              grasp_quaternion=(0., 0., 1., 0.)),
-    "ur5_wsg": PickPlaceProfile(-.55, .75, -.05, .10,
-                               grasp_height_offset=.028),
-    "xarm6_robotiq": PickPlaceProfile(-.55, .70, -.05, .10),
-}
+# Compatibility exports for existing callers and saved task tooling.
+PROFILES = PICK_PLACE_PROFILES
 
 
 @register_env("DualArmPickPlace-v1", max_episode_steps=400)
@@ -65,7 +40,7 @@ class DualArmPickPlaceEnv(BaseEnv):
         robot_uids = tuple(robot_uids)
         if robot_uids not in self.SUPPORTED_ROBOTS:
             raise ValueError(f"Choose a supported robot pair: {self.SUPPORTED_ROBOTS}")
-        self.profile = PROFILES[robot_uids[0]]
+        self.profile = get_task_profile("DualArmPickPlace-v1", robot_uids[0])
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -83,9 +58,8 @@ class DualArmPickPlaceEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1.15, .01, 100)
 
     def _load_agent(self, options: dict):
-        p = self.profile
-        self.base_poses = [sapien.Pose([p.base_x, sign*p.arm_separation/2, p.base_height+.002])
-                           for sign in (-1, 1)]
+        self.base_poses = [sapien.Pose(mount.position, mount.quaternion)
+                           for mount in self.profile.mount_poses]
         super()._load_agent(options, self.base_poses)
         self.left_agent, self.right_agent = self.agent.agents
 
@@ -116,7 +90,7 @@ class DualArmPickPlaceEnv(BaseEnv):
             agent.reset(agent.keyframes["rest"].qpos)
             agent.robot.set_pose(pose)
         p = self.profile
-        jitter = self._episode_rng.uniform(-.008, .008, (2, 2))
+        jitter = self._episode_rng.uniform(-p.source_jitter_m, p.source_jitter_m, (2, 2))
         self.destination_xy = []
         for i, sign in enumerate((-1, 1)):
             y = sign*p.arm_separation/2

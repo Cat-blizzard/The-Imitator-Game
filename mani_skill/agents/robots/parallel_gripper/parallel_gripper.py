@@ -12,6 +12,7 @@ import torch
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import PDJointPosControllerConfig, PDJointPosMimicControllerConfig
 from mani_skill.agents.registration import register_agent
+from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
@@ -119,45 +120,63 @@ def _finger_material(links):
 @register_agent()
 class Piper(ParallelGripperArm):
     uid = "piper"
-    # The source all-zero pose collides between link2 and link4 in PhysX.
-    rest_arm_qpos = (0.0, 0.8, -0.8, 0.0, 0.2, 0.0)
+    embodiment_profile = get_robot_profile(uid)
     urdf_path = "{ASSET_DIR}/robots/piper/robot.urdf"
-    arm_joint_names = [f"joint{i}" for i in range(1, 7)]
-    gripper_joint_names = ["joint7", "joint8"]
-    finger_link_names = ("link7", "link8")
+    arm_joint_names = list(embodiment_profile.arm_joint_names)
+    gripper_joint_names = list(embodiment_profile.gripper_joint_names)
+    rest_arm_qpos = embodiment_profile.rest_arm_qpos
+    ee_link_name = embodiment_profile.ee_link_name
+    finger_link_names = embodiment_profile.finger_link_names
+    gripper_closed_qpos = embodiment_profile.gripper_closed_qpos
+    gripper_open_qpos = embodiment_profile.gripper_open_qpos
+    gripper_open_action = embodiment_profile.gripper_open_action
+    gripper_closed_action = embodiment_profile.gripper_closed_action
+    gripper_coordinate_unit = embodiment_profile.gripper_coordinate_unit
+    gripper_open_tolerance = embodiment_profile.gripper_open_tolerance
+    finger_open_directions = embodiment_profile.finger_open_directions
     urdf_config = _finger_material(finger_link_names)
-    gripper_closed_qpos = 0.0
-    gripper_open_qpos = 0.04
 
 
 @register_agent()
 class ARXX5(ParallelGripperArm):
     uid = "arx_x5"
+    embodiment_profile = get_robot_profile(uid)
     urdf_path = "{ASSET_DIR}/robots/arx_x5/robot.urdf"
-    arm_joint_names = [f"joint{i}" for i in range(1, 7)]
-    gripper_joint_names = ["joint7", "joint8"]
-    finger_link_names = ("link7", "link8")
+    arm_joint_names = list(embodiment_profile.arm_joint_names)
+    gripper_joint_names = list(embodiment_profile.gripper_joint_names)
+    rest_arm_qpos = embodiment_profile.rest_arm_qpos
+    ee_link_name = embodiment_profile.ee_link_name
+    finger_link_names = embodiment_profile.finger_link_names
+    gripper_closed_qpos = embodiment_profile.gripper_closed_qpos
+    gripper_open_qpos = embodiment_profile.gripper_open_qpos
+    gripper_open_action = embodiment_profile.gripper_open_action
+    gripper_closed_action = embodiment_profile.gripper_closed_action
+    gripper_coordinate_unit = embodiment_profile.gripper_coordinate_unit
+    gripper_open_tolerance = embodiment_profile.gripper_open_tolerance
+    finger_open_directions = embodiment_profile.finger_open_directions
     urdf_config = _finger_material(finger_link_names)
-    gripper_closed_qpos = 0.0
-    gripper_open_qpos = 0.044
-    finger_open_directions = ((0.0, 1.0, 0.0), (0.0, -1.0, 0.0))
 
 
 @register_agent()
 class UR5WSG(ParallelGripperArm):
     uid = "ur5_wsg"
-    # The URDF has a massless world root above its actual mounting body.
-    robot_root_link_name = "base_link"
+    embodiment_profile = get_robot_profile(uid)
     urdf_path = "{ASSET_DIR}/robots/ur5_wsg/robot.urdf"
-    arm_joint_names = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
-    gripper_joint_names = ["base_joint_gripper_left", "base_joint_gripper_right"]
-    finger_link_names = ("finger_left", "finger_right")
+    arm_joint_names = list(embodiment_profile.arm_joint_names)
+    gripper_joint_names = list(embodiment_profile.gripper_joint_names)
+    rest_arm_qpos = embodiment_profile.rest_arm_qpos
+    ee_link_name = embodiment_profile.ee_link_name
+    finger_link_names = embodiment_profile.finger_link_names
+    gripper_closed_qpos = embodiment_profile.gripper_closed_qpos
+    gripper_open_qpos = embodiment_profile.gripper_open_qpos
+    gripper_open_action = embodiment_profile.gripper_open_action
+    gripper_closed_action = embodiment_profile.gripper_closed_action
+    gripper_coordinate_unit = embodiment_profile.gripper_coordinate_unit
+    gripper_open_tolerance = embodiment_profile.gripper_open_tolerance
+    finger_open_directions = embodiment_profile.finger_open_directions
+    # The URDF has a massless world root above its mounting body.
+    robot_root_link_name = embodiment_profile.robot_root_link_name
     urdf_config = _finger_material(finger_link_names)
-    rest_arm_qpos = (-1.5447, -1.5447, -1.5447, -1.5794, 1.5794, 0.0)
-    gripper_closed_qpos = 0.0027
-    gripper_open_qpos = 0.055
-    finger_open_directions = ((-1.0, 0.0, 0.0), (-1.0, 0.0, 0.0))
-
 
 if __name__ == "__main__":
     for cls in (Piper, ARXX5, UR5WSG):

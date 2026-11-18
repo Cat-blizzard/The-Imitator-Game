@@ -8,6 +8,7 @@ from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
+from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
@@ -16,6 +17,7 @@ from mani_skill.utils.structs.actor import Actor
 @register_agent(asset_download_ids=["xarm6"])
 class XArm6Robotiq(BaseAgent):
     uid = "xarm6_robotiq"
+    embodiment_profile = get_robot_profile(uid)
     urdf_path = f"{ASSET_DIR}/robots/xarm6/xarm6_robotiq.urdf"
 
     urdf_config = dict(
@@ -34,22 +36,9 @@ class XArm6Robotiq(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array(
-                [
-                    0,
-                    0.22,
-                    -1.23,
-                    0,
-                    1.01,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                ]
-            ),
+            qpos=np.array([*embodiment_profile.rest_arm_qpos,
+                           *([embodiment_profile.gripper_open_qpos]
+                             * len(embodiment_profile.gripper_joint_names))]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         zeros=Keyframe(
@@ -82,29 +71,17 @@ class XArm6Robotiq(BaseAgent):
         ),
     )
 
-    arm_joint_names = [
-        "joint1",
-        "joint2",
-        "joint3",
-        "joint4",
-        "joint5",
-        "joint6",
-    ]
-    # All physical gripper coordinates participate in measured collision state,
-    # including the four joints moved passively by the existing closed linkage.
-    gripper_joint_names = [
-        "left_outer_knuckle_joint", "left_inner_knuckle_joint",
-        "right_outer_knuckle_joint", "right_inner_knuckle_joint",
-        "left_inner_finger_joint", "right_inner_finger_joint",
-    ]
-    finger_link_names = ("left_inner_finger_pad", "right_inner_finger_pad")
-    gripper_open_action = 0.0
-    gripper_closed_action = 0.81
-    gripper_open_qpos = 0.0
-    gripper_coordinate_unit = "rad"
-    gripper_open_tolerance = 0.002
-    robot_root_link_name = "link_base"
-    prefer_nearby_revolute_goals = True
+    arm_joint_names = list(embodiment_profile.arm_joint_names)
+    # All physical coordinates include the four passive linkage joints.
+    gripper_joint_names = list(embodiment_profile.gripper_joint_names)
+    finger_link_names = embodiment_profile.finger_link_names
+    gripper_open_action = embodiment_profile.gripper_open_action
+    gripper_closed_action = embodiment_profile.gripper_closed_action
+    gripper_open_qpos = embodiment_profile.gripper_open_qpos
+    gripper_coordinate_unit = embodiment_profile.gripper_coordinate_unit
+    gripper_open_tolerance = embodiment_profile.gripper_open_tolerance
+    robot_root_link_name = embodiment_profile.robot_root_link_name
+    prefer_nearby_revolute_goals = embodiment_profile.prefer_nearby_revolute_goals
 
     arm_stiffness = 1e4
     arm_damping = 1e3
@@ -115,7 +92,7 @@ class XArm6Robotiq(BaseAgent):
     gripper_damping = 2000
     gripper_force_limit = 0.1
     gripper_friction = 1
-    ee_link_name = "eef"
+    ee_link_name = embodiment_profile.ee_link_name
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -230,12 +207,7 @@ class XArm6Robotiq(BaseAgent):
 
         # Define a passive controller config to simply "turn off" other joints from being controlled and set their properties (damping/friction) to 0.
         # These joints are controlled passively by the mimic controller later on.
-        passive_finger_joint_names = [
-            "left_inner_knuckle_joint",
-            "right_inner_knuckle_joint",
-            "left_inner_finger_joint",
-            "right_inner_finger_joint",
-        ]
+        passive_finger_joint_names = list(self.embodiment_profile.passive_gripper_joints)
 
         passive_finger_joints = PassiveControllerConfig(
             joint_names=passive_finger_joint_names,
@@ -243,7 +215,7 @@ class XArm6Robotiq(BaseAgent):
             friction=0,
         )
 
-        finger_joint_names = ["left_outer_knuckle_joint", "right_outer_knuckle_joint"]
+        finger_joint_names = list(self.embodiment_profile.controlled_gripper_joints)
 
         # Use a mimic controller config to define one action to control both fingers
         finger_mimic_pd_joint_pos = PDJointPosMimicControllerConfig(

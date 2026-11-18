@@ -9,6 +9,7 @@ from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
+from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
@@ -16,6 +17,7 @@ from mani_skill.utils.structs.actor import Actor
 @register_agent()
 class Panda(BaseAgent):
     uid = "panda"
+    embodiment_profile = get_robot_profile(uid)
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_v2.urdf"
     urdf_config = dict(
         _materials=dict(
@@ -33,37 +35,22 @@ class Panda(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array(
-                [
-                    0.0,
-                    np.pi / 8,
-                    0,
-                    -np.pi * 5 / 8,
-                    0,
-                    np.pi * 3 / 4,
-                    -np.pi / 4,
-                    0.04,
-                    0.04,
-                ]
-            ),
+            qpos=np.array([*embodiment_profile.rest_arm_qpos,
+                           embodiment_profile.gripper_open_qpos,
+                           embodiment_profile.gripper_open_qpos]),
             pose=sapien.Pose(),
         )
     )
 
-    arm_joint_names = [
-        "panda_joint1",
-        "panda_joint2",
-        "panda_joint3",
-        "panda_joint4",
-        "panda_joint5",
-        "panda_joint6",
-        "panda_joint7",
-    ]
-    gripper_joint_names = [
-        "panda_finger_joint1",
-        "panda_finger_joint2",
-    ]
-    ee_link_name = "panda_hand_tcp"
+    arm_joint_names = list(embodiment_profile.arm_joint_names)
+    gripper_joint_names = list(embodiment_profile.gripper_joint_names)
+    ee_link_name = embodiment_profile.ee_link_name
+    finger_link_names = embodiment_profile.finger_link_names
+    gripper_open_action = embodiment_profile.gripper_open_action
+    gripper_closed_action = embodiment_profile.gripper_closed_action
+    gripper_open_qpos = embodiment_profile.gripper_open_qpos
+    gripper_coordinate_unit = embodiment_profile.gripper_coordinate_unit
+    gripper_open_tolerance = embodiment_profile.gripper_open_tolerance
 
     arm_stiffness = 1e3
     arm_damping = 1e2
@@ -176,8 +163,8 @@ class Panda(BaseAgent):
         # However, tune a good force limit to have a good mimic behavior
         gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
             self.gripper_joint_names,
-            lower=-0.01,  # a trick to have force when the object is thin
-            upper=0.04,
+            lower=self.embodiment_profile.gripper_closed_qpos,  # extra force on thin objects
+            upper=self.embodiment_profile.gripper_open_qpos,
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
@@ -218,10 +205,10 @@ class Panda(BaseAgent):
 
     def _after_init(self):
         self.finger1_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "panda_leftfinger"
+            self.robot.get_links(), self.finger_link_names[0]
         )
         self.finger2_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "panda_rightfinger"
+            self.robot.get_links(), self.finger_link_names[1]
         )
         self.finger1pad_link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "panda_leftfinger_pad"
