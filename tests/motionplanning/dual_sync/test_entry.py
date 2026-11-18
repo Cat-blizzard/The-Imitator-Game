@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 
 from mani_skill.examples.motionplanning.dual import two_robot_run as runner
+from mani_skill.examples.motionplanning.dual.sync import entry
 
 
 TASK = "TwoRobotPickPillToRegions-v1"
@@ -26,7 +27,7 @@ def test_serial_remains_default_and_seed_is_explicit():
     assert args.planner_backend == "mplib"
     assert args.curobo_device == "cuda:0"
     assert args.seed == 401
-    assert runner._solver_for(args) is runner.MP_SOLUTIONS[TASK]
+    assert entry.resolve_solver(args, runner.MP_SOLUTIONS) is runner.MP_SOLUTIONS[TASK]
 
 
 def test_unsupported_sync_rejected_before_environment_creation(monkeypatch):
@@ -44,10 +45,10 @@ def test_sync_dispatch_loads_policy_only_when_requested(monkeypatch):
     module.solve = lambda env, **kwargs: kwargs
     monkeypatch.setitem(sys.modules, module.__name__, module)
     args = runner.parse_args(["-e", TASK, "--execution-mode", "sync"])
-    assert runner._solver_for(args) is module.solve
+    assert entry.resolve_solver(args, runner.MP_SOLUTIONS) is module.solve
     assert calls == []
     args.sync_config = "task.json"
-    result = runner._solver_for(args)(None, seed=401)
+    result = entry.resolve_solver(args, runner.MP_SOLUTIONS)(None, seed=401)
     assert result == {"seed": 401, "policy": policy}
     assert calls == ["task.json"]
 
@@ -55,7 +56,7 @@ def test_sync_dispatch_loads_policy_only_when_requested(monkeypatch):
 def test_sync_config_requires_sync_mode():
     args = runner.parse_args(["-e", TASK, "--sync-config", "task.json"])
     with pytest.raises(ValueError, match="requires"):
-        runner._solver_for(args)
+        entry.resolve_solver(args, runner.MP_SOLUTIONS)
 
 
 def test_curobo_requires_sync_before_environment_creation(monkeypatch):
@@ -99,7 +100,7 @@ def test_curobo_route_resolves_interpreter_and_keeps_policy(
     if cli_python:
         argv.extend(["--curobo-python", cli_python])
     env = object()
-    actual_env, result = runner._solver_for(runner.parse_args(argv))(env, seed=401)
+    actual_env, result = entry.resolve_solver(runner.parse_args(argv), runner.MP_SOLUTIONS)(env, seed=401)
     assert actual_env is env
     assert result == {"seed": 401, "policy": policy, "planner_backend": "curobo",
                       "curobo_options": {"python": expected, "device": "cuda:3",
@@ -118,7 +119,7 @@ def test_curobo_route_preserves_backend_error_without_mplib_fallback(monkeypatch
     args = runner.parse_args(["-e", TASK, "--execution-mode", "sync",
                               "--planner-backend", "curobo"])
     with pytest.raises(RuntimeError, match="cuRobo unavailable"):
-        runner._solver_for(args)(None)
+        entry.resolve_solver(args, runner.MP_SOLUTIONS)(None)
     assert seen[0]["planner_backend"] == "curobo"
     assert seen[0]["curobo_options"]["device"] == "cuda:0"
     assert seen[0]["curobo_options"]["cache_dir"] is None
@@ -167,7 +168,7 @@ sys.meta_path.insert(0, NoCurobo())
 from mani_skill.examples.motionplanning.dual import two_robot_run as runner
 for mode in ('serial', 'sync'):
     args = runner.parse_args(['-e', 'TwoRobotPickPillToRegions-v1', '--execution-mode', mode])
-    assert callable(runner._solver_for(args))
+    assert callable(runner.sync_entry.resolve_solver(args, runner.MP_SOLUTIONS))
 assert not any(name == 'curobo' or name.startswith('curobo.') for name in sys.modules)
 import torch
 assert not torch.cuda.is_initialized()
@@ -183,12 +184,12 @@ def test_sync_metadata_keeps_official_success(tmp_path):
         unwrapped=SimpleNamespace(dual_sync_result={"quality": {"passed": False}}),
     )
     env.flush_trajectory = lambda save: env._json_data["episodes"].append({"success": True}) if save else None
-    runner._flush_trajectory(env, "sync")
+    entry.flush_trajectory(env, "sync")
     recorded = json.loads(env._json_path.read_text())["episodes"][0]
     assert recorded["success"] is True
     assert recorded["dual_sync"]["quality"] == {"passed": False}
     assert recorded["dual_sync"]["recording"]["status"] == "saved"
-    runner._flush_trajectory(env, "sync", save=False)
+    entry.flush_trajectory(env, "sync", save=False)
     assert len(env._json_data["episodes"]) == 1
 
 
@@ -214,9 +215,9 @@ def test_recording_failure_does_not_change_official_success(tmp_path, monkeypatc
 
     env.flush_trajectory = fail if failure_at == "flush" else flush
     if failure_at == "metadata":
-        monkeypatch.setattr(runner, "dump_json", fail)
+        monkeypatch.setattr(entry, "dump_json", fail)
     with pytest.raises(OSError, match="disk full"):
-        runner._flush_trajectory(env, "sync")
+        entry.flush_trajectory(env, "sync")
     assert facts["official"]["success"] is True
     assert facts["quality"]["status"] == "passed"
     assert facts["recording"] == {"status": "failed", "reason": "OSError: disk full"}
@@ -286,11 +287,11 @@ def _entry_harness(monkeypatch: pytest.MonkeyPatch, *, failure_at: str | None = 
     module = ModuleType("mani_skill.examples.motionplanning.dual.sync.curobo_backend")
     module.CuroboSession = Session
     monkeypatch.setitem(sys.modules, module.__name__, module)
-    monkeypatch.setattr(runner, "_solver_for", lambda args: solve)
+    monkeypatch.setattr(entry, "resolve_solver", lambda args, serial_solutions: solve)
     monkeypatch.setattr(runner.gym, "make", lambda *args, **kwargs: env)
     monkeypatch.setattr(runner, "RecordEpisode", lambda actual_env, **kwargs: actual_env)
     monkeypatch.setattr(runner, "tqdm", lambda *args, **kwargs: Progress())
-    monkeypatch.setattr(runner, "_flush_trajectory", flush)
+    monkeypatch.setattr(entry, "flush_trajectory", flush)
     return state
 
 
@@ -313,15 +314,15 @@ def test_curobo_batch_owns_one_session_and_reports_independent_outcomes(monkeypa
 
 
 def test_single_curobo_episode_keeps_backend_without_shared_pool(monkeypatch):
-    dispatch = runner._solver_for
+    dispatch = entry.resolve_solver
     state = _entry_harness(monkeypatch, outcomes=[{
         "official": True, "execution": {"status": "passed"},
         "quality": {"status": "passed"}}])
     module = ModuleType("mani_skill.examples.motionplanning.dual.sync.solve")
-    module.solve = runner._solver_for(None)
+    module.solve = entry.resolve_solver(None, {})
     module.load_policy = lambda path: pytest.fail("loaded unrequested policy")
     monkeypatch.setitem(sys.modules, module.__name__, module)
-    monkeypatch.setattr(runner, "_solver_for", dispatch)
+    monkeypatch.setattr(entry, "resolve_solver", dispatch)
     backend = sys.modules["mani_skill.examples.motionplanning.dual.sync.curobo_backend"]
     monkeypatch.setattr(backend, "CuroboSession", lambda **kwargs: pytest.fail("created shared pool"))
     args = runner.parse_args(["-e", TASK, "--execution-mode", "sync",
@@ -341,6 +342,38 @@ def test_owned_session_and_environment_close_on_episode_error(monkeypatch, failu
     with pytest.raises(error, match=f"synthetic {failure_at} failure"):
         runner._main(args)
     assert len(state.calls) == len(state.sessions) == 1
+    assert state.sessions[0].close_count == state.env_closes == state.progress_closes == 1
+
+
+def test_serial_collection_keeps_original_recording_and_progress(monkeypatch):
+    state = _entry_harness(monkeypatch)
+    recorded = []
+    monkeypatch.setattr(runner, "RecordEpisode", lambda env, **kwargs: recorded.append(kwargs) or env)
+    args = runner.parse_args(["-e", TASK, "-n", "2"])
+    assert runner._main(args, start_seed=541) == "synthetic.h5"
+    assert state.sessions == []
+    assert [call["seed"] for call in state.calls] == [541, 542]
+    assert all("curobo_session" not in call for call in state.calls)
+    assert recorded[0]["video_fps"] == 30
+    assert recorded[0]["source_desc"] == "official motion planning solution from ManiSkill contributors"
+    assert "motion_planning" not in state.env._json_data
+    assert state.postfix[-1]["failed_motion_plan_rate"] == .5
+    assert "execution_failure_rate" not in state.postfix[-1]
+    assert state.env_closes == state.progress_closes == 1
+
+
+def test_success_only_collection_reuses_session_across_filtered_attempts(monkeypatch):
+    state = _entry_harness(monkeypatch)
+    args = runner.parse_args(["-e", TASK, "--execution-mode", "sync",
+        "--planner-backend", "curobo", "-n", "1", "--only-count-success"])
+    runner._main(args, start_seed=541)
+    assert state.flushed == [False, True]
+    assert [call["seed"] for call in state.calls] == [541, 542]
+    assert len(state.sessions) == 1
+    assert all(call["curobo_session"] is state.sessions[0] for call in state.calls)
+    # Filtering follows official success, even when the saved episode fails quality.
+    assert state.postfix[-1]["official_success_rate"] == .5
+    assert state.postfix[-1]["quality_failures"] == 1
     assert state.sessions[0].close_count == state.env_closes == state.progress_closes == 1
 
 

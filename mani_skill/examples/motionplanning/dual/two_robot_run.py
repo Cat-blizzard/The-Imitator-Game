@@ -1,15 +1,12 @@
 import multiprocessing as mp
 import os
-import sys
 from copy import deepcopy
-from collections import Counter
 from contextlib import ExitStack
 import argparse
 import gymnasium as gym
 import numpy as np
 from tqdm import tqdm
 import os.path as osp
-from mani_skill.utils.io_utils import dump_json
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.envs.tasks.tabletop.utils import L0_L3_utils
@@ -20,6 +17,7 @@ from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotPickW
 from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotCleanDesk
 from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotTransFood
 from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotPutBox
+from mani_skill.examples.motionplanning.dual.sync import entry as sync_entry
 MP_SOLUTIONS = {
     "TwoRobotPickCubeYCB-v1": solveTwoRobotPickCubeYCB,
     "TwoRobotPickRemoteControl-v1": solveTwoRobotPickRemoteControl,
@@ -124,81 +122,12 @@ MP_SOLUTIONS = {
     "TwoRobotTransFoodL3-v1": solveTwoRobotTransFoodL3,
     "TwoRobotPutBoxL3-v1": solveTwoRobotPutBoxL3,
 }
-SYNC_TASKS = {"TwoRobotPickPillToRegions-v1"}
-
-
-def _curobo_options(args: argparse.Namespace) -> dict[str, str | None]:
-    return {
-        "python": args.curobo_python or os.environ.get("TIG_CUROBO_PYTHON") or sys.executable,
-        "device": args.curobo_device,
-        "cache_dir": args.curobo_cache_dir,
-    }
-
-
-def _solver_for(args):
-    """Resolve the explicit mode before constructing a rendering environment."""
-    if args.planner_backend != "curobo" and args._explicit_curobo_options:
-        raise ValueError("--curobo-* options require --planner-backend curobo")
-    if args.planner_backend == "curobo" and args.execution_mode != "sync":
-        raise ValueError("--planner-backend curobo requires --execution-mode sync")
-    if args.execution_mode == "sync":
-        if args.env_id not in SYNC_TASKS:
-            raise ValueError(
-                f"Synchronous execution is not supported for {args.env_id}. "
-                f"Supported tasks: {sorted(SYNC_TASKS)}"
-            )
-        from mani_skill.examples.motionplanning.dual.sync.solve import load_policy, solve
-
-        options = {}
-        if args.sync_config is not None:
-            options["policy"] = load_policy(args.sync_config)
-        if args.planner_backend == "curobo":
-            options.update(planner_backend="curobo", curobo_options=_curobo_options(args))
-        if options:
-            from functools import partial
-
-            return partial(solve, **options)
-        return solve
-    if args.sync_config is not None:
-        raise ValueError("--sync-config requires --execution-mode sync")
-    if args.env_id not in MP_SOLUTIONS:
-        raise RuntimeError(f"No motion planning solution for {args.env_id}.")
-    return MP_SOLUTIONS[args.env_id]
-
-
-def _flush_trajectory(env, execution_mode, save=True):
-    """Keep recording facts independent of actual task and quality outcomes."""
-    previous_count = len(env._json_data["episodes"])
-    try:
-        env.flush_trajectory(save=save)
-        if execution_mode == "sync" and len(env._json_data["episodes"]) > previous_count:
-            env.unwrapped.dual_sync_result["recording"] = {
-                "status": "saved", "format": "RecordEpisode-h5-json"
-            }
-            env._json_data["episodes"][-1]["dual_sync"] = deepcopy(
-                env.unwrapped.dual_sync_result
-            )
-            dump_json(env._json_path, env._json_data, indent=2)
-    except Exception as exc:
-        if execution_mode == "sync":
-            failure = {"status": "failed", "reason": f"{type(exc).__name__}: {exc}"}
-            env.unwrapped.dual_sync_result["recording"] = failure
-            if len(env._json_data["episodes"]) > previous_count:
-                env._json_data["episodes"][-1].setdefault("dual_sync", {})["recording"] = failure
-        raise
-
-
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1", help=f"Environment to run motion planning solver on. Available options are {list(MP_SOLUTIONS.keys())}")
     parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Observation mode to use. Usually this is kept as 'none' as observations are not necesary to be stored, they can be replayed later via the mani_skill.trajectory.replay_trajectory script.")
     parser.add_argument("-n", "--num-traj", type=int, default=10, help="Number of trajectories to generate.")
-    parser.add_argument("--execution-mode", choices=("serial", "sync"), default="serial", help="Use the original serial solver or the optional synchronous dual-arm solver.")
-    parser.add_argument("--planner-backend", choices=("mplib", "curobo"), default="mplib", help="Planning backend for synchronous execution (default: mplib).")
-    parser.add_argument("--curobo-python", default=argparse.SUPPRESS, metavar="PYTHON", help="Interpreter with cuRobo 0.9.0 installed (default: TIG_CUROBO_PYTHON, then the current interpreter).")
-    parser.add_argument("--curobo-device", default=argparse.SUPPRESS, metavar="DEVICE", help="CUDA device in the cuRobo worker (default: cuda:0).")
-    parser.add_argument("--curobo-cache-dir", default=argparse.SUPPRESS, metavar="DIR", help="Optional writable directory for prepared cuRobo robot assets.")
-    parser.add_argument("--sync-config", type=str, help="Optional JSON policy overrides for synchronous execution.")
+    sync_entry.add_arguments(parser)
     parser.add_argument("--seed", type=int, default=0, help="First episode seed (default 0).")
     parser.add_argument("--only-count-success", action="store_true", help="If true, generates trajectories until num_traj of them are successful and only saves the successful trajectories/videos")
     parser.add_argument("--reward-mode", type=str)
@@ -223,17 +152,11 @@ def parse_args(args=None):
             "Use --no-mirror-robot-pose to keep robots on original sides."
         ),
     )
-    parsed = parser.parse_args(args)
-    curobo_defaults = {"curobo_python": None, "curobo_device": "cuda:0", "curobo_cache_dir": None}
-    parsed._explicit_curobo_options = tuple(name for name in curobo_defaults if hasattr(parsed, name))
-    for name, default in curobo_defaults.items():
-        if not hasattr(parsed, name):
-            setattr(parsed, name, default)
-    return parsed
+    return sync_entry.complete_arguments(parser.parse_args(args))
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     env_id = args.env_id
-    solve = _solver_for(args)
+    solve = sync_entry.resolve_solver(args, MP_SOLUTIONS)
     # Reset per-process L-level / mirror overrides to avoid leaking global state across runs.
     L0_L3_utils.set_l1_enabled(False)
     L0_L3_utils.set_l2_enabled(False)
@@ -286,28 +209,13 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             output_dir=osp.join(args.record_dir, env_id, "motionplanning"),
             trajectory_name=new_traj_name, save_video=args.save_video,
             source_type="motionplanning",
-            source_desc=(f"synchronous {dict(mplib='MPLib', curobo='cuRobo')[args.planner_backend]} dual-Panda solution" if args.execution_mode == "sync"
-                         else "official motion planning solution from ManiSkill contributors"),
-            video_fps=env.unwrapped.control_freq if args.execution_mode == "sync" else 30,
+            **sync_entry.recording_options(args, env.unwrapped.control_freq),
             record_reward=False,
             save_on_reset=False,
             info_on_video=True,
         )
         output_h5_path = env._h5_file.filename
-        if args.planner_backend == "curobo" and (args.num_traj > 1 or args.only_count_success):
-            from functools import partial
-            from mani_skill.examples.motionplanning.dual.sync.curobo_backend import CuroboSession
-
-            session = CuroboSession(options=_curobo_options(args))
-            resources.callback(session.close)
-            solve = partial(solve, curobo_session=session)
-        if args.execution_mode == "sync":
-            env._json_data["motion_planning"] = {
-                "execution_mode": "sync",
-                "planner_backend": args.planner_backend,
-                "control_freq": env.unwrapped.control_freq,
-                "action_order": ["panda_wristcam-0", "panda_wristcam-1"],
-            }
+        solve = sync_entry.prepare_collection(args, env, solve, resources)
         print(f"Motion Planning Running on {env_id}")
         pbar = tqdm(range(args.num_traj), desc=f"proc_id: {proc_id}")
         resources.callback(pbar.close)
@@ -317,9 +225,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         left_solution_episode_lengths = []
         right_solution_episode_lengths = []
         failed_motion_plans = 0
-        failure_categories = Counter()
-        official_successes = []
-        quality_failures = 0
+        sync_summary = sync_entry.OutcomeSummary() if args.execution_mode == "sync" else None
         passed = 0
         attempts = 0
         while True:
@@ -329,12 +235,8 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             task_success = eval_info["success"]
             if hasattr(task_success, "item"):
                 task_success = task_success.item()
-            official_successes.append(bool(task_success))
-            if args.execution_mode == "sync":
-                facts = env.unwrapped.dual_sync_result
-                if facts["execution"]["status"] != "passed":
-                    failure_categories[facts["execution"].get("category", "execution")] += 1
-                quality_failures += facts["quality"]["status"] == "failed"
+            if sync_summary is not None:
+                sync_summary.record(env.unwrapped.dual_sync_result, task_success)
             print(f"Task success: {task_success}")
             print("Eval info:", eval_info)
 
@@ -352,12 +254,12 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             right_successes.append(right_success)
             if args.only_count_success and not task_success:
                 seed += 1
-                _flush_trajectory(env, args.execution_mode, save=False)
+                sync_entry.flush_trajectory(env, args.execution_mode, save=False)
                 if args.save_video:
                     env.flush_video(save=False)
                 continue
             else:
-                _flush_trajectory(env, args.execution_mode)
+                sync_entry.flush_trajectory(env, args.execution_mode)
                 if args.save_video:
                     env.flush_video()
                 pbar.update(1)
@@ -365,11 +267,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
                     dict(
                         left_success_rate=np.mean(left_successes),
                         right_success_rate=np.mean(right_successes),
-                        **({"execution_failure_rate": sum(failure_categories.values()) / attempts,
-                            "failure_categories": dict(failure_categories),
-                            "official_success_rate": np.mean(official_successes),
-                            "quality_failures": quality_failures}
-                           if args.execution_mode == "sync" else
+                        **(sync_summary.postfix(attempts) if sync_summary is not None else
                            {"failed_motion_plan_rate": failed_motion_plans / attempts}),
                         left_avg_episode_length=(np.mean(left_solution_episode_lengths)
                                                  if left_solution_episode_lengths else float("nan")),
