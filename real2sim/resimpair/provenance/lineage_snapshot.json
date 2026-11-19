@@ -1,0 +1,98 @@
+{
+  "schema": "resimpair_preserved_lineage_snapshot_v1",
+  "original_budget": {
+    "path": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/budget.json",
+    "sha256": "99e8bdd89a002891c18a13fa6b33684d7712025fc5255d758ad9ecf30cb60f53"
+  },
+  "ancestor_started_calls": {
+    "video": 20,
+    "image": 28,
+    "review": 44
+  },
+  "last_campaign_started_calls": {
+    "image": 1,
+    "video": 2,
+    "review": 6
+  },
+  "lineage_started_calls": {
+    "image": 29,
+    "video": 22,
+    "review": 50
+  },
+  "unresolved_submissions": 0,
+  "markers": [
+    {
+      "kind": "image",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/image_bff03758cfc86682b9730187eab09b7e/call_started.json",
+      "sha256": "ab839a17c9cfe0269b31ba872438ab2c755d447cad764cf6a2efaeb56aefa984",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    },
+    {
+      "kind": "review",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/review_0bc0159d939956a008681ea9f6677ec4/call_started.json",
+      "sha256": "6a47a22093fccffb5d16d8b0cdb8bdf085753e77f279b112f56a2a759fb75bb3",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    },
+    {
+      "kind": "review",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/review_46939b6b06c089eaeeb0bc0788e4d745/call_started.json",
+      "sha256": "539d505cbd7c3164a249524b6d370edbf6fbdc09cfd12dd54bf4c6b905b9af97",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    },
+    {
+      "kind": "review",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/review_aaf59576193fb1dd5aef18fcf7beb0d4/call_started.json",
+      "sha256": "b87e3f1477e23d14902600168a1ae0edb0f4d8a61c809a780dcd7a90d018ec2a",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    },
+    {
+      "kind": "review",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/review_d4bf9d039955580d0ad967d9785a7d0a/call_started.json",
+      "sha256": "a81692b8011d76312f9c250e2fdaaf052863cd3ab2be4e0581517eef6e2af34c",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    },
+    {
+      "kind": "review",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/review_f84a09abe4e27e3d2fc1669d738b1c69/call_started.json",
+      "sha256": "2a5e334cfc2f4b21aa998b01614b90b6d34de5ff23a6540e5334d8bf781623e8",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    },
+    {
+      "kind": "review",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/review_fbbafc161e46e2b28c7389ddf7da1780/call_started.json",
+      "sha256": "fb288fa432ea14d778c0d9fde640bceb682f1de1b4d88244974278b4f6b837c7",
+      "resolved": true,
+      "result_recorded": false,
+      "failure_recorded": true
+    },
+    {
+      "kind": "video",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/video_eec0abca29f17cf9cb81012cfa98c9e3/call_started.json",
+      "sha256": "3c2b25bee6a30deee675ee11e63a27d40c02d491e52108ad259ec9fed0fe51f9",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    },
+    {
+      "kind": "video",
+      "source_marker": "/mnt/sdg/datasets/real_sim_human_pipeline/batch_generation_20261025_v1/campaign_ledger/stages/video_ffa451dcb5100d40348e2e6fc763b28a/call_started.json",
+      "sha256": "25f5ba789e254655a702775770b8e91624b9ecefc30342f20885eda68c1985a3",
+      "resolved": true,
+      "result_recorded": true,
+      "failure_recorded": false
+    }
+  ],
+  "not_a_new_call_budget": true
+}

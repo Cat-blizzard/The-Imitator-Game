@@ -1,0 +1,24 @@
+{
+  "schema": "source_aware_metric_population_v3",
+  "automatic_clipping": false,
+  "small_scale_factors": [0.9, 1.0, 1.1],
+  "metadata_uniform_fit_tolerance": 0.1,
+  "profiles_are_engineering_assumptions": true,
+  "profiles": [
+    {"name": "furniture", "pattern": "\\b(chair|stool|sofa|couch|ottoman|nightstand|bookcase|wardrobe|dresser|bookshelf|desk|dining table|coffee table|shop stool|shelving|bed frame|refrigerator)\\b", "role": "background", "longest_m": [0.3, 4.0], "base_longest_m": 1.0, "density_kg_m3": 450},
+    {"name": "large_scene", "pattern": "\\b(room|apartment|building|landscape|terrain|street|house exterior|car interior)\\b", "role": "background", "longest_m": [1.0, 20.0], "base_longest_m": 4.0, "density_kg_m3": 250},
+    {"name": "bottle", "pattern": "\\b(bottle|bottles|flask|thermos)\\b", "role": "manipulation", "longest_m": [0.10, 0.36], "base_longest_m": 0.20, "density_kg_m3": 200},
+    {"name": "drinkware", "pattern": "\\b(mug|cup|glass|goblet|tumbler)\\b", "role": "manipulation", "longest_m": [0.07, 0.22], "base_longest_m": 0.12, "density_kg_m3": 600},
+    {"name": "container", "pattern": "\\b(bowl|basket|bin|tray|container|tub|pot|planter)\\b", "role": "container", "longest_m": [0.10, 0.65], "base_longest_m": 0.28, "density_kg_m3": 350},
+    {"name": "food", "pattern": "\\b(apple|orange|lemon|lime|peach|pear|fruit|potato|tomato|avocado|onion|banana)\\b", "role": "manipulation", "longest_m": [0.045, 0.25], "base_longest_m": 0.09, "density_kg_m3": 850},
+    {"name": "packaging", "pattern": "\\b(box|package|pack|carton|cereal|crayon|crayons|tea|juice|soda|can|soap|tissue)\\b", "role": "manipulation", "longest_m": [0.06, 0.35], "base_longest_m": 0.15, "density_kg_m3": 220},
+    {"name": "hand_tool", "pattern": "\\b(hammer|screwdriver|wrench|pliers|spanner|brush|spoon|fork|knife|scissors|pen|pencil)\\b", "role": "manipulation", "longest_m": [0.10, 0.35], "base_longest_m": 0.18, "density_kg_m3": 650},
+    {"name": "book", "pattern": "\\b(book|notebook|journal)\\b", "role": "manipulation", "longest_m": [0.10, 0.40], "base_longest_m": 0.22, "density_kg_m3": 650},
+    {"name": "toy", "pattern": "\\b(toy|figurine|doll|plush|toy_vehicle|action figure)\\b", "role": "manipulation", "longest_m": [0.05, 0.35], "base_longest_m": 0.14, "density_kg_m3": 350}
+  ],
+  "fallback": {"name": "unverified_rigid_shape", "role": "manipulation", "longest_m": [0.06, 0.30], "base_longest_m": 0.14, "density_kg_m3": 400},
+  "maximum_native_cpu_workers": 4,
+  "native_per_source_timeout_seconds": 120,
+  "native_total_deadline_seconds": 172800,
+  "physical_certification_inferred": false
+}

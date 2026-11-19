@@ -157,6 +157,7 @@ imitator/            2.0 platform layer
   soft/ render/      Newton (VBD) cloth bridge, Newton ray-cast camera
   sensors/           tactile pads
 veritask/            success contracts, metamorphic tests, static checks, credibility cards, VLM-judge harness
+real2sim/            optional real -> sim -> human pipeline (vendored ReSimPair; python -m imitator.real2sim)
 examples/            policy template
 scripts/             data collection and conversion
 tests/               tests for imitator and veritask

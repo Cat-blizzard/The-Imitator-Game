@@ -1,0 +1,2490 @@
+{
+  "schema": "paper_pipeline_snapshot_v1",
+  "source_root": "/mnt/sdg/datasets/real_sim_human_pipeline/optimization_20261021_180115/worktree/data_generation_methods",
+  "source_campaign": "/mnt/sdg/datasets/real_sim_human_pipeline/optimization_20261021_180115",
+  "files": [
+    {
+      "relative": "code/data_generation_methods/.gitignore",
+      "sha256": "91df7db08bba06620e18ce63d85ab0ad26104a8d8e235d712cf7e4acbc087b40"
+    },
+    {
+      "relative": "code/data_generation_methods/API_REQUIREMENTS.md",
+      "sha256": "6e9968fa6dbe5b7bf680880cb1afef4da905ccb3cf145036c59994119544ac42"
+    },
+    {
+      "relative": "code/data_generation_methods/AUTO_SCENE_PROPOSALS_20261020D.md",
+      "sha256": "e1717d299518214092f42d5552dc4f3407da586c3954644d28e74f01383b774c"
+    },
+    {
+      "relative": "code/data_generation_methods/BOUNDARY_DISCONTINUITY_20261020E.md",
+      "sha256": "7eaa4c7d760b4876e1695352f23b5e33315642e9ec1688f9534918bb1ad88edb"
+    },
+    {
+      "relative": "code/data_generation_methods/CONTROLLED_EXPERIMENT_20261020E.md",
+      "sha256": "7a0d1f7e94dd2d5f3b86e255f3ee40d135d4a7b9af17cf8d62ad4ad5caa48b91"
+    },
+    {
+      "relative": "code/data_generation_methods/CONTROLLED_INITIAL_RESULTS_20261020E.md",
+      "sha256": "4db4c24d695d6f5a50020bc6d08f705f66c16bd6b27a7824f4ae5200b39d240b"
+    },
+    {
+      "relative": "code/data_generation_methods/HARNESS_RESULTS_20261021.md",
+      "sha256": "8eb80e8989509ad270f6ed3f0c3e3284f5785b0852af6cecac3911bfe4983028"
+    },
+    {
+      "relative": "code/data_generation_methods/HARNESS_RESULTS_20261021_V2.md",
+      "sha256": "427262bf7fbab0688132feb819c93dc66eefca1714926c3701279d82767641b9"
+    },
+    {
+      "relative": "code/data_generation_methods/HARNESS_RESULTS_20261021_V3.md",
+      "sha256": "7b62c89f93107a919e47c6ed1d4d20a52d637e09ba27e5fda0f46d59a0b14008"
+    },
+    {
+      "relative": "code/data_generation_methods/HOUSEHOLD_EXPANSION_20261020E.md",
+      "sha256": "37e48346c5fc7c344a5b0a5b5fa83e02c3cd6ff4fb4c83b9880ab2329e8747a1"
+    },
+    {
+      "relative": "code/data_generation_methods/HUMAN_TASK_DRAFT_20261020D.md",
+      "sha256": "9765eca02bfb1298621b561474b92f3e1a9811a14b934652540bd076cce16551"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE.md",
+      "sha256": "bf56a5e8cb25749cad623818b77c336eabea927482a2e61e0247a43e432ad6b8"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE_ARCHITECTURE_20261020B.md",
+      "sha256": "eb6b6fb7204b91b78a876cc6371085dfd07f67f809a808140d4d06109c80539a"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE_BATCH_RESULTS_20261020B.md",
+      "sha256": "e2393413036f53d223008e92528a66a43df4a593ef601be07ef800cb20705fe7"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE_EXPLANATION_AND_REDESIGN_20261021.md",
+      "sha256": "1f635926f0130cf81f1d970c701b14468c7dfe2b5634b83bbaf0ba0699842cf2"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE_FAILURE_METHOD_REVIEW_20261020.md",
+      "sha256": "9d1c2ea8cf793dee18bae35a899843ee077d922074b0d2d5609f22ee0b12d42c"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE_METHOD_20261020D.md",
+      "sha256": "fc1cbaf98523478ee0fbbff533e4dfbaea16aa3f11d9f29309f6a50bc3d3cf10"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE_REPAIR_AND_CONTROLLED_20261020E.md",
+      "sha256": "5132d4242a28186f32e5827ba65be914df3f2993b79f1cc8036308827365ee69"
+    },
+    {
+      "relative": "code/data_generation_methods/PIPELINE_REPAIR_RESULTS_20261020.md",
+      "sha256": "a29c05d4f803a48178cd8c7693e43ebf20a6382bdb5d9b1a5d03ccf969fb698a"
+    },
+    {
+      "relative": "code/data_generation_methods/QUALITY_CASCADE_20261020D.md",
+      "sha256": "848220314e96f0f9f5b1d461e4eed17e59d48aae02b32bcab004d7a731b0360c"
+    },
+    {
+      "relative": "code/data_generation_methods/README.md",
+      "sha256": "de581c1e8506cd6f1c74eb5553c9b74474a0e77fdcbfb204c10a18126c422422"
+    },
+    {
+      "relative": "code/data_generation_methods/REAL_SIM_HUMAN_EXECUTION_PLAN_20261020.md",
+      "sha256": "0fdc9118454236dc86870dbb5ca2be97f85fe33c4677820ba869eddea2bbc92a"
+    },
+    {
+      "relative": "code/data_generation_methods/REFERENCE_PIPELINE_DESIGN.md",
+      "sha256": "95b37e85dd995a5f20b67315c4af40c46450617d4fbbe3048f9e0207361ef750"
+    },
+    {
+      "relative": "code/data_generation_methods/REPORT_AND_CONTROL_RESULTS_20261021.md",
+      "sha256": "71d0ae84f653b3aa5bd9b83b48d834c6addfc07b38ec7c88e61607f7e6227882"
+    },
+    {
+      "relative": "code/data_generation_methods/ROBOT_TO_HUMAN_PILOT.md",
+      "sha256": "2ee150156437f49ec0b32d80c1a371e057ffb1ca96a6d84d7cd55cf287b3afb7"
+    },
+    {
+      "relative": "code/data_generation_methods/ROBOT_TO_HUMAN_REVIEW.md",
+      "sha256": "9bb4c3b590adb53fc27bd6a7ff99b826dc7cb541fa17cdbc5207f4973b44f5c2"
+    },
+    {
+      "relative": "code/data_generation_methods/RUN_PIPELINE.md",
+      "sha256": "30889ab11b7a40b90980118ce448061f07f01a913db1a25539268b50e70696eb"
+    },
+    {
+      "relative": "code/data_generation_methods/STATE_CONDITIONED_RESULTS_20261020C.md",
+      "sha256": "e64a53e30ed411af3faed51d09d75b993bd5bb7acf9dd66fdcbdd4d496241f04"
+    },
+    {
+      "relative": "code/data_generation_methods/TRAINING_DATA_AUDIT_20261020B.md",
+      "sha256": "332b440300c284908796ee6c9c4a07a860d6fa36ecc5f7e0896e1ba56f3eadea"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/ASSET_SELECTION_CANDIDATE.md",
+      "sha256": "fd3e6dc30e1606df1695d7c068e54a9eda837d0472858488ee00fbc2edfe791f"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/README.md",
+      "sha256": "418aaf54b89b7b8f7c99b484adf33ef7168fe1be9469ce7ea70de743f3161b8b"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/background_candidates.py",
+      "sha256": "2f04754ba0191fcfccc65ae2c54574554df5fc1bd8dc0f266f5d2af20b6276fd"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/build_index.py",
+      "sha256": "9756351bbf858642160c5116c3394ebe10b218f8e72b6a49506c24106c4a19cd"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/prepare_scanned_static_candidate.py",
+      "sha256": "f56a19102b2d4fb543bf85a304d0daa490db2e430db57c083e7ab131786521ea"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/prepare_selection_candidate.py",
+      "sha256": "a4cf901191165ef2e1d501e32d1998cc543b590a686ceef921e6fa0357de8dff"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/abo_household.py",
+      "sha256": "e00082929158a83527d046e88767b916a0194621eda561804ae3d40c801b6b92"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/abo_sample_qa.py",
+      "sha256": "833604b6473dfb58bde08766452a20ef97ea48e8c6a4959c6eea63955554fe5c"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/environment_common.py",
+      "sha256": "cb7ab8e00f9d502cefc7b0be110eed555719c82a32c74210fc6c3815f2017ff1"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/environment_polyhaven.py",
+      "sha256": "8f4086f2dbf4712fee8f00953a8ef40bf3ed73e8cac6f0c1d9e2a11e382c15ca"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/environment_robocasa.py",
+      "sha256": "f8f437e1730d53209da03494cc9c94ba1ecefd25088e7e925c8b7b6bee4a5d50"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/environment_robocasa_core.py",
+      "sha256": "fcd55dad22c635993dc021fa18bacbca0fc9d3c360c066801a5ad4ae1ced6a0b"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/environment_robocasa_portable.py",
+      "sha256": "2a7d80f7c0451524c392ee947039fa7b7a631e20c5f0a44eabfde5c8b5adbee4"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/objaverse_household_scaleup.py",
+      "sha256": "32ed49c2622d00c95c6cd2a893d7d5b2cd257bae26108257b08448d087ff1d9b"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/objaverse_household_taxonomy.py",
+      "sha256": "43c2ed02e933a07a2a4f8b75b7d8f1de108645ee0d093b4643c616efe91dae4d"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/sources/scanned_household.py",
+      "sha256": "5c718e2e1ba9e0263cbb1e9cfa2b8c8bb77c0c0c11a2916d480bcd2270e73a37"
+    },
+    {
+      "relative": "code/data_generation_methods/asset_library/task_asset_selection.py",
+      "sha256": "9dc16512c26f70317c89d88ff814297bb4c4ecc3a6abed791ccb4b81a06e9786"
+    },
+    {
+      "relative": "code/data_generation_methods/config.echoflow.example.json",
+      "sha256": "fd0a452481e0138b5ee9a71ffc0b1eca37654bd8451db8a80f6ca999b5b82af7"
+    },
+    {
+      "relative": "code/data_generation_methods/config.example.json",
+      "sha256": "20bb45036ce012723485c46bbfcc92db62b75c001fc5b344d8ab47b8a37e3ca7"
+    },
+    {
+      "relative": "code/data_generation_methods/dexterous_candidate/README.md",
+      "sha256": "0c31a4543ea7834bd52bf02eda8ec1d306e42094bbfba8eeafeea86785b7d1eb"
+    },
+    {
+      "relative": "code/data_generation_methods/dexterous_candidate/__init__.py",
+      "sha256": "947dccad854c507d9259a3a88dd5468a6a63369b2e79726a9651cbca35b11092"
+    },
+    {
+      "relative": "code/data_generation_methods/dexterous_candidate/analyze.py",
+      "sha256": "174fb6c534a581c5ba236ddb5103148cc17f25baed6b23c88b0a53380490bb81"
+    },
+    {
+      "relative": "code/data_generation_methods/dexterous_candidate/assets.py",
+      "sha256": "da5f890b60cf1e4f2cbad68d8de7170ede46e876148e2a94225433a5aa2a0869"
+    },
+    {
+      "relative": "code/data_generation_methods/dexterous_candidate/runtime.py",
+      "sha256": "0968caf80a50fc1c97404dc960c4e23cf0b8b2e0f2bb5f83713c55a5bdb1e5c2"
+    },
+    {
+      "relative": "code/data_generation_methods/dexterous_candidate/runtime_backend_v3.py",
+      "sha256": "3662a0c053732748bd575bf79cbfeab17877bdb2e80fd92e356f3d8096f64e23"
+    },
+    {
+      "relative": "code/data_generation_methods/dexterous_candidate/runtime_contact_v2.py",
+      "sha256": "f3e383ff7408d8ddeac2f902e0808201bdd577eabce23eda75e5b24ae299d615"
+    },
+    {
+      "relative": "code/data_generation_methods/dual_arm_candidate/README.md",
+      "sha256": "60d2683f6a8cfc6a1288d051716f3261092a127c25f103d12835e82178e4dc6d"
+    },
+    {
+      "relative": "code/data_generation_methods/dual_arm_candidate/__init__.py",
+      "sha256": "f241c704528e12eb91699c21690926696cd1a952eb1f5865d783aac6f876e94f"
+    },
+    {
+      "relative": "code/data_generation_methods/dual_arm_candidate/plot_raw_traces.py",
+      "sha256": "422733128dab001d4fb9b1b30fc44cf5902e6f8fe79f9ee69f851d6ac5a2637a"
+    },
+    {
+      "relative": "code/data_generation_methods/dual_arm_candidate/run.py",
+      "sha256": "fd5fdb187b219d46869193254a84bd1477133797366934061d210f32c99e39d1"
+    },
+    {
+      "relative": "code/data_generation_methods/dual_arm_candidate/summarize_evidence.py",
+      "sha256": "854a614cd558b4ce4ae79e190adc215cba87f65a4aa08076e9673fd3afe82fcf"
+    },
+    {
+      "relative": "code/data_generation_methods/dual_arm_candidate/synchronized_pick.py",
+      "sha256": "6de4feff6abad5134fcbf4bfec539abc0872ae9a672eb480154deb0c09cb9c6e"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/MULTIVIEW_RECORDING.md",
+      "sha256": "7dbc0edac3aa1925ebb5a7f41cf208da7ac8a9da36cbfc891581b274ee5fc5f2"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/PLANNING_GUIDE.md",
+      "sha256": "2b67329852442b06cb92ca844160f78bfe5db9e89b226b7965d2fd47c7c932b6"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/README.md",
+      "sha256": "0269bc1691a5edd6f986b585473ba514da53f3fe2a6bbe92cbb07f63e2c89bfe"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/STRICT_PLANNER.md",
+      "sha256": "1acbea52ac3c7d415a314f9eddd0db621a82935e58dbb10982819216831ee1b9"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/__init__.py",
+      "sha256": "414b50e6fb28f0d85f4488493c6e57c76dc0a9980ae62b754c56e912297a49f9"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/audit_household_coverage.py",
+      "sha256": "80cb91ee1def76a4625878dd423aead96a2dc0a0819cf1b1de2bd2dd270c17ac"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/audit_multiview.py",
+      "sha256": "712355639d5aeaac96caa5a64259eb74bd932b57386079c9d563fda7811a289c"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/audit_multiview_v2.py",
+      "sha256": "afc93cc4fd5cd6ebe598971c373e1c18659ae3b28f0c3de84cfa673895d28ca9"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/audit_native.py",
+      "sha256": "60bcaad28e33ee145cdb614c87d9e193608e67fea2749a8e4f59e67c917b10fa"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/candidate_scene.py",
+      "sha256": "179ac26b68baac78b348b13703cceafea43b2861ecbf3a939490d70f7b2d3a40"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/FAILURE_ANALYSIS_AND_ACTUAL_COVERAGE.md",
+      "sha256": "a979ec549472db397e710f691d57960254bb771f46229c0b5a816ac22da271d8"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/README.md",
+      "sha256": "ad679af94e3a21bba6e4658b4c465e363fb05e88b5f6afe44d4d2465e51899cb"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/apple_bowl_transfer_audit.json",
+      "sha256": "a56bab371b305d5fc20cd77290b3a026d746fa5bf769286db0ad12b8a8773c16"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/apple_contract.json",
+      "sha256": "db025e10172c579b29efeacbab94cfb0a82ecad8a489afd54db68b4ced49e219"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/apple_layout_proposals.json",
+      "sha256": "6f34fb9829229f38d1532ad58d482a3ccabaf2fd8eecc185de6a0b9f538b62cb"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/apple_layout_proposals_v2.json",
+      "sha256": "cbb59acb59b4eee456ca15d65d84a3f6353a28a5a76849240fc355cbdb658796"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/apple_layout_proposals_v3.json",
+      "sha256": "ceef5975dc55c637c8d960dda8bba467119a0046f4908a50c0b7d059181ba9fe"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/closed_book_to_open_box_audit.json",
+      "sha256": "da6503f973b1daae17ed13e2c3b9b0aedc63a37c69bdbda9e1aad06e33fc8432"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/clutter_2026202018_geometry_replay.json",
+      "sha256": "cf45622814189976bd994299f90ecaff634e7819bd5644a20027ae7507cdaf0a"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/clutter_2026202030_geometry_replay.json",
+      "sha256": "011bd6372a1e53a0e1cca0a427cef6a1c6e7f587b91a3ee34ba56910a7b6549c"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/layout2001_failure_sheet.jpg",
+      "sha256": "bb6540a66bc82f9c73a8767f4157484a3c795aac3963159ada0a178d6797e218"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/layout_2026102001_geometry_replay.json",
+      "sha256": "898d82cfe04d90a3cb589f05a977afd28c79de745f637e3749f0d2e7be34fbd9"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/evidence_20261020d/right_cabinet_open_only_audit.json",
+      "sha256": "3ee2278fedab09efdd63e1be48ba4739e936b84faba7f97e6a5161d45b3e1ac6"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/expand_household_cases.py",
+      "sha256": "a4cbb0b3185d2b0cc41e2fe08965ca10c6178bdfd101e39afd9d4609622dee18"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/experimental_apple_adapter.py",
+      "sha256": "27ff1f98b4c5f5ee7c50ac5baa698ec5310d6605aa9e2a8df99aad766be80660"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/household_assets.py",
+      "sha256": "46bd993fb3a6476729df74c140bc879dd0d7a644f51530bc04ab8c040d24ca4c"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/multi_task_candidate.py",
+      "sha256": "328d0f7ebcb2d633e01dbeb9baa728dd9b03860098f59340b100a50b831eb6ee"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/multiview_recording.py",
+      "sha256": "a18c04b4c68c51a940e6a23e9717a6e821f7bd0789d9ac1c2118b248a085a0dc"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/plan_geometry_validator.py",
+      "sha256": "6031303d2b3cbcc160bc2811b0818bd4539f240620a3dccca548008339f6a4df"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/planning_contract.py",
+      "sha256": "e4fb6c89292e0862e010d4d3840253012589e35ff4de5a5259bac8b59f5fcdea"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/repair_household_layouts.py",
+      "sha256": "2fe448bd583cc398114598bb055d6248c7cd2d63ea3df55daa774255cd6f6493"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/repair_household_material.py",
+      "sha256": "0e27bdc1735184cff810198dd173351f2691e689b412bb7b2ddb6c5160c648a0"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/resume.py",
+      "sha256": "cd553b923bf8f168a447efa343b67195dde38cd361eea18b259a94af7407577c"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/scene_case_builder.py",
+      "sha256": "0801065e9b26d595e8cba4198f1d6ecfa4bfdfda4c8fbde3ed9d4d3b4a9b235e"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/source_lineage_audit.py",
+      "sha256": "2bd2668427570578ee137573b856905c6d063f8fc2b7280397edfb1d93071be6"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/strict_apple_adapter.py",
+      "sha256": "1024e723792fb8069700e772da3a626563c38cead3b80ba74508c4830543a0b9"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/strict_motion.py",
+      "sha256": "06d2ffbbd644dc615b09f3bc38976cd12c10e164a525901cd8ce8eef805371a1"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/strict_replay_audit.py",
+      "sha256": "9040ea4fa64245952443622829088fb5b59972929b8517dc02e2dc1fe651bd02"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/structured_randomization.py",
+      "sha256": "166c6adc20148165f2f036415783d401ba188ed88578777f5af5a2017ffc9c50"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/summarize_household_qualification.py",
+      "sha256": "45843e7dc3e906b49db3a490399765c82c4ede68a85bbdaf77f5de5f2d55208c"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/verify_batch.py",
+      "sha256": "ff0777dc916ba2a0d15dc8cf49f7bc755c42f706837ed3676b056ecc4b9d3151"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_pipeline/verify_extra_clutter.py",
+      "sha256": "b7536c69de6e9cee944256f882c93ae20b9fed175588965fdca0009017ecb846"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/GPU2_current_closure_readonly.json",
+      "sha256": "aae32ee09563fb177309bb0a62f6b920673a405a8b2d0341dc57c7d53e7d385d"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/apple_visual_review.json",
+      "sha256": "8ac764ca26cbbce11c8ef908f2cc774bdea5f516b02070c3cf20723a8e7dd04d"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/book_prior6_visual_review.json",
+      "sha256": "542a87da4552dbcb4f66bc044fd0cd463c8a419dcef46882f8d658624abc4a6b"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/excluded_outcomes.json",
+      "sha256": "4fb281eb1a607e543bbd4838f5bbd289fc3b31f6b617bc479ae16d6e182e685b"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/frozen_inputs.json",
+      "sha256": "e4099b42c4d2edffc6a63133066d2b71ad76961b6d0b8f7d8c22e6283ffb67ca"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/human/apple_bowl_transfer/ego_part2_basic_pick_place_2174.jpg",
+      "sha256": "ebb6d469e71a5fcba13063844e9ca65822717f5255763e967d513ae2c3affe04"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/human/apple_bowl_transfer/ego_part2_basic_pick_place_6057.jpg",
+      "sha256": "d53ab520d4ef97bf6ae0065be873da753cc065215646be236b257057a5361867"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/human/apple_bowl_transfer/ego_part2_basic_pick_place_8006.jpg",
+      "sha256": "a548650e4100dc73a7ec2db1170916e83f087e80dd2c7c75b00e4d0f907bda39"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/human_media_checks.json",
+      "sha256": "e9e1ee76a86f11a676297090d5c75cfada27555c4ea4f6b8777b0636ede969c2"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/paired_candidates.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/report.json",
+      "sha256": "170843c5c44ad71604696b043879b263fb3a4c2fb1ac0d91732a10103f5ff4d9"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/robot/bowl11a_892010000/raw_check.json",
+      "sha256": "83955c7983006ca985e400026110adbc8a8d72ca3b97fb8325c8cd1e34d89abf"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/robot/bowl11a_892010000/robot_actual_RGB.jpg",
+      "sha256": "4de2c898bd5b3b25bf3782e61080fe5865bac7ae0790d7513b8d432665463c75"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_duplicate_v1/verified_robot_records.json",
+      "sha256": "c79e1ed503029a6756b04d38240b7661b2916cd6368fc7ff152df098286d34d6"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_unknown_v1/excluded_outcomes.json",
+      "sha256": "d7ea000ddbdaebae9ab90fd630eb28630d65aeabdb3e3d66e2f10b7b19e8a75e"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_unknown_v1/frozen_inputs.json",
+      "sha256": "9ea07e9577b122128d98d495c7da4c159e3384bef2acb0d347411fde13c79e7e"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_unknown_v1/human_media_checks.json",
+      "sha256": "b1ca3b249db2688294364f496dfa0a130bc98a4c377dee8fdc4bd9215943aba6"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_unknown_v1/paired_candidates.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_unknown_v1/report.json",
+      "sha256": "1bfcdba0e70b517ce1bde4ec494cd501d101213c70bbce5347b307ba85281177"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/cpu_negative_unknown_v1/verified_robot_records.json",
+      "sha256": "c79e1ed503029a6756b04d38240b7661b2916cd6368fc7ff152df098286d34d6"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/human_audit.json",
+      "sha256": "ed0acf7715d08f3c37b5ffc662442dd714bfee5c22e3ab93cb19b37fc01d72f2"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/human_audit.md",
+      "sha256": "d9431c0de4f1e8fe3b6a54edf58858d62ceef63d9c20b8643b64b40e80db9756"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/new_batch00_apple_visual_review.json",
+      "sha256": "fb66620247e982d1deb70e2203c60c81af0419f1a47f2ec4af434c08a1504f63"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/pairing_audit.md",
+      "sha256": "3d92c2e43b7cea6d3699035916db298b5074dfbba8f5c0cf0ed867df99a532eb"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/pairing_audit_evidence.json",
+      "sha256": "43e3614e655425ff346785e3b559ec767fed67ceb5a8671d953324fb9b34d799"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/recovered_results.json",
+      "sha256": "c3165de36422930e673acd36e32ece54ee28fc537b8b7d88141ade609d6282c9"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/remaining_identity_inventory.json",
+      "sha256": "3ec48fae0bd17bd8368f4fbf842061c9fba772a0eeceb85bba8269d3d9ee6b6b"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/sim_audit.md",
+      "sha256": "88d41fe67c26b6cc6e26391a42386c948bde1f3d73c31cb6a9cafd477000c1a5"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/single_cup_future_qualification_spec.json",
+      "sha256": "662bf593931990adeb8d23563eaebab71b07a32fe89a75f437de557cd9bb6f14"
+    },
+    {
+      "relative": "code/data_generation_methods/human_to_robot_runs/20261020_v1/single_cup_future_qualification_spec.md",
+      "sha256": "24140ac03ec8663dffd3294ace881c96fd45162dfed276e80ff81f34b1dfeb02"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/README.md",
+      "sha256": "71aa875d2f91034b00bd79f8364c9f030dcc09558d5d9dd84ce2db0d6f3a3420"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/VERIFICATION.json",
+      "sha256": "24013eb56ac39e24749c9d55b76f5a2194385dee3773cefecddc8e2b9af839e6"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/input_manifest.json",
+      "sha256": "414ff1aa6bbbc16a355a5e720144ddff36154c678d4121edecbeb95b0f66284c"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/input_manifest.jsonl",
+      "sha256": "af4f9f9e499303185a4fe407c53dec61a3fc9454dbc36999e42a4bcb36897e1e"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914000/first_frame000000.png",
+      "sha256": "71ae907960abba67ede867dfde09fd8b909e4b92fc21a39abb7438681c20041e"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914000/input.json",
+      "sha256": "b657e2c68df7c96b294bbdb60d6bbaf13272810919dc7062c579f996bb12be8f"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914000/last_frame000498.png",
+      "sha256": "7459233f343ac7dbbcbdb11848d84e4c7159870846a071d73442a66192317ec7"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914000/middle_frame000249.png",
+      "sha256": "6b2610d7c5c169f98cee4bef3cdb9171b60602dc1b64ae6cc6ef46c87bf79da0"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914001/first_frame000000.png",
+      "sha256": "022e890e2cb92057482c1a8e148a08dec44d56b4c88b8e548adc18eb19aac993"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914001/input.json",
+      "sha256": "4430463843335a20476bd87d0a6fd115bc18562dab7f3829b3951076aa0c3761"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914001/last_frame000503.png",
+      "sha256": "be3134a8d0f95845a06c189c30aee7e252638e0d97495f292f63b00cb211868c"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_cabinet_right_door_cabinet_open_right_only_891914001/middle_frame000252.png",
+      "sha256": "3821e67046c4007362d8ffe630859e8a051d09cc485eec35f6e77f1a09b84cdd"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891912000/first_frame000000.png",
+      "sha256": "7a58090a8069e58e30326ab987696b6c30a17b90ebb102f2798bde91217b6f93"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891912000/input.json",
+      "sha256": "9c44035e98da1113353e0473b9372503a743c28ba2dedf1264e1384d06a0910e"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891912000/last_frame000410.png",
+      "sha256": "a97cfe97982d107e3c9a25c5e1035858270c32b79ac1adb277eb574ce7ee1b6e"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891912000/middle_frame000205.png",
+      "sha256": "e9f6d0dfab080eefd0c71d958aae602630a705a720f239feb6b2a42e9c4c784f"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891913000/first_frame000000.png",
+      "sha256": "1920659a9fb6924871f331a39d1adb477e58700d332d06f8b4f91ffac1e767b1"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891913000/input.json",
+      "sha256": "4a3024615dc9d3af0f42e2368d50d05eba9dddcdd6cb68aca6c182bcdfefac37"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891913000/last_frame000370.png",
+      "sha256": "3b66ac3cdd4ad3d14cc170e27ceb5f6342ba503cb8634fc98e5a333d99efdf63"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_closed_book_to_open_box_891913000/middle_frame000185.png",
+      "sha256": "c87379f8bfefc3ec490f409416df08175d978fec6ee6a10ee65d70c1f5f12631"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891910000_pick_second_to_right/first_frame000000.png",
+      "sha256": "c73a252261bdc7cf104a04528fde244ed49d18f5d0773e90741d6bc75218f37a"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891910000_pick_second_to_right/input.json",
+      "sha256": "ba1e9e239cfcaf7f2045976f88cdf9dcc93194265d2551f965598cdaaa457c20"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891910000_pick_second_to_right/last_frame000301.png",
+      "sha256": "cf2479350318e50fdcc6c85165209623ce716892d33dfcac08b1f49161426972"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891910000_pick_second_to_right/middle_frame000151.png",
+      "sha256": "046777aa6f73cce3b6c646ebc014653da4537d29e7df62ed24f64f0907156733"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891911000_pick_first_to_right/first_frame000000.png",
+      "sha256": "27bfb43422df4b55a42dcd39bd739841bf7164a5c0c9ea916adeebbe3b010ce9"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891911000_pick_first_to_right/input.json",
+      "sha256": "7b03f2fffc9fd97422dbeff1ab6f42e22632f19046f1ace0a2a94b253838f39c"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891911000_pick_first_to_right/last_frame000326.png",
+      "sha256": "0355241df0395da2c42a1b33a9580b7c757ba7331e349ad4b32972b4be95eb6b"
+    },
+    {
+      "relative": "code/data_generation_methods/pilot_inputs/simx_real_bowl_transfer_891911000_pick_first_to_right/middle_frame000163.png",
+      "sha256": "99137f6fa9a9d09b8240b55c52e531e5999e9d7fac7c1834069154b04d67fd72"
+    },
+    {
+      "relative": "code/data_generation_methods/pipeline_runs/bootstrap_v1/BOOTSTRAP.json",
+      "sha256": "fcb66766c2d60097b9eb3e16c223a375b611afa93480c6d13a3498a5abc55eae"
+    },
+    {
+      "relative": "code/data_generation_methods/pipeline_runs/bootstrap_v1/VALIDATION.json",
+      "sha256": "8928e2972a5053b86a0a921934160fcffe8c6ae1bd21df7833bb89c80d3cb418"
+    },
+    {
+      "relative": "code/data_generation_methods/pipeline_runs/bootstrap_v1/anchors/29f522086d67a16055a6/request.json",
+      "sha256": "f51ea4ee28dba14418b11faf41b95ebfd63f1381c314e9f993bf989326dfd328"
+    },
+    {
+      "relative": "code/data_generation_methods/pipeline_runs/bootstrap_v1/anchors/a300744d42840d6ebf6e/request.json",
+      "sha256": "07699c1b979f509f7b7fb374562d3d50c6391f01d1d6caae3468d75256d651f8"
+    },
+    {
+      "relative": "code/data_generation_methods/pipeline_runs/bootstrap_v1/doctor.json",
+      "sha256": "d1723b13d44aa9d339dbb0ce19826a220a1dd1067f2d0ce4844532db0f77c3ed"
+    },
+    {
+      "relative": "code/data_generation_methods/pipeline_runs/bootstrap_v1/ledger.sqlite3",
+      "sha256": "05a82c1bf0bff6d47acd3f622fc7343b1a9c16e69f8928b004810c3479a4d2de"
+    },
+    {
+      "relative": "code/data_generation_methods/pipeline_runs/bootstrap_v1/tests.xml",
+      "sha256": "6bace637128bbd4a811090292b46500c2b9d7da7d1de11a1f7e72634dadb82a4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/catalog.json",
+      "sha256": "ce6058e9d6c27f22a17039d3677efac2f12b5add4fc6c95784c4d2696eede12b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/contract.json",
+      "sha256": "10b54e221fdd7270804073454232cc787278968d181af7977e87ecc016a0252b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/evidence.json",
+      "sha256": "881d5348ec0c61726d11a0b6278e5958ffba34067f7e78851143dbc23d19c26c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000001.png",
+      "sha256": "01c2069dab0d9c8186d5505c1e930a78b7871da0009be1638876ff153f8fda96"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000002.png",
+      "sha256": "7158bdd4ad1839f222978a1560b727b2f83a392e4b128f403eac8c838038bd41"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000003.png",
+      "sha256": "9c3b51960e63553369d1dbcbf3b6fc982aae5591fbaffab6ed2a4c6481c2b674"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000004.png",
+      "sha256": "b1b47876c4ab98f756d7d76e6616a7f6547648d451e483e375739846b8ca52b2"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000005.png",
+      "sha256": "eeb6a616e1d84aa1dee6058a67241cd22bfc8f45d9a7ff13821654d8866f21ba"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000006.png",
+      "sha256": "bf946c09605e8689000bece99bdf0a1715981855503511908abceb3e388e72c5"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000007.png",
+      "sha256": "2d8391221deb56a89271c6856e6404233377afe62859cb0a85b079a60c0087da"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000008.png",
+      "sha256": "69b11126f7ae35b45ccd37986074857b36eb08208e8fa5b9bd5d699f02695701"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000009.png",
+      "sha256": "47d58dae28842b6705f8d649085cfed499ac638f0f117000867b5fa85e041c7f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000010.png",
+      "sha256": "621b7e36093c18a750380c328364c27fe1392eea394f2192b4df8069b2b4c644"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frame_000011.png",
+      "sha256": "b477b618d3210efbd917d67c2c45a2703d4cd4be1be345baa7c2d10d79131946"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/frames/frames.json",
+      "sha256": "14ae5ddbff3b3a9c57617540071690ecf7a9c0787177417c5c56cc93baba0ac9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/job.json",
+      "sha256": "0de2d70a3a094c9f242f3df19a3e758f9b53adfe1bce61362dd63c893ae4ce33"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0428894030220b74c2037654/prompt.txt",
+      "sha256": "e1757567b2005b3531ca410161e16781bd759e885e15931ff938c07052d5cf81"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/contract.json",
+      "sha256": "11bc9a5c39ee23d9f612364c4d08afe070608efa285b05d2d76845e93fed6f9e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/evidence.json",
+      "sha256": "d9fde0ba5a574751a928e8584e5d72938fce69c2b63da963ef834ecd65c15c3f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000001.png",
+      "sha256": "114c2f634e3e402c95c0a8385b4b93daea68d383431bc4735bceb57d6bb3edef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000002.png",
+      "sha256": "ee6217a7c5fd45dac9b03127823a4b2cf59922e59ffe04874c6d6eab2e20ab2b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000003.png",
+      "sha256": "f910f7d421af8c7afecc1cc51fbd6b23aaa6c1ccf3d5e1c95d1c0312b7d9344a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000004.png",
+      "sha256": "753c40f66b038667cc46db26fce886e4e5157d5a76125400b7d4ba69915da898"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000005.png",
+      "sha256": "24c2f5bc88fccda9567a41b62dacd8640200cc2e6e87bdefcdcf3fd44a2d63db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000006.png",
+      "sha256": "596f18c45787cb3d458c728e1de0b0d5f861e622082bbdb6b2b3173a89e0d93e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000007.png",
+      "sha256": "528403f97eb6d4212b85c45eda0fb30cb45ba797115c88c41f039571d414a5a4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000008.png",
+      "sha256": "528403f97eb6d4212b85c45eda0fb30cb45ba797115c88c41f039571d414a5a4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000009.png",
+      "sha256": "d786a03380665689b2cdbce684a27f7a965ff10db4c0a41f0b91ca6336c48d4b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000010.png",
+      "sha256": "af03192ff044641d40beccaae0cf5bb3f8f0d894f693f5bc59fcd347a1f0e856"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frame_000011.png",
+      "sha256": "92c6320a0db9ecac8d580def4150660dc37e1da52b3ad31623aae321b373e94b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/frames/frames.json",
+      "sha256": "cbba40f04b94fae6a81cddbb22f382fe477b98df136d4f6416dd606974f3da02"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/job.json",
+      "sha256": "186716a2b689ffa7702adaebba118d223cb793a3130c283531764cc5a82511e9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_0c0295f7d11f9d413e165d4e/prompt.txt",
+      "sha256": "e1757567b2005b3531ca410161e16781bd759e885e15931ff938c07052d5cf81"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/contract.json",
+      "sha256": "5d112bf3cc3a333f4b1106f67026b3c5bbb30e4db2395455453503a38e9d7ebe"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/evidence.json",
+      "sha256": "1cbd88dba35fcdb38b08dd84429215818b4307aec0ab91f968e2d1df4b0fcd3d"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000001.png",
+      "sha256": "114c2f634e3e402c95c0a8385b4b93daea68d383431bc4735bceb57d6bb3edef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000002.png",
+      "sha256": "ee6217a7c5fd45dac9b03127823a4b2cf59922e59ffe04874c6d6eab2e20ab2b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000003.png",
+      "sha256": "f910f7d421af8c7afecc1cc51fbd6b23aaa6c1ccf3d5e1c95d1c0312b7d9344a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000004.png",
+      "sha256": "753c40f66b038667cc46db26fce886e4e5157d5a76125400b7d4ba69915da898"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000005.png",
+      "sha256": "24c2f5bc88fccda9567a41b62dacd8640200cc2e6e87bdefcdcf3fd44a2d63db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000006.png",
+      "sha256": "596f18c45787cb3d458c728e1de0b0d5f861e622082bbdb6b2b3173a89e0d93e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000007.png",
+      "sha256": "b7c586e6c3d4f6f3463cb6fdf3969c34578c6bf701d5a5e253b0a4ff2097b879"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000008.png",
+      "sha256": "8f1cf694890a212b3c9ef7147822063383f8788345e14bae7227dcf25c347b72"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000009.png",
+      "sha256": "62cc4c230b8dec8bc676b866ffed363c989b4342541536bf7098cd83710487fa"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000010.png",
+      "sha256": "7699442e5a8362759f7ea5a59c69ce8991bc57fa2fcb5a54c5422f09e51c0bef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000011.png",
+      "sha256": "0b013b7d0a6b532df660b9e5a1df5fdc0476239175494ee4c1dd17ad06587f3b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000012.png",
+      "sha256": "c605932c4eb722d713f1cf886c2bf799047a281651fac73b5c698ca0b572222f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000013.png",
+      "sha256": "4b6080ac50acc420c3898713abf15ebac7293971260603286a0dd350fb9b0db9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000014.png",
+      "sha256": "74481f970d543c804e38ab79bd3e103aa3127640bd51430894895c8a9dfb0303"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000015.png",
+      "sha256": "5d4ba113332016f1b34462ff3cef07de2813f90f2c9c129db621bab47e3d5dad"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000016.png",
+      "sha256": "dc6389b0532ddfb4c42cba42e5824d0c6e60174521b00e50ea40362f564fec16"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000017.png",
+      "sha256": "fd0514781cbda9ea12ecc6387d3fc73dec8d523f554af87b49aa3e3961cf044b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000018.png",
+      "sha256": "9159181f811b22b21f38afdcefd104b6b5ccdecace59d7c31413c4159711434c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000019.png",
+      "sha256": "f97f8b0d8786176e33396d5bdcd96159ec1da0064f28bf3520005ee4f1566f03"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frame_000020.png",
+      "sha256": "cd58266a999fa26888ffed2adbc372e54aeefef78e0eb004e177b135f2fcf1a1"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/frames/frames.json",
+      "sha256": "05fd299bfa38246c386cd7643cf22e26417d59a5c99df79aba342a01ac74c6a5"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/job.json",
+      "sha256": "7b5b54c4a5d67f6ded81b5a08daf80a90a6b6baa162efbdc06de7cb42263e15e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_3bebf2b95a46787aa5e5bf02/prompt.txt",
+      "sha256": "d510670223c1be28523ad99a5ca3207b04cbd7b0b51c2af0bbb8730b29ae57c4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/contract.json",
+      "sha256": "1f57f4799106be4e2442a49ad11b18623b4ffcee4a6afbd54e0454c55e5501e3"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/evidence.json",
+      "sha256": "983de73b94cb6e8eed0fe285afef8d1485bb15f9b4934f8fbf1283deb68f8fcf"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000001.png",
+      "sha256": "01c2069dab0d9c8186d5505c1e930a78b7871da0009be1638876ff153f8fda96"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000002.png",
+      "sha256": "7158bdd4ad1839f222978a1560b727b2f83a392e4b128f403eac8c838038bd41"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000003.png",
+      "sha256": "9c3b51960e63553369d1dbcbf3b6fc982aae5591fbaffab6ed2a4c6481c2b674"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000004.png",
+      "sha256": "b1b47876c4ab98f756d7d76e6616a7f6547648d451e483e375739846b8ca52b2"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000005.png",
+      "sha256": "eeb6a616e1d84aa1dee6058a67241cd22bfc8f45d9a7ff13821654d8866f21ba"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000006.png",
+      "sha256": "bf946c09605e8689000bece99bdf0a1715981855503511908abceb3e388e72c5"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000007.png",
+      "sha256": "67acdc6f9f67e375d85f39fa38b33f4259e7570d6ee79b59e0fdaa00586bd673"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000008.png",
+      "sha256": "f1208f4b0b201b171e81e9b109c6353913191f1e8b658cc533f980f91d1512f9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000009.png",
+      "sha256": "250d0d7cf3be33b4b311262df1a42ee5dae912797c94ac4d7e2bdd5d16138fde"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000010.png",
+      "sha256": "b7cb204d0f51c4faf29a5a0116fe110598fadec53e2a3a09523d8fbdc6fc0c32"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000011.png",
+      "sha256": "dc4dfab8101eafef269c33e982f3195a58fcd274209031dbe27f730412cfe1fd"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000012.png",
+      "sha256": "e7f6740cd4e7ac6061772436229f83e3fc05750e57643fa49bc019df8a55043e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000013.png",
+      "sha256": "3cf584272fe6672fb81ca0833b666a851ee6897a60db16a26ad3673d11ed14e6"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000014.png",
+      "sha256": "78495dbe28d8de8e3d22a7fac3d18032dddef2782957d5e2578d92d410863ee0"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000015.png",
+      "sha256": "3de1fd06ff07acd2d47b662a60b4d5bed616bccfb8f7bb4b34a986cb1994342f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000016.png",
+      "sha256": "5a00ba46587c99e4b736d499b5ac29ee87dbeb46abab3f88df903623aaf4bb44"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000017.png",
+      "sha256": "60d6ea9418284c4d5d26b0d25746358d4db3dae8286cfe3d7989368ee867d1b3"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000018.png",
+      "sha256": "a8db54834854c742f7308a43722d47d76e63957d5d0893b11f5e81a76d13f48e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000019.png",
+      "sha256": "bf6095b75318feaeb037c4ba7e447bc9a308c9bfcf2f663eeb88933763ddcb7a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frame_000020.png",
+      "sha256": "2f561dcec86f193b02a1ab70dea5aab76b7712db22eff3a03d57581a355ca24c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/frames/frames.json",
+      "sha256": "22ab96fc3ff4b2ab5257198c76652654c1089b3c5ee1e5080202326e032ad066"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/job.json",
+      "sha256": "acc4a85542cdda26e328e5e2551348d4303d42833900b91c6b2b6504c1934e77"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_e105a064840fcf6e7bf3a410/prompt.txt",
+      "sha256": "d510670223c1be28523ad99a5ca3207b04cbd7b0b51c2af0bbb8730b29ae57c4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/contract.json",
+      "sha256": "ffd2542ca351677c5c05536d3d4f191858e22a1dc644ea272a9a317340ecc030"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/evidence.json",
+      "sha256": "509ee14abb4356ef69c655b19b1e4965731d062d817b54f9c18efe7b0775afbc"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000001.png",
+      "sha256": "114c2f634e3e402c95c0a8385b4b93daea68d383431bc4735bceb57d6bb3edef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000002.png",
+      "sha256": "ee6217a7c5fd45dac9b03127823a4b2cf59922e59ffe04874c6d6eab2e20ab2b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000003.png",
+      "sha256": "f910f7d421af8c7afecc1cc51fbd6b23aaa6c1ccf3d5e1c95d1c0312b7d9344a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000004.png",
+      "sha256": "753c40f66b038667cc46db26fce886e4e5157d5a76125400b7d4ba69915da898"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000005.png",
+      "sha256": "24c2f5bc88fccda9567a41b62dacd8640200cc2e6e87bdefcdcf3fd44a2d63db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000006.png",
+      "sha256": "596f18c45787cb3d458c728e1de0b0d5f861e622082bbdb6b2b3173a89e0d93e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000007.png",
+      "sha256": "b7c586e6c3d4f6f3463cb6fdf3969c34578c6bf701d5a5e253b0a4ff2097b879"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000008.png",
+      "sha256": "8f1cf694890a212b3c9ef7147822063383f8788345e14bae7227dcf25c347b72"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000009.png",
+      "sha256": "62cc4c230b8dec8bc676b866ffed363c989b4342541536bf7098cd83710487fa"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000010.png",
+      "sha256": "7699442e5a8362759f7ea5a59c69ce8991bc57fa2fcb5a54c5422f09e51c0bef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000011.png",
+      "sha256": "0b013b7d0a6b532df660b9e5a1df5fdc0476239175494ee4c1dd17ad06587f3b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000012.png",
+      "sha256": "67a27e82363bddd5351db09acbfb2756266618bb0a3153b8d3c30ff525efb41f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000013.png",
+      "sha256": "f04c92ce87b9f9fd741460cb7b8967da3223615c136f7d6d988e574cbc693ea6"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000014.png",
+      "sha256": "f33bbb5a231552f5cc2e5e85d705386418eda58e3a72e6a3c206b796f775d20c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000015.png",
+      "sha256": "0eeb011ed9096aaf5f862683ce5991f64fe408a8edc111affe8aa1bbdbcaf864"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000016.png",
+      "sha256": "af52334b52122dad0a7cc31cf4f0f5f89d4e30161dc19656508069459dfbeb78"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frame_000017.png",
+      "sha256": "4b413853a35a86abb030fa88c653d091a83be756d55f9d6ff3560502d81a4759"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/frames/frames.json",
+      "sha256": "72c2958b9f2e71a3b7dde9bfce5517c824a900f2e8796054cdcbb13e764a4f3b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/job.json",
+      "sha256": "cd89caf1c989131efc4646d1657c1360e17816f6c221accea1eff183e16e67fd"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_ea4799441f92699e1ec6d4da/prompt.txt",
+      "sha256": "ef5f76799357872b556e1912091446117655155d1e8303c0d7daddfde2dd6f55"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/contract.json",
+      "sha256": "868de375f296f1218d1388d28402d512f3a78217e57153327464ea241ba74c8d"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/evidence.json",
+      "sha256": "b7bc09ab6d79590ddb5c00488f3e8234a3b4434fb3b43f47ca9b40c438494100"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000001.png",
+      "sha256": "01c2069dab0d9c8186d5505c1e930a78b7871da0009be1638876ff153f8fda96"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000002.png",
+      "sha256": "7158bdd4ad1839f222978a1560b727b2f83a392e4b128f403eac8c838038bd41"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000003.png",
+      "sha256": "9c3b51960e63553369d1dbcbf3b6fc982aae5591fbaffab6ed2a4c6481c2b674"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000004.png",
+      "sha256": "b1b47876c4ab98f756d7d76e6616a7f6547648d451e483e375739846b8ca52b2"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000005.png",
+      "sha256": "eeb6a616e1d84aa1dee6058a67241cd22bfc8f45d9a7ff13821654d8866f21ba"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000006.png",
+      "sha256": "bf946c09605e8689000bece99bdf0a1715981855503511908abceb3e388e72c5"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000007.png",
+      "sha256": "67acdc6f9f67e375d85f39fa38b33f4259e7570d6ee79b59e0fdaa00586bd673"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000008.png",
+      "sha256": "f1208f4b0b201b171e81e9b109c6353913191f1e8b658cc533f980f91d1512f9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000009.png",
+      "sha256": "250d0d7cf3be33b4b311262df1a42ee5dae912797c94ac4d7e2bdd5d16138fde"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000010.png",
+      "sha256": "b7cb204d0f51c4faf29a5a0116fe110598fadec53e2a3a09523d8fbdc6fc0c32"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000011.png",
+      "sha256": "dc4dfab8101eafef269c33e982f3195a58fcd274209031dbe27f730412cfe1fd"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000012.png",
+      "sha256": "ec9cb4b06f417f2d7268f8a47977e25dd3b73331a1bad4784365dfa13bca57db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000013.png",
+      "sha256": "e38c7ecf3f4e981cf009d33fee057b284a56bac632942fe860207665db091254"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000014.png",
+      "sha256": "884da0fc805c9167b1fb2f0859ec32d30535403730239110af1758456cb9d53b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000015.png",
+      "sha256": "7875f3b632785b20deb17e623ba4f26010ab68a4bfce5a3837ab64640d7c2bcf"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000016.png",
+      "sha256": "612c2c38e8fdafe7748734f0efa4c8d13570d0b6a4b60e450747ff50e4b43563"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frame_000017.png",
+      "sha256": "b9dcffe2b77a02808a6dfdecee9cc00fbc74615c3b48e86c0f3f136328d986c1"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/frames/frames.json",
+      "sha256": "8d0204209a27d8941767707727e130655230ae312de5481f066a68f187890792"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/job.json",
+      "sha256": "6deda79615b0e1ce3757897f4f260d421bbae759eeb8a541267d8517df36bbec"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v1/jobs/r2h_f343c0a18577e99cdcc125e8/prompt.txt",
+      "sha256": "ef5f76799357872b556e1912091446117655155d1e8303c0d7daddfde2dd6f55"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/catalog.json",
+      "sha256": "8c1051214bab32e8950ff3911d5d9e65999373bcac37b18b3698a2b67e0b6ab6"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/contract.json",
+      "sha256": "0df9db8fb0059e98a046c93527ad600fe79124e514bb0eaed4ae21545f5ba152"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/evidence.json",
+      "sha256": "b37f5a4a66508bf41c3c6e4e2ed1c2351f400b8f2e377e90c32ec37c5f7c0f1d"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000001.png",
+      "sha256": "114c2f634e3e402c95c0a8385b4b93daea68d383431bc4735bceb57d6bb3edef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000002.png",
+      "sha256": "ee6217a7c5fd45dac9b03127823a4b2cf59922e59ffe04874c6d6eab2e20ab2b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000003.png",
+      "sha256": "f910f7d421af8c7afecc1cc51fbd6b23aaa6c1ccf3d5e1c95d1c0312b7d9344a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000004.png",
+      "sha256": "753c40f66b038667cc46db26fce886e4e5157d5a76125400b7d4ba69915da898"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000005.png",
+      "sha256": "24c2f5bc88fccda9567a41b62dacd8640200cc2e6e87bdefcdcf3fd44a2d63db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000006.png",
+      "sha256": "596f18c45787cb3d458c728e1de0b0d5f861e622082bbdb6b2b3173a89e0d93e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000007.png",
+      "sha256": "b7c586e6c3d4f6f3463cb6fdf3969c34578c6bf701d5a5e253b0a4ff2097b879"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000008.png",
+      "sha256": "8f1cf694890a212b3c9ef7147822063383f8788345e14bae7227dcf25c347b72"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000009.png",
+      "sha256": "62cc4c230b8dec8bc676b866ffed363c989b4342541536bf7098cd83710487fa"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000010.png",
+      "sha256": "7699442e5a8362759f7ea5a59c69ce8991bc57fa2fcb5a54c5422f09e51c0bef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000011.png",
+      "sha256": "0b013b7d0a6b532df660b9e5a1df5fdc0476239175494ee4c1dd17ad06587f3b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000012.png",
+      "sha256": "67a27e82363bddd5351db09acbfb2756266618bb0a3153b8d3c30ff525efb41f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000013.png",
+      "sha256": "f04c92ce87b9f9fd741460cb7b8967da3223615c136f7d6d988e574cbc693ea6"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000014.png",
+      "sha256": "f33bbb5a231552f5cc2e5e85d705386418eda58e3a72e6a3c206b796f775d20c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000015.png",
+      "sha256": "0eeb011ed9096aaf5f862683ce5991f64fe408a8edc111affe8aa1bbdbcaf864"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000016.png",
+      "sha256": "af52334b52122dad0a7cc31cf4f0f5f89d4e30161dc19656508069459dfbeb78"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frame_000017.png",
+      "sha256": "4b413853a35a86abb030fa88c653d091a83be756d55f9d6ff3560502d81a4759"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/frames/frames.json",
+      "sha256": "8816178396fe2e2241b50a859f69671d283707658da33749c869ea8c00c8b958"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/job.json",
+      "sha256": "9928b6c889c67856ef7743681f6d6db47e7a17d5cb41a1944417bbebf69fc376"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_1eaf15fe55faa6eda920562d/prompt.txt",
+      "sha256": "ef5f76799357872b556e1912091446117655155d1e8303c0d7daddfde2dd6f55"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/contract.json",
+      "sha256": "7093b6235599be24aad853915ee21fd25098c7e5a41efe48406c9ff70c0c0aab"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/evidence.json",
+      "sha256": "abf6a10fbe98621fd3f29de2314cd4ca685f0facdee1a944daf1b1dd81e19d10"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000001.png",
+      "sha256": "114c2f634e3e402c95c0a8385b4b93daea68d383431bc4735bceb57d6bb3edef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000002.png",
+      "sha256": "ee6217a7c5fd45dac9b03127823a4b2cf59922e59ffe04874c6d6eab2e20ab2b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000003.png",
+      "sha256": "f910f7d421af8c7afecc1cc51fbd6b23aaa6c1ccf3d5e1c95d1c0312b7d9344a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000004.png",
+      "sha256": "753c40f66b038667cc46db26fce886e4e5157d5a76125400b7d4ba69915da898"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000005.png",
+      "sha256": "24c2f5bc88fccda9567a41b62dacd8640200cc2e6e87bdefcdcf3fd44a2d63db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000006.png",
+      "sha256": "596f18c45787cb3d458c728e1de0b0d5f861e622082bbdb6b2b3173a89e0d93e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000007.png",
+      "sha256": "b7c586e6c3d4f6f3463cb6fdf3969c34578c6bf701d5a5e253b0a4ff2097b879"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000008.png",
+      "sha256": "8f1cf694890a212b3c9ef7147822063383f8788345e14bae7227dcf25c347b72"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000009.png",
+      "sha256": "62cc4c230b8dec8bc676b866ffed363c989b4342541536bf7098cd83710487fa"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000010.png",
+      "sha256": "7699442e5a8362759f7ea5a59c69ce8991bc57fa2fcb5a54c5422f09e51c0bef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000011.png",
+      "sha256": "0b013b7d0a6b532df660b9e5a1df5fdc0476239175494ee4c1dd17ad06587f3b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000012.png",
+      "sha256": "c605932c4eb722d713f1cf886c2bf799047a281651fac73b5c698ca0b572222f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000013.png",
+      "sha256": "4b6080ac50acc420c3898713abf15ebac7293971260603286a0dd350fb9b0db9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000014.png",
+      "sha256": "74481f970d543c804e38ab79bd3e103aa3127640bd51430894895c8a9dfb0303"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000015.png",
+      "sha256": "5d4ba113332016f1b34462ff3cef07de2813f90f2c9c129db621bab47e3d5dad"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000016.png",
+      "sha256": "dc6389b0532ddfb4c42cba42e5824d0c6e60174521b00e50ea40362f564fec16"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000017.png",
+      "sha256": "fd0514781cbda9ea12ecc6387d3fc73dec8d523f554af87b49aa3e3961cf044b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000018.png",
+      "sha256": "9159181f811b22b21f38afdcefd104b6b5ccdecace59d7c31413c4159711434c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000019.png",
+      "sha256": "f97f8b0d8786176e33396d5bdcd96159ec1da0064f28bf3520005ee4f1566f03"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frame_000020.png",
+      "sha256": "cd58266a999fa26888ffed2adbc372e54aeefef78e0eb004e177b135f2fcf1a1"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/frames/frames.json",
+      "sha256": "1e148be3d1588de9e61ead2418b105ce5a576512da706e27557b97e9c0a4ac9c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/job.json",
+      "sha256": "f8405728e2104d99d75f0edee1d8a3b51f598ef437276efc7a860e73b8ffb3b4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_2cb2e7da926fbeb937af36c6/prompt.txt",
+      "sha256": "d510670223c1be28523ad99a5ca3207b04cbd7b0b51c2af0bbb8730b29ae57c4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/contract.json",
+      "sha256": "ea59c7f9a38f72275277a91ca4ca50931d07141e9a541490abf89914ccdd5141"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/evidence.json",
+      "sha256": "4305390549f568dae6eeb093a657eb1c1e9ab542c3beb9bf4b6c9492fb04a528"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000001.png",
+      "sha256": "114c2f634e3e402c95c0a8385b4b93daea68d383431bc4735bceb57d6bb3edef"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000002.png",
+      "sha256": "ee6217a7c5fd45dac9b03127823a4b2cf59922e59ffe04874c6d6eab2e20ab2b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000003.png",
+      "sha256": "f910f7d421af8c7afecc1cc51fbd6b23aaa6c1ccf3d5e1c95d1c0312b7d9344a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000004.png",
+      "sha256": "753c40f66b038667cc46db26fce886e4e5157d5a76125400b7d4ba69915da898"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000005.png",
+      "sha256": "24c2f5bc88fccda9567a41b62dacd8640200cc2e6e87bdefcdcf3fd44a2d63db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000006.png",
+      "sha256": "596f18c45787cb3d458c728e1de0b0d5f861e622082bbdb6b2b3173a89e0d93e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000007.png",
+      "sha256": "528403f97eb6d4212b85c45eda0fb30cb45ba797115c88c41f039571d414a5a4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000008.png",
+      "sha256": "528403f97eb6d4212b85c45eda0fb30cb45ba797115c88c41f039571d414a5a4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000009.png",
+      "sha256": "d786a03380665689b2cdbce684a27f7a965ff10db4c0a41f0b91ca6336c48d4b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000010.png",
+      "sha256": "af03192ff044641d40beccaae0cf5bb3f8f0d894f693f5bc59fcd347a1f0e856"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frame_000011.png",
+      "sha256": "92c6320a0db9ecac8d580def4150660dc37e1da52b3ad31623aae321b373e94b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/frames/frames.json",
+      "sha256": "0d6835cb9e0d94de06404284f411064940f2a0f2dbdc20a7eece3f3d499aefe8"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/job.json",
+      "sha256": "6bd3a82547fc971f67aa1a6db00123b4b8213bdf760a444be2a84b5d6c576c24"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_52aa2e750290926a2842ca0d/prompt.txt",
+      "sha256": "e1757567b2005b3531ca410161e16781bd759e885e15931ff938c07052d5cf81"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/contract.json",
+      "sha256": "137d556b28680143b9e67401f2166fef47eedb02df81753307665de06eef94cd"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/evidence.json",
+      "sha256": "43f8af4c803b2886592cf5c8db0fea7f9fe35136ad732871e4c965fff501706c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000001.png",
+      "sha256": "01c2069dab0d9c8186d5505c1e930a78b7871da0009be1638876ff153f8fda96"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000002.png",
+      "sha256": "7158bdd4ad1839f222978a1560b727b2f83a392e4b128f403eac8c838038bd41"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000003.png",
+      "sha256": "9c3b51960e63553369d1dbcbf3b6fc982aae5591fbaffab6ed2a4c6481c2b674"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000004.png",
+      "sha256": "b1b47876c4ab98f756d7d76e6616a7f6547648d451e483e375739846b8ca52b2"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000005.png",
+      "sha256": "eeb6a616e1d84aa1dee6058a67241cd22bfc8f45d9a7ff13821654d8866f21ba"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000006.png",
+      "sha256": "bf946c09605e8689000bece99bdf0a1715981855503511908abceb3e388e72c5"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000007.png",
+      "sha256": "67acdc6f9f67e375d85f39fa38b33f4259e7570d6ee79b59e0fdaa00586bd673"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000008.png",
+      "sha256": "f1208f4b0b201b171e81e9b109c6353913191f1e8b658cc533f980f91d1512f9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000009.png",
+      "sha256": "250d0d7cf3be33b4b311262df1a42ee5dae912797c94ac4d7e2bdd5d16138fde"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000010.png",
+      "sha256": "b7cb204d0f51c4faf29a5a0116fe110598fadec53e2a3a09523d8fbdc6fc0c32"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000011.png",
+      "sha256": "dc4dfab8101eafef269c33e982f3195a58fcd274209031dbe27f730412cfe1fd"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000012.png",
+      "sha256": "ec9cb4b06f417f2d7268f8a47977e25dd3b73331a1bad4784365dfa13bca57db"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000013.png",
+      "sha256": "e38c7ecf3f4e981cf009d33fee057b284a56bac632942fe860207665db091254"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000014.png",
+      "sha256": "884da0fc805c9167b1fb2f0859ec32d30535403730239110af1758456cb9d53b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000015.png",
+      "sha256": "7875f3b632785b20deb17e623ba4f26010ab68a4bfce5a3837ab64640d7c2bcf"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000016.png",
+      "sha256": "612c2c38e8fdafe7748734f0efa4c8d13570d0b6a4b60e450747ff50e4b43563"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frame_000017.png",
+      "sha256": "b9dcffe2b77a02808a6dfdecee9cc00fbc74615c3b48e86c0f3f136328d986c1"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/frames/frames.json",
+      "sha256": "9fe0abfc7f4d212a78708e5a72760b4402b88879f1ca93523acf4f99ff50a36d"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/job.json",
+      "sha256": "225a3c44be081ecfb44b5f7bbce23583ae7e94dd98fd075665274f0e43ae18e1"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_a5707addfddc3b571aa23b69/prompt.txt",
+      "sha256": "ef5f76799357872b556e1912091446117655155d1e8303c0d7daddfde2dd6f55"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/contract.json",
+      "sha256": "151bdcd29370d367d19caa73d91fd218b04796f16e7da4526be8fbab0fff56b3"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/evidence.json",
+      "sha256": "a1f51a543b68efcbd3cc3d6f2fda2b40d6e4166cd372df33c6895911af6e138c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000001.png",
+      "sha256": "01c2069dab0d9c8186d5505c1e930a78b7871da0009be1638876ff153f8fda96"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000002.png",
+      "sha256": "7158bdd4ad1839f222978a1560b727b2f83a392e4b128f403eac8c838038bd41"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000003.png",
+      "sha256": "9c3b51960e63553369d1dbcbf3b6fc982aae5591fbaffab6ed2a4c6481c2b674"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000004.png",
+      "sha256": "b1b47876c4ab98f756d7d76e6616a7f6547648d451e483e375739846b8ca52b2"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000005.png",
+      "sha256": "eeb6a616e1d84aa1dee6058a67241cd22bfc8f45d9a7ff13821654d8866f21ba"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000006.png",
+      "sha256": "bf946c09605e8689000bece99bdf0a1715981855503511908abceb3e388e72c5"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000007.png",
+      "sha256": "2d8391221deb56a89271c6856e6404233377afe62859cb0a85b079a60c0087da"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000008.png",
+      "sha256": "69b11126f7ae35b45ccd37986074857b36eb08208e8fa5b9bd5d699f02695701"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000009.png",
+      "sha256": "47d58dae28842b6705f8d649085cfed499ac638f0f117000867b5fa85e041c7f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000010.png",
+      "sha256": "621b7e36093c18a750380c328364c27fe1392eea394f2192b4df8069b2b4c644"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frame_000011.png",
+      "sha256": "b477b618d3210efbd917d67c2c45a2703d4cd4be1be345baa7c2d10d79131946"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/frames/frames.json",
+      "sha256": "d69d0e092d0348612b8288c3a23479a67d302e97982a679bf24f24b09b77a06f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/job.json",
+      "sha256": "39bb929ba8bdc2e5b9d17e55dd64060e380bb0a7ce45f5214c1672f191d87b35"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_f59cbb57344885a343400bfb/prompt.txt",
+      "sha256": "e1757567b2005b3531ca410161e16781bd759e885e15931ff938c07052d5cf81"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/blind_review_prompt.txt",
+      "sha256": "5e2a983ff9dbfc6a66f8756275096a71a1211e30961491f7a461f0e12dfc2f6b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/contract.json",
+      "sha256": "436adfc50b12ae64e58425c7b7c3ee0d51c8943b2608947791a24a3a24328bd4"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/evidence.json",
+      "sha256": "ea46a960ecf9cb3ab21b996fe91d7d38aa0f6dffc4571b56d6b2f66fcfafea3b"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000001.png",
+      "sha256": "01c2069dab0d9c8186d5505c1e930a78b7871da0009be1638876ff153f8fda96"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000002.png",
+      "sha256": "7158bdd4ad1839f222978a1560b727b2f83a392e4b128f403eac8c838038bd41"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000003.png",
+      "sha256": "9c3b51960e63553369d1dbcbf3b6fc982aae5591fbaffab6ed2a4c6481c2b674"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000004.png",
+      "sha256": "b1b47876c4ab98f756d7d76e6616a7f6547648d451e483e375739846b8ca52b2"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000005.png",
+      "sha256": "eeb6a616e1d84aa1dee6058a67241cd22bfc8f45d9a7ff13821654d8866f21ba"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000006.png",
+      "sha256": "bf946c09605e8689000bece99bdf0a1715981855503511908abceb3e388e72c5"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000007.png",
+      "sha256": "67acdc6f9f67e375d85f39fa38b33f4259e7570d6ee79b59e0fdaa00586bd673"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000008.png",
+      "sha256": "f1208f4b0b201b171e81e9b109c6353913191f1e8b658cc533f980f91d1512f9"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000009.png",
+      "sha256": "250d0d7cf3be33b4b311262df1a42ee5dae912797c94ac4d7e2bdd5d16138fde"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000010.png",
+      "sha256": "b7cb204d0f51c4faf29a5a0116fe110598fadec53e2a3a09523d8fbdc6fc0c32"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000011.png",
+      "sha256": "dc4dfab8101eafef269c33e982f3195a58fcd274209031dbe27f730412cfe1fd"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000012.png",
+      "sha256": "e7f6740cd4e7ac6061772436229f83e3fc05750e57643fa49bc019df8a55043e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000013.png",
+      "sha256": "3cf584272fe6672fb81ca0833b666a851ee6897a60db16a26ad3673d11ed14e6"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000014.png",
+      "sha256": "78495dbe28d8de8e3d22a7fac3d18032dddef2782957d5e2578d92d410863ee0"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000015.png",
+      "sha256": "3de1fd06ff07acd2d47b662a60b4d5bed616bccfb8f7bb4b34a986cb1994342f"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000016.png",
+      "sha256": "5a00ba46587c99e4b736d499b5ac29ee87dbeb46abab3f88df903623aaf4bb44"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000017.png",
+      "sha256": "60d6ea9418284c4d5d26b0d25746358d4db3dae8286cfe3d7989368ee867d1b3"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000018.png",
+      "sha256": "a8db54834854c742f7308a43722d47d76e63957d5d0893b11f5e81a76d13f48e"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000019.png",
+      "sha256": "bf6095b75318feaeb037c4ba7e447bc9a308c9bfcf2f663eeb88933763ddcb7a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frame_000020.png",
+      "sha256": "2f561dcec86f193b02a1ab70dea5aab76b7712db22eff3a03d57581a355ca24c"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/frames/frames.json",
+      "sha256": "124a45f0c92c6d3acb4c8f3704aa7892ca31fa0787b66bdb83e129ca605591b8"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/job.json",
+      "sha256": "03439630b3ecd0e2d18149eaa09d33ecc93921c358c774f0838d319c62dad39a"
+    },
+    {
+      "relative": "code/data_generation_methods/prepared_catalogs/long_train_two_groups_v2/jobs/r2h_fe26186ce21c55abc521e3a7/prompt.txt",
+      "sha256": "d510670223c1be28523ad99a5ca3207b04cbd7b0b51c2af0bbb8730b29ae57c4"
+    },
+    {
+      "relative": "code/data_generation_methods/prompts/DATA_GENERATION_GOAL.md",
+      "sha256": "28e9e0f81dd204cab20cb4b1ba2fcd6b1bb4704911309cd3db07bc03dac352da"
+    },
+    {
+      "relative": "code/data_generation_methods/prompts/ROBOT_TO_HUMAN_PROMPTS.md",
+      "sha256": "861270c42ff56831dff977da382f76009e71cfeb3a242a3644f401490964cd1e"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/ACTOR_GEOMETRY_CANDIDATE.md",
+      "sha256": "053141aeef6585c24d374a5c13182545300b066ab38d8bc4cbf7c3c9e13236ed"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/ACTOR_GEOMETRY_PREPARATION_V3.md",
+      "sha256": "1cf350cd11879e77208dc6a1b7b008110b6e08524bf2127ba2f6bf1edf5e456b"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/HIDDEN_CONTENT_CONDITIONS.md",
+      "sha256": "7e36bfdf106bec212b4018ad742ca6325d18f7ecd683f1562201e63d5f6232d8"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/HIDDEN_IDENTITY_EXTENT.md",
+      "sha256": "9eb2ad8578dbaa085075a56c0cf8d3d0a2c4444cc5742404dfb20bfe76f758f6"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/REPAIR_ROUTER.md",
+      "sha256": "dbd03064a2be5a0c7f2a9a39f0ca9b541af963ac8eadee474186023d2b26a5d5"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/SIM_STATE_CONDITIONS.md",
+      "sha256": "c0dc8b5219b6522219a6b2ab1921b1ed7c8c5a050216a8bd8217fc5b9855d74f"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/SINGLE_ACTOR_ACCEPTANCE_V2.md",
+      "sha256": "d07050e98b47e7196a3a6d38b4a7ef09e45e7762d4398c2fdcef477cc5e0f282"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/SINGLE_ACTOR_CANDIDATE.md",
+      "sha256": "99aa7a8df19680769713722fcef3d651d70fea3e685c706af1348277e8fa9c29"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/STATIC_STATE_ACCEPTANCE_V1.md",
+      "sha256": "951a100dc2365d19dc9f01165ef1ed11fcfa872c4d4e725046435bd8972091b4"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/UNIFIED_ANCHOR_CANDIDATE.md",
+      "sha256": "10ec8c0b9364c80f14029d7168a739e4528e791dd7f47bcf8fd0fb3d5d646871"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/__init__.py",
+      "sha256": "b70b76c472fc8507b8ee08e4bd1e8ca6f2ba76195a360f28a9cea921d64ee53b"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/__main__.py",
+      "sha256": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/actor_geometry_candidate.py",
+      "sha256": "37d7a8339980c8a560005f033f9620453854d9ce42bf99b40ad7aacfeb2540cd"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/actor_geometry_preparation_v2.py",
+      "sha256": "75407412dc944a852b773b532f37da3fc7c480bea98c96e8c0e9cc03e8ae1386"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/actor_geometry_preparation_v3.py",
+      "sha256": "45ccf08dd0c0dca19ba5d37fbad674137fc8630afd7e75eef662c4ecf86a54c6"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/actor_plan_guard.py",
+      "sha256": "454673dd1227a8f38bd2fe663e3d2e32bf4a7945122e27b04b4d65d031070a15"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/analyze_actor_hand_assignment.py",
+      "sha256": "c290c8ea93e1d52b7fc2ce2fae5c4b7cb993067df0e314faf262e2bf9b6169d9"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/anchor_body_review.py",
+      "sha256": "b5ae2d4eaf6ee6a8bf0da4ac00fcccf4ee16bcf4d70ba789ad6b421787f1efd0"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/anchors.py",
+      "sha256": "872f333258d16ed89c97786bf3782b5ba9a291bc15514e1ba62bf8583bd74db2"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/automated_review.py",
+      "sha256": "b60b5baaf88e2880cd1238786a01a70a38edc98397ad94841baf4bfd14d8efdc"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/batch_pipeline.py",
+      "sha256": "eab3f51d4d090778d94ca28eade75f31c08dad221e7c8b4ae949dcaf6889f590"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/boundary_discontinuity.py",
+      "sha256": "c0ea9e835a7bdf0f9687845b12edcbdd09df3aa18d3dfc65f16ff9cde7dfd5dc"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/boundary_probe.py",
+      "sha256": "e82f67144c9bff9b009dafd277a41683e3e09e80e4ed49cfb7982b5396011e86"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/budgeted_review_frames.py",
+      "sha256": "4e4444285ba13da738af8860978ddd17657d595ed9dca6810fe48fc6b5e77dbc"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/cli.py",
+      "sha256": "76de84680f2a4298136db9ae9d47d65f5bb50751c1293bc118eceb6b42b0ea8f"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/common.py",
+      "sha256": "fe6d2c814786c978a5f625530e91685d320353598457a71174fc04359be5e64d"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/condition_compiler_candidate.py",
+      "sha256": "3cdc839a71baf26f5e013b067af7b7f0ce6354dafa937f15fcae84ffe5602157"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/contact_diagnostics.py",
+      "sha256": "fbbba5352ac82c23d4f51a7c7c4c2ce7151432fda7239b71293c0ba842cdea46"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/contracts.py",
+      "sha256": "3a5e149381eefbbaafbba1ec8eaab1a5d99192fb434ff54c7ac96008d30869f8"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/controlled_experiment.py",
+      "sha256": "8e1b6c3681882217abde336558a9e91cbee042483ff37e0f5522035b0784e74d"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/failure_regression.py",
+      "sha256": "4658d624dcde56492df3afc2a49ab3510dc859502544b5a98536b13f0354c069"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/hidden_content_conditions.py",
+      "sha256": "72b91a321d037beb7e023bbbb4e6d5422d62e1c2ec14790098a9b26b8dafc2d7"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/hidden_identity_extent.py",
+      "sha256": "655ad4fe2c1f8d9835da6030c11f5959e565a09236c639cb01221599c6d1e4f7"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/human_task_draft.py",
+      "sha256": "17f8016be9acef420118b632b2863cf687a77488a1514cdb3d841c2db447b305"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/importer.py",
+      "sha256": "8b93574d05895de7384cb9d9a3405fa467240b41fa01c454bc35ff3d2593b80c"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/interaction_triage.py",
+      "sha256": "d72e109108f6440694154ec048b13c68cd6e606c8a83428cc95898eb508bc77b"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/local_hands.py",
+      "sha256": "1b7eff55df811e54425a4259b9419648ad57462e2b939f57b902552165ed3753"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/media.py",
+      "sha256": "e3fcaa570bcff34e7c0c399d1bf8acfa54faddc0ac82cfca4368a3ad023c2971"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/posthoc_controlled_repair.py",
+      "sha256": "b4bb8c63264789713e29fbefcc50032052d8673ce53ca5e3dec88a687d6abab7"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/providers.py",
+      "sha256": "5edd55da9efe6ae409fa64fd949493a041f53944e37841d8e2bdcec4118c16ab"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/quality_cascade.py",
+      "sha256": "c3d49435b298aaee6c55805f24afe487baba5f29a828e86f282f928888d7c04e"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/quality_model_review.py",
+      "sha256": "e5c88181c337ca179122f41ce5c38500f83cf1f8743b51a66c578cb50e68a21a"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/refinement.py",
+      "sha256": "a1b058d5363d1d6445114a571081d3cfa00b2ca343b7a15bfb529938b107a83c"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/repair_router.py",
+      "sha256": "d5af94b43f6f0fddcb9373e1add5b4e6af5d84e43bfc87e30070cd73cc111bd8"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/review.py",
+      "sha256": "91805f2dc48b77f510311f6e00742a8ece964b7b97fa39a211a81d8b7092fec2"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/review_protocol.py",
+      "sha256": "7e3a9c60b33fefd107fd3c434ef8371036a9a8399714968bf2bee875cbd5259b"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/run_actor_geometry_ablation.py",
+      "sha256": "45fc40c85898984bd74fae43f1aedbe71132e28ea016b3340ff4552ad14ae9b1"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/run_actor_geometry_left_probe.py",
+      "sha256": "add0029ec80ec8b6eb83d76b48b291f0860a13c0542dca886bebc6e0e6b9293f"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/run_actor_geometry_native_probe.py",
+      "sha256": "d7df36b2520305eeff2242abeba9a92fdab6e29730bd02d464221d9779f551ca"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/scene_proposals.py",
+      "sha256": "df58a21dd48ce84e7dbc54c41789a7c60a0f389c423e49eed4898993bfd5a741"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/schemas/single_actor_review_v2.schema.json",
+      "sha256": "b5415a030bec2b355f63f99258e961f4e24c0eab652971a8b19f66d29aa579a0"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/schemas/static_state_review_v1.schema.json",
+      "sha256": "90ce2ebb2aa30f3e58ef99c6c670b853b26ff0f5bbebdb4e4b0e1f63fc006349"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/sim_state_conditions.py",
+      "sha256": "c8496c8ddf30bff15770756c2af2d329c2b5e32fc901b36b941be115ce5e8c52"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/single_actor_acceptance.py",
+      "sha256": "b5a8261fbaffef88f9224e745314254eaec4bde91b163527ee97cfb605307f68"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/single_actor_candidate.py",
+      "sha256": "051eac2cfcc459fadb3c34b2e45bdc940a13960dff77ed8ab45256b29cf57858"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/static_state_acceptance.py",
+      "sha256": "2bfc90ff58d003d07198dbf8e3c8d4c780aa1bd57381511dd44710b4007a9ca2"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/store.py",
+      "sha256": "b8a4b446a96771fbfaf09c12f1cd42a46cd1cc9b72618d75264f3b07a6eb363e"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/task_evidence.py",
+      "sha256": "898047872fd1ee3776100a1dc42feaaf049d654be8ee494631e3f8115f8922eb"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/task_review.py",
+      "sha256": "47b0f57b7a618004d7c649e47b3f2e3e04313dbad3acd34990eece208d0f5264"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/test_actor_geometry_candidate.py",
+      "sha256": "8955ed6de7550709f6edb2a94c83c4f11c045d5a2f24257f61385f02884f2f77"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/test_actor_geometry_preparation_v2.py",
+      "sha256": "34d3b00eb7e3a1dba0659bc8980e49af38fc219819e9a2b461769363682b4094"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/test_actor_geometry_preparation_v3.py",
+      "sha256": "e34e43399bc350a527322be20316a0018b02f44c89b07f5dfd7fff85dd4bb3b3"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/test_condition_compiler_candidate.py",
+      "sha256": "b57395e6c1e4a9d871d118fbce82b0e1f90f33ea30b9ba0fc1ad269f43f5e499"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/tests/test_boundary_probe.py",
+      "sha256": "ba864e31366d3251335305664d92ea4400fd7fabfcd7a937af4b6dfbfd817a01"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/tests/test_budgeted_review_frames.py",
+      "sha256": "3912bbd3944e959361cdf2e30380efa75491e03b500548403a713b569aef2f7f"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/tests/test_contracts.py",
+      "sha256": "69211ee4fc21b7bac76121f2d1922fdf16133a21d73d3ed66d7304ffb6f4f355"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/tests/test_importer.py",
+      "sha256": "81f4f842c9fcead613763ac4420d454854273c14c8adebe746a6f48ae5e55442"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/training_pairs.py",
+      "sha256": "40d4e630793a13e4407cccafe12398a851fc9239021074cf6f631b0e13801495"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/unified_anchor_candidate.py",
+      "sha256": "aea66c385c7ff142845fbfcf8285237c6aea5b1e14110c228ac88aedef73a381"
+    },
+    {
+      "relative": "code/data_generation_methods/r2h_pipeline/visibility_policy_candidate.py",
+      "sha256": "d550e391193329ac5dd8b98195ca64299ecf4dc767591bfba4e17047075cd2c8"
+    },
+    {
+      "relative": "code/data_generation_methods/reports/build_pipeline_case_report_20261020c.py",
+      "sha256": "01fe79d3e4687e0635c47cdc719a3eabb9e538e98f929f12f4dae30e85b5ac7d"
+    },
+    {
+      "relative": "code/data_generation_methods/reports/pipeline_explained_20261021/README.md",
+      "sha256": "9e303f1d7e87f891f25b01d02550ab4ca9cc6854759db26f4852416fca6108b6"
+    },
+    {
+      "relative": "code/data_generation_methods/reports/pipeline_explained_20261021/build_report.py",
+      "sha256": "c4c3292fb298636e08a70a35b83ad1e837c466ce6b3c31e093e81f27ec488727"
+    },
+    {
+      "relative": "code/data_generation_methods/reports/pipeline_explained_20261021/kai_deck.py",
+      "sha256": "d17056b1d339f1484f05ea792f6c1c63a2c3d007708391d3d50e33e2c545fe91"
+    },
+    {
+      "relative": "code/data_generation_methods/reports/report_control_20261021/build_report.py",
+      "sha256": "4bf8cc49c2746d1c9577506d6eac8035ee50d45c8bf7ce0aa21e0961ea3df739"
+    },
+    {
+      "relative": "code/data_generation_methods/reports/report_control_20261021/slide_builder.py",
+      "sha256": "946cba9b3411d4e343e642cae58d04f3b1d0aed4745afad00582055b25f0c9a3"
+    },
+    {
+      "relative": "code/data_generation_methods/requirements-api.txt",
+      "sha256": "d5a6cefd76e50422c289eac9c57897ac093b4bc878b27ed7b1806f36dd470265"
+    },
+    {
+      "relative": "code/data_generation_methods/research/STATE_CONDITIONING_TOOLS_20261020C.md",
+      "sha256": "7ddd1cc063979127e8acb195bd55d62a2217c625fdf03949a9fac4bc9b363a28"
+    },
+    {
+      "relative": "code/data_generation_methods/research/seedance_first_last_offline_validation_20261020c.json",
+      "sha256": "70214cad467487c56402cac0e3a923437def190320bd486dd59eb1c386f2392e"
+    },
+    {
+      "relative": "code/data_generation_methods/run_boundary_discontinuity_20261020e.py",
+      "sha256": "42d9dad303b55140bea80bc6fb62a4ea642ef3830e8ff071eaa683fa27fab2cb"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v1/baseline/manifest.json",
+      "sha256": "a60504843f5af288d687b3bfd03a28d188d9af36fdc781860ed89534eac4254e"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v1/baseline/pytest.log",
+      "sha256": "007692bd85c7778502aaf0711e1be8ec1ded8c557aef32e2b44c4e9b6ef131ad"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v1/baseline/source.tar.gz",
+      "sha256": "d6da5601bfeb32070035d5047e382b7afbd02d5e300dc841b902c1645a78305a"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v1/final_integration_pytest.log",
+      "sha256": "746c6f15705810f6c1503879246f0305bcf2e4e46a5e6b97bc8ef1b4e071ea89"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v1/integration_pytest.log",
+      "sha256": "932297879acc4448276bec9414e4a00175f0c2f13293e98572c018090002b233"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v2/final_integration_pytest.log",
+      "sha256": "c40aae498cb996b284be01ee0417872631af7fb3deeffde33e0d996487468afb"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v3/final_integration_pytest.log",
+      "sha256": "e3ec6f383a578f5c2ec5a65b1514a96145cf46279c52e490cdf944eb24efc776"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v3/integration_pytest_01_failed.log",
+      "sha256": "f222598e307e906d6a8bdc7c6348aa036c3e7ca44c7ffd8fc600b2d362b8a2a7"
+    },
+    {
+      "relative": "code/data_generation_methods/runs/20261021_harness_v3/integration_pytest_02_760_passed.log",
+      "sha256": "d06f92bdf1ab907f0fb4b36bddcc363a4ce4648f4d41e6351cce4bdf228ddef0"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/audit_actor_geometry_20261021.py",
+      "sha256": "84de0c8cbb97787de10e7f601164df122002a5c8d3b860e9e71b946e2f023b65"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/audit_hidden_content_conditions_20261021.py",
+      "sha256": "2a3b2e5f95c18bf45d4944ee3ea68594df7027923c031827d6e833771a8c5813"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/audit_hidden_extent_20261021.py",
+      "sha256": "649d787b9e9ebb86e56c799adc37239e0fd3a8c704d8872093f12c3d915ef727"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/audit_sim_state_conditions_20261021.py",
+      "sha256": "fbfe85b684986c0d5f3f891f58aeff291e1a0f491f98771b3a024aed3fa83aff"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/audit_unified_anchor_20261021.py",
+      "sha256": "6e706c5aebf16dbff661eb4fd71a1364362b70ff9c13c8fabb99ab0d9ba51d46"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/audit_unified_budget_20261021.py",
+      "sha256": "e6371f7d9524f6d02dad8a8e121ec70133e1ee4c4ee5147c271ae9d092c73a3f"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/check_multiview_negative_controls.py",
+      "sha256": "35babcd8f951fa9caa9b3a11d289c5ccb3303c5e8a6226b589108ba1cff8033f"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/compile_batch_training_pairs.py",
+      "sha256": "09389bae8189222b27ebe08f59047f7ab9e218df0c757047b385d1f8012cd256"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/diagnose_hidden_identity_20261021.py",
+      "sha256": "7e6963a41e7f8dd65e86ac3fb14ff9abceb21a44d91bb82f593b308639f477c8"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/echoflow_pilot.py",
+      "sha256": "cdc2ad1e35f66f6c5cbb8afcbc35c19ef93400f436163ec828afc00f83838d89"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/echoflow_recover_readonly.py",
+      "sha256": "f48a384fb42da5ddda749d21e8e11e478f94a640b2cf3831ccc6c12281fe150a"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/echoflow_repair_study.py",
+      "sha256": "438f0816602907ba525c5254d07a009e5e0ebe15f7a7262a828ece00ab4adced"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/execute_conditioned_pipeline_20261020c.py",
+      "sha256": "4590b1b0122a5282d46f76bee0e56474cbb9766cbe3a4b64473a8f65d178e377"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/export_batch_review_bundle.py",
+      "sha256": "eeb50153fd7241b50f0000d1c35dc2a3727f4e1f61917ccfd679085aa7528011"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/extract_human_task_draft_20261020d.py",
+      "sha256": "486cf6aa9f0bfa26566e5fc5536629cb732104fba77d276e6d84b260d82992e4"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/freeze_actor_regression_20261021.py",
+      "sha256": "2b6bbfae539a3a595ebff19e3be903945d78dbebf1398917a21bc45e36ac0289"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/postprocess_conditioned_case_20261020c.py",
+      "sha256": "0a1dad654eee42d3b39b3a2abe8f691a4a0a4d57bda1563979c2dbc87cb13a0b"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/prepare_r2h_pilot_inputs.py",
+      "sha256": "2af6b34f5f3cf9a19caaa7198b5c25ec7d849f5065ae1b09ff8ceb3e8f0f751b"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/prepare_single_actor_20261021.py",
+      "sha256": "dba71bfb71997d6cc588dcf3e76369ee36b47e1c5ff8a4f1988765e095dce9ee"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/propose_scene_conditions_20261020d.py",
+      "sha256": "77ad42666b0fc73abdc304bdd654e09d88fc3088e06b228f888748472a396498"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/review_conditioned_video_20261020c.py",
+      "sha256": "9e70db71d4b5921ae6e3073aa13b133a46ba7555f887d4d13971c50788b3d550"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/review_video_quality_20261020d.py",
+      "sha256": "a4488d5976d83a81ea5d786a204798779f0fa9284b036d9c5dbd5a3b7e321385"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/run_actor_plan_guards_20261020d.py",
+      "sha256": "1d22513bcab31cb2ac4e91f12d539f49dc51c36dff4c34a02e4ec3e66e176a72"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/run_controlled_20261020e.py",
+      "sha256": "4a7d5a6c63dcb89a1c4ba49ab77210f3edd424f764b0464278d68df80ffe9a49"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/run_local_multiview_qualification.py",
+      "sha256": "75d3363da2fd8a909a7b9f84b77d4470335a3be7e0d9a3e220ae3d90698ebf2a"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/run_posthoc_controlled_repair_20261020e.py",
+      "sha256": "0102efc2bea759d2723c17160c537cd358545523cccfd8383cc5fff14a0e88ce"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/run_quality_cascade_examples_20261020d.py",
+      "sha256": "0ccdb2679b55e77238b8de22222bee7fb38b8ed43beb3f629c4f849fb57f5802"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/run_r2h_pipeline.py",
+      "sha256": "d7849d083aa7ba76acd6cea69cf36bfee685b018ab48c89f827055ecdfcb3158"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/run_state_conditioned_case_20261020c.py",
+      "sha256": "a1031432f051ba17ff2f3fb3999d0b357b372171befd20bbd9cafd29e16ab7cc"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/summarize_strict_runs.py",
+      "sha256": "3585d4ac6db6469e431052eb0bd754ab9850ac22db131b62f7bccd8a4cc0a6df"
+    },
+    {
+      "relative": "code/data_generation_methods/scripts/watch_role_grounded_study.py",
+      "sha256": "233f812d59c937bf3b4be401cc80ac9d87a98f5849d0ed537683776525ee99cd"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/echoflow_public_api_notes_20261020.md",
+      "sha256": "37634b60b9143633d0238abd1f9c23c392df2f15ecc77c7266f1d86b4096c40b"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/pipeline_code_gap_audit_20261020.md",
+      "sha256": "025f5af6483f9a360e13e95e1b6c4443bf79036a0755eb7db99f6f56a753f9d1"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/real_sim_human_method_research_20261020.md",
+      "sha256": "87c0faef4f4b72356760805c1e702c26461cd30bccb93ec51928e1cf453c2b3a"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/ICL_config_robotwin.json",
+      "sha256": "87011a8c6bc348501c4b63fee8f67da607021b2ed44662e15812bb28d1e0718f"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/SOURCE_INDEX.json",
+      "sha256": "f2963e6a8c473956a8b8dbea571795609b5afcce4fdc4c3787936895b4e1cd6c"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/hf_human_data_tree.json",
+      "sha256": "56d79c5827dc7efdc557e8087e5cb3fb59fc14cc14acf92a04004b606182b2a2"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/hf_human_manifest.tsv",
+      "sha256": "d73137f961b515ed49a736039ca2d54ef045485195a9adbab3964bd231f9cb66"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/hf_icl_configs_tree.json",
+      "sha256": "39659c5b7daa54f71fa8a296478a3b16194152578333729167dfdeb28a688506"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/hf_root_tree.json",
+      "sha256": "22e744c44b91eb9b02bab4a40533300ab77d0ec0ef9dc179cfa1eaef16cc1439"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/manifest_statistics.json",
+      "sha256": "40884a4eff832fca9e8e204d8d6cd228c7c5c5b59ad8d82d84bb78c5c69f259c"
+    },
+    {
+      "relative": "code/data_generation_methods/sources/zero_wam_20261019/verify_manifest.py",
+      "sha256": "5de56b05c863a9863f3b4b5b0e31441fc3d759acfb6cae91c7abe4c62828bff5"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_actor_plan_guard.py",
+      "sha256": "21e76637aec7251c64021e353749c02996edbc0081ec07d3eec7a5d8d5147954"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_anchor_body_review.py",
+      "sha256": "dcbd82c0a7f55e6d006bd75efbe889286d2e810e2d082a66482c1112582723ca"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_asset_selection_candidate.py",
+      "sha256": "05824e2f927d88818b84a3cb9da41ae504d5eb9f4c22b47e543166264e5a5dc1"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_automated_review.py",
+      "sha256": "377296a43fd6cf9c3dae244566bf3deb1da5e9a34a2a166310576c584514f65b"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_batch_pipeline.py",
+      "sha256": "be01f78a1e2b703484afe4443e5e472e8e572d9dc01aee0a338da5519c7b22f4"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_boundary_discontinuity.py",
+      "sha256": "b194e63eb950899ccb90afc5577cad84738a56716a80fbe0dd2c40f8314e6aee"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_cli_integration.py",
+      "sha256": "727c8488e70483edc526e8e27137536f30559cef87dd23a7464adbdc998a1f1f"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_conditioned_dispatcher.py",
+      "sha256": "1844cc205753da26b6a5dc624af815a2322a371ecfa0756501f322557b542f5e"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_conditioned_postprocess.py",
+      "sha256": "b89cdfe5d819af96a9795cf5b8ab8894338d84e9110bc62c5ec5d9140e558cbd"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_contact_diagnostics.py",
+      "sha256": "62e8ee5c0616f9743e9e43a372f800849be85661dfae76595f1814b73fa7ef58"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_controlled_experiment.py",
+      "sha256": "9c393544a9c7a0228dd26beed0af53dc5ee0e32072d66a40c8f8c564b29b06bb"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_dual_arm_candidate.py",
+      "sha256": "127cc4cce74ec1e3aba04e247821ddf93d01218be39ba7771624e18e01f19353"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_event_visibility_candidate.py",
+      "sha256": "e119a560bf5386f8e26a2174b1fb3ac1dff69106c13a7c08ffe31b0f069b51b6"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_failure_regression.py",
+      "sha256": "552c42e358d63a582874e012d292d26174a2ce642773ee5a9a44703276123ab0"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_gemini_frame_review.py",
+      "sha256": "8479ed2b9302c08f6ec35279bc098736df8a128f4336fee716db2ba962c884d6"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_hidden_content_conditions.py",
+      "sha256": "6a9aedaef0a8f55cde52d3c195aad97e6c03a3b397af3d6c9d5c2ad5b017b358"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_hidden_identity_extent.py",
+      "sha256": "5f75ccb257a916d5da6b6416081c275d71fa5d71c2e94bdcbd2f044c303ca04e"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_household_assets.py",
+      "sha256": "ae324aa215bb657c1983f0400775428520c5cc8ba299780fb11a0053350b5e44"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_human_sim_resume.py",
+      "sha256": "acf472314e338ade038e2ab7162fe228d2fbcd1658c6da46f6f7c352fa8b679b"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_human_task_draft.py",
+      "sha256": "0aeb72bed116aa8d7cd2d1111643621570d867356ed2a5bba348124a3faa0cf7"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_interaction_triage.py",
+      "sha256": "1b27734b6f61e592ae960db2bc083564adf679f9ae00a917530ecc1c3365b2ee"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_local_hands.py",
+      "sha256": "adc0a401c79637586841ef0b9ddb919f691c0f08414e5c9d6c2f4a610df245cb"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_media_and_anchors.py",
+      "sha256": "f706a00d2055d4e1bb22b6b2924810952b23505bb557c2981a4034806df920ec"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_multi_image_generation.py",
+      "sha256": "79ba26a159d41a9e2b272445fc3a643cac1c170cd9147909bc23e184e8de9878"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_multi_task_candidate.py",
+      "sha256": "cfcb66f66a27877d7520081df2aec870b378a527d0a071ad7618a7a7eb6db591"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_multiview_recording.py",
+      "sha256": "9b237b2fd27b1f7212e35442c7bd6788f60a2afad66349b0d2a9c619a64ab98b"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_posthoc_controlled_repair.py",
+      "sha256": "82b66dddf12fcd9943bc7eec0bc761c5f30a097bda56a99cdb576056170876fd"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_providers.py",
+      "sha256": "6e0fc0f064222dbe7471da43a8a11c28ba19d49faee67dc9c1dcd7612daedd8e"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_quality_cascade.py",
+      "sha256": "fd32a8a5f16d13825b27e3b59f0c555278aecbbab784c1a63fe5dcb6e3431b56"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_quality_model_review.py",
+      "sha256": "dccfa84a8cde3e730bb661c3d073eb6ac18cb2540dd1634838ddbaa1d7d732a1"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_refinement.py",
+      "sha256": "ffd1a5ce6462ac6da6dfe7d7181b0219a74bfb5cf3fe79e931d9846265c726cb"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_relay_auth.py",
+      "sha256": "f984b5d3453e1dd46f8398b699f117bb38305eb5cdfa5694a1d74f839b6f8580"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_repair_router.py",
+      "sha256": "3eeb3a47cadd4cc6d7f23e6f11f9246945af96ce67bd0c416b75dea8f24c1d16"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_review.py",
+      "sha256": "cc11d4661b7e24db361544d4d946a197a0dad071dc99a5e7587abfd292439186"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_review_conditioned_video.py",
+      "sha256": "c8972749a23e85fa2f1e95a32f214766c5c0e70b9050d7d0510f01e0750ec1e0"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_review_protocol.py",
+      "sha256": "5561b34f6007c1e96d5dd02c01720a081bf587b478b30bacace54ef83032f5b8"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_scene_proposal_review_cli.py",
+      "sha256": "00299b44c065fa979e2ec18c0f036d06d46b62248aa05ffd4eb0449649f17002"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_scene_proposals.py",
+      "sha256": "8313e41b93901c70491a528a7af2b9ebb84d2011e5796759fb443512377e8370"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_seedance_pending.py",
+      "sha256": "d12f6eb98e81ceb94934ba3a84c5e2420f22617e527dae0fde904b073f5d32a7"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_sim_clutter_verifier.py",
+      "sha256": "990ac248a1ef5e0d99715fa478e63444ac82e42e5d735d2b61b878f36f842e65"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_sim_plan_geometry.py",
+      "sha256": "0f9cd70a77637367772012321a7e2a2b25fbbe2d88e8af8c6aab10ba32cc4fa7"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_sim_planning_contract.py",
+      "sha256": "876411d3470d9dc50264278c8e39eb5017b4b1a855eaf41ec8acc4d7c44158c3"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_sim_state_conditions.py",
+      "sha256": "1da2f96c9e6b3ca1e4c6fd484f574874ea25831fee5863c305b1adc5ab8d1dca"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_single_actor_acceptance.py",
+      "sha256": "e607841d856074d533ce02486a9b2b029ff8cc0d69216e40d24030d7ee1b2e2c"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_single_actor_candidate.py",
+      "sha256": "f67cfb80bb57501a4a34da5a78034fbebf5446b7736f157b1d4db43716522715"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_source_lineage_audit.py",
+      "sha256": "314f78140ae655168ebdcc4f55bc2a383e0933cd089f7f2a351c1d481cef5a2f"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_static_state_acceptance.py",
+      "sha256": "2b5354bfb036da7fd0775cf67fcbd095e91821d97495c0988d60704e2b4e7f79"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_strict_motion.py",
+      "sha256": "4a281e85cebbb7b3edc1b12c76beb982aef7cbd99ded362dcba361e694283107"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_task_evidence.py",
+      "sha256": "fc4f086e30e3250fa0dabbb315f5eaeb93cef5b2fffebfa3875b31fae1d8f6e3"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_task_review.py",
+      "sha256": "0be82d6c1afd28e345d98fb0207ac5a2e1a3b08fe72d12b0710804c7c49c0f51"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_training_pairs.py",
+      "sha256": "653e62a99bd85a736933ee7a766f23271a5d9fa0e36b4ddac31fd025f5702c97"
+    },
+    {
+      "relative": "code/data_generation_methods/tests/test_unified_anchor_candidate.py",
+      "sha256": "4010abc8620a8d48f31a5b75834574db57f7fe9ebc3a6bb612dadb6d8b7d9f3c"
+    }
+  ],
+  "status": "previous_completed_opt_in_candidate_no_default_promotion",
+  "interrupted_continuation_included": false,
+  "excluded_continuation": "/mnt/sdg/datasets/real_sim_human_pipeline/optimization_20261021_continuation_184411",
+  "dependency_repositories_external": [
+    "PolicyGen",
+    "The-Imitator-Game"
+  ]
+}

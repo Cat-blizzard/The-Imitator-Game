@@ -1,0 +1,27 @@
+{
+  "schema": "resimpair_asset_selection_v1",
+  "size_policy": "Explicit engineering tabletop sizes, not recovered real-world metric ground truth; never resize after seeing grasp results",
+  "mass_policy": "0.08 kg engineering assumption for all manipulation candidates",
+  "assets": [
+    ["ycb_official:005_tomato_soup_can", "food_can", 0.10, "z_up", "development"],
+    ["ycb_official:009_gelatin_box", "food_box", 0.09, "z_up", "development"],
+    ["ycb_official:008_pudding_box", "food_box", 0.10, "z_up", "development"],
+    ["ycb_official:004_sugar_box", "food_box", 0.14, "z_up", "development"],
+    ["ycb_official:006_mustard_bottle", "bottle", 0.14, "z_up", "development"],
+    ["ycb_official:007_tuna_fish_can", "food_can", 0.07, "z_up", "development"],
+    ["ycb_official:010_potted_meat_can", "food_can", 0.09, "z_up", "development"],
+    ["ycb_official:011_banana", "fruit", 0.14, "z_up", "development"],
+    ["ycb_official:014_lemon", "fruit", 0.08, "z_up", "development"],
+    ["ycb_official:036_wood_block", "block", 0.10, "z_up", "development"],
+    ["ycb_official:061_foam_brick", "block", 0.12, "z_up", "development"],
+    ["ycb_official:077_rubiks_cube", "toy", 0.06, "z_up", "development"],
+    ["google_scanned_objects_original_fuel:5_HTP", "bottle", 0.11, "stable", "heldout_asset"],
+    ["google_scanned_objects_original_fuel:AllergenFree_JarroDophilus", "bottle", 0.12, "stable", "heldout_asset"],
+    ["google_scanned_objects_original_fuel:Orbit_Bubblemint_Mini_Bottle_6_ct", "food_container", 0.09, "stable", "heldout_asset"],
+    ["google_scanned_objects_original_fuel:Nescafe_Tasters_Choice_Instant_Coffee_Decaf_House_Blend_Light_7_oz", "food_container", 0.14, "stable", "heldout_asset"],
+    ["google_scanned_objects_original_fuel:LEGO_Duplo_Build_and_Play_Box_4629", "toy_container", 0.16, "stable", "heldout_asset"],
+    ["google_scanned_objects_original_fuel:Marc_Anthony_Skip_Professional_Oil_of_Morocco_Conditioner_with_Argan_Oil", "bottle", 0.16, "stable", "heldout_asset"],
+    ["google_scanned_objects_original_fuel:Crunch_Girl_Scouts_Candy_Bars_Peanut_Butter_Creme_78_oz_box", "food_box", 0.14, "stable", "heldout_asset"],
+    ["google_scanned_objects_original_fuel:Wilton_Pearlized_Sugar_Sprinkles_525_oz_Gold", "food_container", 0.12, "stable", "heldout_asset"]
+  ]
+}

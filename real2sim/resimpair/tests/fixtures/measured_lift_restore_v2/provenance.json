@@ -1,0 +1,29 @@
+{
+  "schema": "real_measured_frame_derived_attachment_counter_fixture_v1",
+  "source_request": {
+    "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/transfer_0_motion/010_lift_cartesian/request.json",
+    "sha256": "218ebb2d3feee39763c4f47153569b364e0d36677866479977f7068dacfc2378"
+  },
+  "source_measurements": {
+    "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/measurements.npz",
+    "sha256": "22856912034a741fd0bc1ca3d75fab6b94fad795cde9861ee269c7a2802ae775"
+  },
+  "source_attachment": {
+    "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/transfer_0_motion/attachment_010_lift.json",
+    "sha256": "4495a81d7e3dc6e33d75fa7698346dceca7804594693b1a45126f28607504f67"
+  },
+  "source_bundle": {
+    "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/execution_bundle.json",
+    "sha256": "ffa72c7d7d2f2a36756454673c98646296e832d8a8657ec591738baba345da1d"
+  },
+  "source_frame": 113,
+  "fixture_frame": 0,
+  "fixture_measurements": {
+    "path": "tests/fixtures/measured_lift_restore_v2/measurements.npz",
+    "sha256": "a988979311ae0feb9dd48a008f3fab2ce6266a5dff223cabbd1aecdc4a05b510"
+  },
+  "description": "Exact real measured state retained; duplicate identical refresh at counter13 and request counters9/13 are derived interface fixtures, not new simulator executions. Counter12 represents an original later planner proposal at the same physical state.",
+  "physical_executions": 0,
+  "gpu_jobs": 0,
+  "api_calls": 0
+}

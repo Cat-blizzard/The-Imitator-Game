@@ -1,0 +1,117 @@
+{
+  "schema": "frozen_independent_metric_acceptance_v1",
+  "retained_rules": {
+    "version": "requested_metric_goal_v1",
+    "files": {
+      "evaluator.py": {
+        "path": "resimpair_grasp/evaluator.py",
+        "sha256": "7147a650eeae65fdd9b636fb504b96b6b48c5d02d86e55c2d2ffc91810b21cbb"
+      },
+      "event_protocol.py": {
+        "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/event_protocol.py",
+        "sha256": "6d89b33ec348de4f23cc31e4c3d7a532b8cbe4da1e3d788c3d2b7e018fafe3ff"
+      },
+      "compiler.py": {
+        "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/compiler.py",
+        "sha256": "5c3a276f7db74b1dc5318182ae15da6cf3711a58fac10336df39b353d0439650"
+      },
+      "planning_protocols.py": {
+        "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/planning_protocols.py",
+        "sha256": "a0e823b67ee6e6b97f660abf44c2d767a160e020f89b59392f09c6082bb0dd52"
+      },
+      "media.py": {
+        "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/media.py",
+        "sha256": "57f8883f0a646b59cfa7e31888ef6c4ddca7a543adf4c84728777e455436f5fd"
+      },
+      "container_evaluator.py": {
+        "path": "resimpair_pickplace/evaluator.py",
+        "sha256": "509d86cac122a3b682928f18d2911667e61a592ea843bfa4dfe1f15cecae3835"
+      },
+      "requested_goal_evaluator.py": {
+        "path": "resimpair_pickplace/requested_goal_audit.py",
+        "sha256": "b63215e577496cf523f36c6ffb79f7745b33905dfed17b4091b228a15e30b2bb"
+      }
+    },
+    "frozen_before_attempts": true,
+    "retained_rules_unchanged": true
+  },
+  "baseline_rule_provenance": {
+    "path": "runs/drop_release_full_open_20261030_v2/rules.json",
+    "sha256": "d02d74ed973b20c8fc919cc91eda4df99ca932198bb6f2922e2a0f7811c421cd"
+  },
+  "dependencies": {
+    "evaluator.py": {
+      "path": "resimpair_grasp/evaluator.py",
+      "sha256": "7147a650eeae65fdd9b636fb504b96b6b48c5d02d86e55c2d2ffc91810b21cbb"
+    },
+    "event_protocol.py": {
+      "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/event_protocol.py",
+      "sha256": "6d89b33ec348de4f23cc31e4c3d7a532b8cbe4da1e3d788c3d2b7e018fafe3ff"
+    },
+    "compiler.py": {
+      "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/compiler.py",
+      "sha256": "5c3a276f7db74b1dc5318182ae15da6cf3711a58fac10336df39b353d0439650"
+    },
+    "planning_protocols.py": {
+      "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/planning_protocols.py",
+      "sha256": "a0e823b67ee6e6b97f660abf44c2d767a160e020f89b59392f09c6082bb0dd52"
+    },
+    "media.py": {
+      "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/media.py",
+      "sha256": "57f8883f0a646b59cfa7e31888ef6c4ddca7a543adf4c84728777e455436f5fd"
+    },
+    "container_evaluator.py": {
+      "path": "resimpair_pickplace/evaluator.py",
+      "sha256": "509d86cac122a3b682928f18d2911667e61a592ea843bfa4dfe1f15cecae3835"
+    },
+    "requested_goal_audit.py": {
+      "path": "resimpair_pickplace/requested_goal_audit.py",
+      "sha256": "b63215e577496cf523f36c6ffb79f7745b33905dfed17b4091b228a15e30b2bb"
+    },
+    "retained_review.py": {
+      "path": "validation/pickplace_automation_20261029/independent/review_executions.py",
+      "sha256": "bfa8e8a1a834590d780f4fef9b0439911db0edb12ca141419d43bee6700d7de8"
+    },
+    "core.py": {
+      "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/core.py",
+      "sha256": "95b4aed825378bd56f278024af10662f78e4560b8616ab7fffb69a24c0c6a969"
+    },
+    "hand_correspondence.py": {
+      "path": "corl2026_workshop/experiments/autonomous_pipeline_v4/hand_correspondence.py",
+      "sha256": "25b67845bfc561a07c18231ed9bd6b9244fb141ac251f74f4731dd83d0f3356b"
+    },
+    "independent_multitask_review.py": {
+      "path": "validation/multitask_20261030/independent/review_multitask_v3.py",
+      "sha256": "9014809ba987ee4c5af98fe39e92744cb882b9cfc107719e38315d0db4815cb6"
+    },
+    "preserved_review_v1.py": {
+      "path": "validation/multitask_20261030/independent/review_multitask_v1.py",
+      "sha256": "7080d19a0cd683b2def3512268e74980117e513b2ab7d81aa8340fe288ca3be9"
+    },
+    "preserved_review_v2.py": {
+      "path": "validation/multitask_20261030/independent/review_multitask_v2.py",
+      "sha256": "a1acae6f802eedf8710a997812c1114ad1c822351e39dc673d84afc8e92a3681"
+    },
+    "event_statistics_helper": {
+      "path": "validation/drop_release_20261030/independent/review_pilot_v2.py",
+      "sha256": "9fa285660bf21df7a284942ec565551a75288ea354bbcb8c43dc0f26b6e03640"
+    },
+    "drop_event_protocol": {
+      "path": "resimpair_pickplace/drop_event_protocol_v1.py",
+      "sha256": "1671e23ab0f44cecd717eed774105eb90b70a6eb6c9baae8608a26ea870466a1"
+    }
+  },
+  "physical_checks": [
+    "task_events",
+    "kinematics",
+    "geometry",
+    "executed_paths_guarded",
+    "native_container_geometry",
+    "payload_inside_qualified_floor",
+    "original_requested_goal"
+  ],
+  "native_mass_readback": "Exact runtime/offline native mass, COM, cmass pose, principal/full inertia when available; missing is unknown, reported separately from old seven physical checks.",
+  "contract_integrity": "Rebuild frozen event protocol; ignore only ordering of constraints identified by unique ID, never values or predicates.",
+  "no_RGB_full_pair": false,
+  "generation_or_API_jobs_authorized": 0
+}

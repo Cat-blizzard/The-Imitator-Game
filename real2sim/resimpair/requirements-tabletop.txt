@@ -1,0 +1,3 @@
+# Isolated optional acceleration; does not replace the baseline environment.
+# CPython 3.12 Linux x86_64 binary wheel from PyPI.
+embreex==4.4.0.post1 --hash=sha256:9ee31b8b40a129620e40e06ae5c0af088b12e5f52c583e43428b87a02786d6bb

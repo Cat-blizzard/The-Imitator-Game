@@ -106,3 +106,12 @@ results/*
 # imitator 2.0 outputs
 /results
 .pytest_cache
+
+# real2sim (ReSimPair) data folders: assets, run outputs, runtime state, credentials
+/real2sim/resimpair/assets/
+/real2sim/resimpair/runs/
+/real2sim/resimpair/runtime/
+/real2sim/resimpair/private/
+/real2sim/resimpair/.venv/
+/real2sim/resimpair/core.*
+core.python.*

@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/ShirakuGIT/grasp-sampler",
+  "commit": "4a3c8fae876d2abe8488ec9d6dd9916d3afeec1f",
+  "license": "MIT with per-file third-party attribution",
+  "changes": "Unmodified source; dependency injection imports only numpy/trimesh antipodal module"
+}

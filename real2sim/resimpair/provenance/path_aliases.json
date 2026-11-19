@@ -1,0 +1,11 @@
+{
+  "schema": "explicit_readonly_evidence_relocation_v1",
+  "prefixes": {
+    "/mnt/sdg/datasets/real_sim_human_pipeline/schema_conformance_20261024_v1": "provenance/provider_schema_evidence",
+    "/mnt/sdg/datasets/real_sim_human_pipeline/expansion_20261020e/household_assets_v3": "assets/household",
+    "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/generic_grasp_20261026_development_r5/executions/ycb_official_004_sugar_box_d2158d0f_L0_tray_place__cached_antipodal": "validation/generic_grasp_20261026/portable_regression_fixture/execution",
+    "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/generic_grasp_20261026_development_r5/inputs/ycb_official_004_sugar_box_d2158d0f_L0.json": "validation/generic_grasp_20261026/portable_regression_fixture/inputs/ycb_official_004_sugar_box_d2158d0f_L0.json",
+    "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/generic_grasp_20261026_development_r5/inputs/ycb_official_004_sugar_box_d2158d0f_L0_tray_place.json": "validation/generic_grasp_20261026/portable_regression_fixture/inputs/ycb_official_004_sugar_box_d2158d0f_L0_tray_place.json",
+    "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair": "."
+  }
+}

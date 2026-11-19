@@ -1,0 +1,17 @@
+--find-links https://data.pyg.org/whl/torch-2.7.0+cu128.html
+cmeel-assimp==6.0.5
+cmeel-boost==1.89.0
+cmeel-eigen==3.4.1
+cmeel-octomap==1.10.0
+cmeel-qhull==8.0.2.1
+cmeel==0.57.3
+coal==3.0.2
+eigenpy==3.13.0
+libcoal==3.0.2
+ninja==1.11.1.4
+numpy-quaternion==2024.0.9
+pybind11==2.13.6
+setuptools-scm==8.3.1
+torch-scatter==2.1.2+pt27cu128
+warp-lang==1.9.1
+yourdfpy==0.0.58

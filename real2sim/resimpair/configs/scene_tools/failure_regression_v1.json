@@ -1,0 +1,78 @@
+{
+  "schema": "scene_tools_real_failure_regression_v1",
+  "cases": [
+    {
+      "id": "63301d",
+      "execution": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_63301d78de427f1d55784def45a53738_distribute_groups",
+      "source_bundle": {
+        "path": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_63301d78de427f1d55784def45a53738_distribute_groups/execution_bundle.json",
+        "sha256": "7a05746d0802563203ba4a25a28ee8c828b01a267398d16615b87673dfc6c872"
+      },
+      "independent_audit": {
+        "path": "validation/paired_assets_20261030/independent/final_metric_groups_closure_r1/FINAL_REVIEW.json",
+        "sha256": "d0abbd40f361bc1fff807a730e169535ac96789cef3a3b83675a63721ad3facb"
+      },
+      "expected_failure_type": "hand_vs_container",
+      "physical_result": "failed"
+    },
+    {
+      "id": "b61e7",
+      "execution": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_b61e71434d87d8089768f9d33ed8a237_distribute_groups",
+      "source_bundle": {
+        "path": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_b61e71434d87d8089768f9d33ed8a237_distribute_groups/execution_bundle.json",
+        "sha256": "7768efe136797c25578a78540b113d5556f17eb1dae1533f72627b15057bafa7"
+      },
+      "independent_audit": {
+        "path": "validation/paired_assets_20261030/independent/final_metric_groups_closure_r1/FINAL_REVIEW.json",
+        "sha256": "d0abbd40f361bc1fff807a730e169535ac96789cef3a3b83675a63721ad3facb"
+      },
+      "expected_failure_type": "hand_vs_placed_object",
+      "physical_result": "failed"
+    },
+    {
+      "id": "e5bd",
+      "execution": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_e5bd1e5109221146d7e20c6829fe1165_distribute_groups",
+      "source_bundle": {
+        "path": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_e5bd1e5109221146d7e20c6829fe1165_distribute_groups/execution_bundle.json",
+        "sha256": "02a956e97b8e61ec87013ef3830882711980db48e4ec500645e1cfe78a636d20"
+      },
+      "independent_audit": {
+        "path": "validation/paired_assets_20261030/independent/final_metric_groups_closure_r1/FINAL_REVIEW.json",
+        "sha256": "d0abbd40f361bc1fff807a730e169535ac96789cef3a3b83675a63721ad3facb"
+      },
+      "expected_failure_type": "grasp_lost_during_lift",
+      "physical_result": "failed"
+    },
+    {
+      "id": "35f5",
+      "execution": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_35f5f2b23d9520e3f311c57adee97856_distribute_groups",
+      "source_bundle": {
+        "path": "runs/production_integration_20261030_v1/final_metric_groups_closure_r1/executions/metric_group_35f5f2b23d9520e3f311c57adee97856_distribute_groups/execution_bundle.json",
+        "sha256": "a2ecca93394b021af371618d864054a8c07f18750a375df37493d2097a385983"
+      },
+      "independent_audit": {
+        "path": "validation/paired_assets_20261030/independent/final_metric_groups_closure_r1/FINAL_REVIEW.json",
+        "sha256": "d0abbd40f361bc1fff807a730e169535ac96789cef3a3b83675a63721ad3facb"
+      },
+      "expected_failure_type": "release_region_violation",
+      "physical_result": "failed"
+    },
+    {
+      "id": "reordered_N8",
+      "execution": "runs/production_integration_20261030_v1/scene_tools_revision_r1/executions/revision_a8e6542ec9_distribute_groups",
+      "source_bundle": {
+        "path": "runs/production_integration_20261030_v1/scene_tools_revision_r1/executions/revision_a8e6542ec9_distribute_groups/execution_bundle.json",
+        "sha256": "4cab2b3c937971f5c1c5244ad17531d670a9374f6f9da4f92d41e5e0e1297334"
+      },
+      "independent_audit": {
+        "path": "validation/architecture_20261031/scene_tools_revision_r1/FINAL_REVIEW.json",
+        "sha256": "6937057aa4c8fc56a423977e75fd72ade1062b9fd1557d148e6d4c492ccc0212"
+      },
+      "expected_failure_type": "payload_corridor_start_outside",
+      "physical_result": "failed"
+    }
+  ],
+  "rule": "These are retained real failures used for diagnosis and development, not an unseen validation set. Do not re-run physics; use run_diagnose and frozen independent evidence.",
+  "new_physics_required": false,
+  "API_calls_required": 0
+}

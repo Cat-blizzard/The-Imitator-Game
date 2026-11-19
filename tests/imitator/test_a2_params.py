@@ -16,6 +16,9 @@ import sys
 import numpy as np
 import pytest
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from _paths import needs_stock_tasks  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))   # repository root
 PROJECT = ROOT
@@ -195,6 +198,7 @@ print(json.dumps(dict(status=str(log.get("status")), n=len(acts),
 
 
 @pytest.mark.skipif(not SLOW, reason="set IMSIM_SLOW=1 (scripted episodes)")
+@needs_stock_tasks()
 @pytest.mark.parametrize("task", ["PushCube-v1", "StackCube-v1", "PullCubeTool-v1"])
 def test_slow_defaults_reproduce_the_frozen_expert(task):
     """same actions from the TaskSpec expert (params=None, IMSIM_EXPERT_PARAMS=frozen) and from the explicit defaults,

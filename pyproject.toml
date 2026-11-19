@@ -46,6 +46,9 @@ dependencies = [
 dataset = ["lerobot==0.5.0", "av>=10.0.0,<16.0.0", "albumentations>=2.0.8", "fsspec[gcs]>=2024.6.0"]
 # soft bodies (Newton VBD cloth bridge), Newton ray-cast camera, MuJoCo-Warp route B
 soft = ["newton==1.7.0", "warp-lang==1.19.0", "mujoco-warp==3.15.0"]
+# optional real -> sim -> human pipeline (real2sim/, vendored ReSimPair); versions as in its requirements.lock
+real2sim = ["jsonschema==4.26.0", "referencing==0.37.0", "av==15.1.0", "coacd==1.0.7", "embreex==4.4.0.post1", "requests", "pyyaml",
+            "scipy", "trimesh", "opencv-python", "imageio[ffmpeg]"]
 # PartNet-Mobility download helper (mani_skill/utils/download_partnet.py)
 partnet = ["selenium>=4.39.0"]
 dev = ["pytest>=8.3.4", "ruff>=0.8.6"]
@@ -74,7 +77,7 @@ explicit = true
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["mani_skill"]
+extend-exclude = ["mani_skill", "real2sim"]
 
 [tool.ruff.lint]
 # https://docs.astral.sh/ruff/rules/

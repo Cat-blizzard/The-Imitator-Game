@@ -1,0 +1,23 @@
+{
+  "gemini": {
+    "model": "gemini-3.1-pro-preview",
+    "base_url": "https://api.echoflowai.cc/v1beta",
+    "api_key_env": "ECHOFLOW_API_KEY",
+    "auth_scheme": "bearer",
+    "timeout": 240,
+    "review_schema_parameter": "responseSchema",
+    "review_schema_qualification": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/schema_conformance_20261024_v1/responseSchema_qualification.json",
+      "sha256": "37d607a08a40690c53c4524cb5d8362a90694e123895078286bd9ff3a8dca898"
+    },
+    "wire_schema_adapter": "gemini_response_schema_subset_v1"
+  },
+  "seedance": {
+    "model": "doubao-seedance-2-5-260628",
+    "base_url": "https://api.echoflowai.cc/api/v3",
+    "api_key_env": "ECHOFLOW_API_KEY",
+    "timeout": 180
+  },
+  "anchor_model": "gemini-nano-banana-2.1",
+  "credentials_file": "private/.env.local"
+}

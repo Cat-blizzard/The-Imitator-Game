@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/MiYanDoris/cudex-graspvla",
+  "commit": "e3d84aea7ee6c87df99b4f980cac8b6a52b2d362",
+  "patch": {
+    "path": "third_party/cudex_native/compatibility.patch",
+    "sha256": "ec9740b01b46792ce711bbf37211903b8fa788e8bd8e2f996d1141a07fe43bca"
+  },
+  "native_adapter": "resimpair_grasp/cudex_native.py",
+  "license": {
+    "path": "runtime/upstream/cudex-native-panda/LICENSE",
+    "sha256": "797d1e69fe7fd1c502e87af12c5a0ed08a84c7a8a22af1c7a3589cbfadff4364"
+  },
+  "source_distributed_as": "pinned optional upstream checkout plus patch; original notices retained",
+  "verified_build": {
+    "path": "validation/cudex_physical_20261026/builds/attempt_1/terminal.json",
+    "sha256": "765b71c0b63ab935144fa87148fb181dc403ce35b1f581be4594e72f07d660b8"
+  },
+  "torch": "2.7.1+cu128",
+  "compiler_cuda": "12.9",
+  "tested_cuda_arch": "12.0",
+  "python": "3.12.11"
+}

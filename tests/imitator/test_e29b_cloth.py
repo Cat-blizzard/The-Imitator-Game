@@ -107,7 +107,7 @@ def _subprocess_json(code: str, timeout: int = 1800) -> dict:
 def test_slow_cloth_smoke_expert(task):
     out = os.path.join(TMP, f"test_e29b_cloth_{task}")
     v = _subprocess_json(f"""
-import json, shutil, imsim
+import json, shutil, imitator
 shutil.rmtree({out!r}, ignore_errors=True)
 r = imitator.evaluate({task!r}, "dual_ur5_wsg", "expert", seeds=[0], num_envs=2, out_dir={out!r}, verbose=False)
 print("RESULT " + json.dumps([dict(v=x["verdict"], win=x["window_status"], aft=(x.get("aftermath") or {{}}).get("value"))

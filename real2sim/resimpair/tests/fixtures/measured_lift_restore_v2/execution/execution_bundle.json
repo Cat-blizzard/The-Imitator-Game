@@ -1,0 +1,960 @@
+{
+  "schema": "resimpair_execution_bundle_v5",
+  "case": {
+    "id": "factory_scene_003_83d683b0_relocate_selected",
+    "execution_id": "factory_scene_003_83d683b0_relocate_selected",
+    "partition": "development",
+    "source_ids": [
+      "abo:B075X2YJGK",
+      "ycb_official:048_hammer"
+    ],
+    "split_group": [
+      "abo:B075X2YJGK",
+      "ycb_official:048_hammer"
+    ],
+    "shared_scene": {
+      "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/scenes/factory_scene_003_83d683b0.json",
+      "sha256": "f2e1f587b1a3401405c00cbc14d3bfd7ba04e735cef3d9468b09af1ed80bca56"
+    },
+    "method": "cudex",
+    "source_coverage": "synthetic_only",
+    "source_request": {
+      "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/requests/factory_scene_003_83d683b0/request.json",
+      "sha256": "186964abb0228123f9138c35b60379ab73ec13ebc18866d31fbffd6f9d0d62d0"
+    },
+    "requested_task_id": "relocate_selected",
+    "eligible": true,
+    "arm_selection": {
+      "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/inputs/factory_scene_003_83d683b0_relocate_selected/arm_selection.json",
+      "sha256": "fd7a07f57fd11f30632e810c15dd20a7a0671b5ec07ca4700f39924a12f4264d"
+    },
+    "scene": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/inputs/factory_scene_003_83d683b0_relocate_selected/scene.json",
+      "sha256": "a000ae16d4ebb17a43d54b21bed411c3031b9cf92357999487115202125ce7f4"
+    },
+    "task": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/inputs/factory_scene_003_83d683b0_relocate_selected/task.json",
+      "sha256": "f7881feb54b5cd30e117b1b090341d0adc89d79e292f51f011584dda9d3d0ba2"
+    }
+  },
+  "task_intent": {
+    "schema": "resimpair_task_intent_v4",
+    "id": "factory_scene_003_83d683b0_relocate_selected",
+    "family": "relocate",
+    "required_skills": [
+      "pick_place"
+    ],
+    "object_ids": [
+      "object_0"
+    ],
+    "goal": "relocate_selected",
+    "operations": [
+      {
+        "id": "transfer_0",
+        "primitive": "pick_place",
+        "object": "object_0",
+        "arm": 0,
+        "target": {
+          "support": "table",
+          "offset_xy": [
+            -0.105,
+            -0.42
+          ],
+          "yaw": 2.313315
+        }
+      }
+    ],
+    "required_operation_precedence": [],
+    "equivalence_groups": [],
+    "incidental_controller_order_is_required": false,
+    "human_hand_policy": "preserve_robot_body_side",
+    "non_target_policy": "preserve_identity_and_pose",
+    "release_precondition_control": true,
+    "scope": "cached rigid tabletop pick/place; no scaling or handover",
+    "requested_task_id": "relocate_selected"
+  },
+  "scene": {
+    "schema": "requested_cached_pickplace_scene_v1",
+    "id": "factory_scene_003_83d683b0",
+    "seed": 20261027503,
+    "table_top_z": 0.0,
+    "robot_roots": [
+      [
+        -0.6,
+        -0.35,
+        0.0
+      ],
+      [
+        -0.6,
+        0.35,
+        0.0
+      ]
+    ],
+    "cameras": {
+      "robot_side": {
+        "eye": [
+          -0.7,
+          0.0,
+          0.72
+        ],
+        "target": [
+          -0.06,
+          0.0,
+          0.08
+        ],
+        "width": 512,
+        "height": 512,
+        "fov": 1.15
+      },
+      "opposite_high": {
+        "eye": [
+          0.85,
+          0.0,
+          1.02
+        ],
+        "target": [
+          -0.13,
+          0.0,
+          0.12
+        ],
+        "width": 512,
+        "height": 512,
+        "fov": 1.04
+      }
+    },
+    "objects": [
+      {
+        "id": "object_0",
+        "kind": "movable",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/library/954625e1e8842a1f0df7/descriptor.json",
+          "sha256": "ae01337f5df2c03b7b2259887ec15e684c0a1110422ace7ac1a098a9048b15bc"
+        },
+        "half_size": [
+          0.027510259678702617,
+          0.027514182117395806,
+          0.04967568006692128
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          -0.330984,
+          -0.42,
+          0.05017568006692128
+        ],
+        "yaw": 2.313315,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the Amazon Brand – Rivet Mid Century Modern Marble Table Decor Lamp With LED Light Bulb - 14 Inches, White Marble and Brass (LAMP)"
+      },
+      {
+        "id": "object_1",
+        "kind": "movable",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/library/a3f0a44673cada6c916f/descriptor.json",
+          "sha256": "5ba9acbf0909194d878f464befea94c20b078df8c7d109f7b52646d30b92876b"
+        },
+        "half_size": [
+          0.07146148615293141,
+          0.007553217902350863,
+          0.03033663515743515
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          -0.329979,
+          0.42,
+          0.03083663515743515
+        ],
+        "yaw": 1.793807,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the 048 hammer (hand_tool)"
+      },
+      {
+        "id": "clutter_0",
+        "kind": "static_distractor",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "assets/expanded_library/static_catalog_v4/google_scanned_objects_original_fuel_Brisk_Iced_Tea_Lemon_12_12_fl_oz_35_740b8f97.json",
+          "sha256": "38558aabe741ba8fadc090efcff2b5bff7532da27fa141a8fddccc1bc7d3bb65"
+        },
+        "half_size": [
+          0.02692175385546619,
+          0.045,
+          0.013638593715497405
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          -0.2515204512370897,
+          0.6655287191199935,
+          0.014138593715497406
+        ],
+        "yaw": 2.480123931947344,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the Brisk Iced Tea Lemon 12 12 fl oz 355 ml cans 144 fl oz 426 lt (can)"
+      },
+      {
+        "id": "clutter_1",
+        "kind": "static_distractor",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "assets/expanded_library/static_catalog_v4/google_scanned_objects_original_fuel_Razer_Taipan_Black_Ambidextrous_Gam_37c5e81d.json",
+          "sha256": "65329d2181e5144c9d2f7a49e81978c94774637a319b24362fdaa43e6c95f6dd"
+        },
+        "half_size": [
+          0.0448689711408428,
+          0.05,
+          0.015131512802201916
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          -0.07721047076119869,
+          -0.6669996395582718,
+          0.015631512802201916
+        ],
+        "yaw": -2.4253281272026657,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the Razer Taipan Black Ambidextrous Gaming Mouse (mouse)"
+      },
+      {
+        "id": "clutter_2",
+        "kind": "static_distractor",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "assets/expanded_library/static_catalog_v4/ycb_official_073-m_lego_duplo_3e36aac5.json",
+          "sha256": "189c1b79fcbd53d582f359217d062a9eabac9aca7e4fbd83f5bc8432686eac25"
+        },
+        "half_size": [
+          0.029509772781548465,
+          0.04,
+          0.021303467311241726
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          0.2821329657605782,
+          -0.5201911889959558,
+          0.021803467311241727
+        ],
+        "yaw": -2.634447104912788,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the 073-m lego duplo (toy)"
+      },
+      {
+        "id": "clutter_3",
+        "kind": "static_distractor",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "assets/expanded_library/static_catalog_v4/abo_B000S6N026_82ad4468.json",
+          "sha256": "800549ae0a275b8d5efaecf5aaaf4fbd3ef7d68d04660a874694ae805b1f7ffd"
+        },
+        "half_size": [
+          0.033366070630963814,
+          0.044999999999999984,
+          0.025405213844617823
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          -0.10425668984324116,
+          0.7297958451913519,
+          0.025905213844617823
+        ],
+        "yaw": 3.1255545991544222,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the AmazonBasics Paper Shredder SHREDDER EU 7-8 sheets, micro cut Black (stationery)"
+      },
+      {
+        "id": "clutter_4",
+        "kind": "static_distractor",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "assets/grasp_library/v2/ycb_official_014_lemon_58cda2b5.json",
+          "sha256": "7b20b1c04c4f29431af1b801991f8fe1f4beff2fb4053055d8a829acf4832e55"
+        },
+        "half_size": [
+          0.04,
+          0.039149006403908365,
+          0.035001650491846566
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          0.049247809448724145,
+          0.7220069665407542,
+          0.035501650491846566
+        ],
+        "yaw": 1.444964200042862,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the 014 lemon (fruit)"
+      },
+      {
+        "id": "clutter_5",
+        "kind": "static_distractor",
+        "shape": "catalog_mesh",
+        "asset_descriptor": {
+          "path": "assets/expanded_library/static_catalog_v4/objaverse_50f676e0b0dc4931b2f95ea7fde295e4_7467bb13.json",
+          "sha256": "c5b3a16305ce8addae617ef148da7cadf4003f9b86f2bbe9d3509b94e0a4b77f"
+        },
+        "half_size": [
+          0.04688131218368648,
+          0.046881320897157575,
+          0.05
+        ],
+        "mass_kg": 0.08,
+        "position": [
+          0.367055669773506,
+          -0.18574265145451652,
+          0.0505
+        ],
+        "yaw": -2.050124276783825,
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ],
+        "color_name": "original textured material",
+        "semantic_description": "the Carbonara Jar (jar)"
+      }
+    ],
+    "supports": [
+      {
+        "id": "container_0",
+        "shape": "stationary_mesh_container",
+        "container_descriptor": {
+          "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/library/containers/1897fa5401d815cd.json",
+          "sha256": "652a7f877592bfc704578a03d3867fb03fee47ca78b468f09d43cd039cf5de36"
+        },
+        "position": [
+          0.12,
+          0.0,
+          0.0
+        ],
+        "yaw": 2.762049,
+        "half_size": [
+          0.1412299252161517,
+          0.14122993267536738,
+          0.060825483588030936
+        ],
+        "top_z": 0.012084681489194643,
+        "semantic_description": "the wooden bowl",
+        "color_name": "original material",
+        "rgba": [
+          0.5,
+          0.5,
+          0.5,
+          1.0
+        ]
+      }
+    ],
+    "randomization": {
+      "seed": 20261027503,
+      "source_and_goal": "user metric requests",
+      "distractor_count": 6,
+      "distractor_source_ids": [
+        "google_scanned_objects_original_fuel:Brisk_Iced_Tea_Lemon_12_12_fl_oz_355_ml_cans_144_fl_oz_426_lt",
+        "google_scanned_objects_original_fuel:Razer_Taipan_Black_Ambidextrous_Gaming_Mouse",
+        "ycb_official:073-m_lego_duplo",
+        "abo:B000S6N026",
+        "ycb_official:014_lemon",
+        "objaverse:50f676e0b0dc4931b2f95ea7fde295e4"
+      ],
+      "size_policy": "fixed cached metric geometry; no runtime rescaling",
+      "no_success_driven_resampling": true
+    },
+    "appearance": {
+      "table_rgb": [
+        0.4701621268958628,
+        0.49583804329009684,
+        0.544605649676493
+      ],
+      "background_rgb": [
+        0.7572663298561667,
+        0.6703759455120273,
+        0.6730575633084344
+      ],
+      "ambient_rgb": [
+        0.3394005971159696,
+        0.42754608465720323,
+        0.3137627682196428
+      ],
+      "key_light_rgb": [
+        1.4236071675422999,
+        1.6956901409503438,
+        1.2303484418105335
+      ]
+    },
+    "scene_instance_id": "factory_scene_003_83d683b0",
+    "split_group": [
+      "abo:B075X2YJGK",
+      "ycb_official:048_hammer"
+    ],
+    "partition": "development",
+    "source_coverage": "synthetic_only",
+    "grasp_caches": {
+      "object_0": {
+        "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/inputs/factory_scene_003_83d683b0_relocate_selected/object_0_grasp_cache.json",
+        "sha256": "5fe50dada6d631a11c35ca8d14bdf5806cee57da2e6c864e55ee0912f34c019c"
+      },
+      "object_1": {
+        "path": "runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/library/a3f0a44673cada6c916f/cudex.json",
+        "sha256": "b5bdb015c8a10de795833e1635dd062f29d8913a821b7b4bdf93fc123c7152b0"
+      }
+    }
+  },
+  "event_protocol": {
+    "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/event_protocol.json",
+    "sha256": "4206939c18c2be262a4d75596595298462ab0c0e7267c71f9cb1b0245877504f"
+  },
+  "planning_declaration": {
+    "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/planning_declaration.json",
+    "sha256": "b13ec5e9282041258f779085753ff98cc6f035c4465008fcd669dba421c6a48b"
+  },
+  "measurements": {
+    "path": "tests/fixtures/measured_lift_restore_v2/measurements.npz",
+    "sha256": "a988979311ae0feb9dd48a008f3fab2ce6266a5dff223cabbd1aecdc4a05b510"
+  },
+  "planned_paths": {
+    "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/planned_paths.json",
+    "sha256": "90afd62c29f1ea6e8d4b84f413ae362763afc1b1fd73b0204580ad009d8a3622"
+  },
+  "object_ids": [
+    "object_0",
+    "object_1",
+    "clutter_0",
+    "clutter_1",
+    "clutter_2",
+    "clutter_3",
+    "clutter_4",
+    "clutter_5"
+  ],
+  "support_ids": [
+    "object_0",
+    "object_1",
+    "clutter_0",
+    "clutter_1",
+    "clutter_2",
+    "clutter_3",
+    "clutter_4",
+    "clutter_5",
+    "container_0",
+    "table"
+  ],
+  "target_positions_world": {
+    "object_0": [
+      -0.105,
+      -0.42,
+      0.04967568006692128
+    ]
+  },
+  "cameras": {
+    "robot_side": {
+      "config": {
+        "eye": [
+          -0.7,
+          0.0,
+          0.72
+        ],
+        "target": [
+          -0.06,
+          0.0,
+          0.08
+        ],
+        "width": 512,
+        "height": 512,
+        "fov": 1.15
+      },
+      "parameters": {
+        "extrinsic_cv": [
+          [
+            0.0,
+            -1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -0.7071068286895752,
+            0.0,
+            -0.7071067094802856,
+            0.014142155647277832
+          ],
+          [
+            0.7071067094802856,
+            0.0,
+            -0.7071068286895752,
+            1.004091739654541
+          ]
+        ],
+        "cam2world_gl": [
+          [
+            -1.1920928955078125e-07,
+            0.7071068286895752,
+            -0.7071068286895752,
+            -0.699999988079071
+          ],
+          [
+            -1.0000001192092896,
+            -1.1920928955078125e-07,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.7071068286895752,
+            0.7071067690849304,
+            0.7200000286102295
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "intrinsic_cv": [
+          [
+            395.03399658203125,
+            0.0,
+            256.0
+          ],
+          [
+            0.0,
+            395.03399658203125,
+            256.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "video": {
+        "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/robot_side.mp4",
+        "sha256": "fc18140a6ee61b2eab9c31ce4281d52dc2d17685d30581debabd54ad5722700e"
+      },
+      "initial_image": {
+        "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/robot_side_initial.png",
+        "sha256": "b67d3bdebfedf88816b24a41c9a36eddf74df4f554a058b9b32ce9e2247e1f51"
+      },
+      "final_image": {
+        "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/robot_side_final.png",
+        "sha256": "8735fff76d40b4d16ddf99c95407084fa91bac34dedd80a480bfd571830ad33e"
+      },
+      "synchronous_with_measurements": true,
+      "frame_count": 114,
+      "fps": 20.0
+    },
+    "opposite_high": {
+      "config": {
+        "eye": [
+          0.85,
+          0.0,
+          1.02
+        ],
+        "target": [
+          -0.13,
+          0.0,
+          0.12
+        ],
+        "width": 512,
+        "height": 512,
+        "fov": 1.04
+      },
+      "parameters": {
+        "extrinsic_cv": [
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.6764050126075745,
+            0.0,
+            -0.7365298867225647,
+            0.17631614208221436
+          ],
+          [
+            -0.7365298271179199,
+            0.0,
+            -0.6764050126075745,
+            1.315983533859253
+          ]
+        ],
+        "cam2world_gl": [
+          [
+            0.0,
+            -0.6764049530029297,
+            0.7365298867225647,
+            0.8500000238418579
+          ],
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.7365298867225647,
+            0.6764050126075745,
+            1.0199999809265137
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "intrinsic_cv": [
+          [
+            447.1133117675781,
+            0.0,
+            256.0
+          ],
+          [
+            0.0,
+            447.1133117675781,
+            256.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "video": {
+        "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/opposite_high.mp4",
+        "sha256": "9fe615f590fddc9221e68d3eb1c137e2cf9593b173485e650fa81cdf3bcd19d3"
+      },
+      "initial_image": {
+        "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/opposite_high_initial.png",
+        "sha256": "74ccd1794c23cbb0de8ab04b89c13e8b4457e5770ba76cd056d477df28b26e62"
+      },
+      "final_image": {
+        "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/batch500_20261027/production_transport_v2/production_transport_v2_chunk_000/executions/factory_scene_003_83d683b0_relocate_selected/opposite_high_final.png",
+        "sha256": "5ba0ef07f74644f3f186e3d09eaab8760ec107064bc065f12974905f5ee66739"
+      },
+      "synchronous_with_measurements": true,
+      "frame_count": 114,
+      "fps": 20.0
+    }
+  },
+  "initial_physics_sha256": "324f932ac56b0d8b466ce052447c28e863378fdc02bfe47da9f1d6f8cbb53c8e",
+  "initial_object_state_sha256": "a3ccb2399ae5f0de4ba9fc534410842b7cb5c7d22b7369c48838e634cf02f816",
+  "motion_planning_agent_participation": true,
+  "manual_generation_semantics_supplied": false,
+  "manual_review_observations_supplied": false,
+  "native_execution": true,
+  "physical_execution_count": 1,
+  "saved_state_rerender": false,
+  "code": {
+    "__init__.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/__init__.py",
+      "sha256": "403677da77aed1afb228ade96af1a5f74ffe28707b8c0e1bd81dd3ef0ec05cc3"
+    },
+    "__main__.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/__main__.py",
+      "sha256": "b61d66adddd3a0a3c426f800068e84493652ceffdda21d385a380b767b1477d9"
+    },
+    "active_assets.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/active_assets.py",
+      "sha256": "d9ab2ad32c59072d2bedc174d3a12b0572631ceef2a8b18f0d09295a2cbad08a"
+    },
+    "asset_experiment.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/asset_experiment.py",
+      "sha256": "6518ea18b4ffb223755e87a78cda11180d53297acc9940c054a3a9f5de1592ed"
+    },
+    "asset_qualification.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/asset_qualification.py",
+      "sha256": "7ddeaca4597a9c6c425afebb4c6c7e708f1e815cc610c16c1890b19e0a97cede"
+    },
+    "batch_campaign.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/batch_campaign.py",
+      "sha256": "d4a6695d6dfd9dbe43e0d80bd9b8e4cc68c50ea647f4066a3c98ce9e1060b23e"
+    },
+    "batch_dataset.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/batch_dataset.py",
+      "sha256": "93ad7e1c0b3be24ffaa37e73aaa980e20d508aa36874d0d98195d63b30265eff"
+    },
+    "batch_human_queue.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/batch_human_queue.py",
+      "sha256": "b13f3283f03f4250c6899d254c86a0143b3ebc58363ba22db91151a486c210ba"
+    },
+    "batch_protocols.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/batch_protocols.py",
+      "sha256": "671d0241b798f5df8a8a8004be5740d8f587fe55aa50e04846bd6e968277af34"
+    },
+    "batch_sampling.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/batch_sampling.py",
+      "sha256": "96300b6eb4a16a30f5065e0b5998a65a40dea2dd4f2def1ae09b6575b7d7a5b6"
+    },
+    "benchmark.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/benchmark.py",
+      "sha256": "4b2d4732c514fd4918396df7cb3c09cf4fbeed748c97a9dcd4c366f8c85283eb"
+    },
+    "billing.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/billing.py",
+      "sha256": "2961c3b6b8510f27e9495c6f1df0019e568fa243e8f5a3b28b5fae88873ec5a0"
+    },
+    "budget.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/budget.py",
+      "sha256": "ba77fbc9d92c1a01f2a5da182417ddfb217c064be4411345f72fa83b68fdbc96"
+    },
+    "compatibility.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/compatibility.py",
+      "sha256": "291f2b743428a00837b084cec0cb086187b1a793229f17929abcbe4733679651"
+    },
+    "compiler.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/compiler.py",
+      "sha256": "5c3a276f7db74b1dc5318182ae15da6cf3711a58fac10336df39b353d0439650"
+    },
+    "contact_extensions.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/contact_extensions.py",
+      "sha256": "ed10d1c6dfe0c408c9927c10b0f9c1966959f36371add4c9818f4797889c1777"
+    },
+    "core.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/core.py",
+      "sha256": "95b4aed825378bd56f278024af10662f78e4560b8616ab7fffb69a24c0c6a969"
+    },
+    "event_protocol.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/event_protocol.py",
+      "sha256": "6d89b33ec348de4f23cc31e4c3d7a532b8cbe4da1e3d788c3d2b7e018fafe3ff"
+    },
+    "evidence_plan.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/evidence_plan.py",
+      "sha256": "af36bb1e89e6e84804c2f332d66928f8c93c37bf22b93284dd420c9b37fd3115"
+    },
+    "experiment.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/experiment.py",
+      "sha256": "b98851ea7be52a2bd89c6d189df214bb333a62465eb2ff4a8d91049ce00b890d"
+    },
+    "functional_assets.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/functional_assets.py",
+      "sha256": "d511619772531808aea9f6fa7536b1d5796631fc4362f74f0facb140a60bd35b"
+    },
+    "generic_compiler.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/generic_compiler.py",
+      "sha256": "c8a972b7eb56c6ee9e00f21a2e72ada72cc810f833a0cbe5ba43a12058ce7248"
+    },
+    "grounding.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/grounding.py",
+      "sha256": "e21e061d5eb84e9c6a48e07da9f14f48763b65aa6f21f00bc380e629da2f4f48"
+    },
+    "hand_correspondence.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/hand_correspondence.py",
+      "sha256": "25b67845bfc561a07c18231ed9bd6b9244fb141ac251f74f4731dd83d0f3356b"
+    },
+    "hand_regression.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/hand_regression.py",
+      "sha256": "9a9063187547519d40f1d19079a378380b217e1cb6d183f3f85235eed21168d4"
+    },
+    "hand_review.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/hand_review.py",
+      "sha256": "4c1c96d721307b030c46de4b6ebb74e706f6acc1a6a4edc19ed4f7bcf9414907"
+    },
+    "image_response.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/image_response.py",
+      "sha256": "3f1e9201c219434eadff67186ce575fd101ef53b814b435d93655f62a93fb399"
+    },
+    "intake.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/intake.py",
+      "sha256": "95b5d5f7e9f3b7d19f300e1e1117e1161d7ab70ff50f5b853b18505a6d785f47"
+    },
+    "interface.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/interface.py",
+      "sha256": "379ac7b9a30137af17a52af59dd6687eb6d1c56f88776a86bd06c7bce1d8b163"
+    },
+    "library.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/library.py",
+      "sha256": "4c17c32580f8dbfc1a2522b4c1265e7999493c00a1561f4e20d754b171958df8"
+    },
+    "mechanism_conditions.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/mechanism_conditions.py",
+      "sha256": "d240cefdc60365cf700dfd34af04d6ea944838406ec4a58cb8bb4322da0e5d88"
+    },
+    "mechanism_review.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/mechanism_review.py",
+      "sha256": "79989ed56e2f5552a93735b4d8867d07fef3e8ec43763c1b3d4633b4a87ab478"
+    },
+    "media.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/media.py",
+      "sha256": "57f8883f0a646b59cfa7e31888ef6c4ddca7a543adf4c84728777e455436f5fd"
+    },
+    "models.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/models.py",
+      "sha256": "b89b2a7744df67c7666d6a59dce9cf763a432978ac8860bee0bd6dbd4a4a87c1"
+    },
+    "motion_comparison.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/motion_comparison.py",
+      "sha256": "b2bcab4e69d52798d025090252d07e5b4f7fde653200a8f874a14accb1b18b5a"
+    },
+    "motion_evidence.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/motion_evidence.py",
+      "sha256": "6da218020000befa20442f74e99bc48a0ccec6bba2c6dfa78ad09b0af856eb0c"
+    },
+    "motion_reference.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/motion_reference.py",
+      "sha256": "9309dd96a02cdcffd55c30c9133c1ee1229805ca09c93b24af2e23e473164e95"
+    },
+    "novel_campaign.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/novel_campaign.py",
+      "sha256": "6f0a162ddad830cda866b49071474abd48cf5fed8aa815034fe4180c9371086c"
+    },
+    "novel_catalog.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/novel_catalog.py",
+      "sha256": "feb62f9fec2c0be2bcdea23574a23df22d554744a7dd9f71af8199a27a5cce51"
+    },
+    "novel_protocols.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/novel_protocols.py",
+      "sha256": "387536bafcd1afd0025137352f6a7809cfbbad17a8313703b308e338709fd087"
+    },
+    "novel_runtime.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/novel_runtime.py",
+      "sha256": "a396a607dac9f328f9ed9f3b83c5a30c64f2a9435628dd9871dc7cc112f0f791"
+    },
+    "novel_solvers.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/novel_solvers.py",
+      "sha256": "dcd82c8a012b83d9349608810aa0cc3d1c460486def60bcf47132894158a5526"
+    },
+    "paid_pilot.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/paid_pilot.py",
+      "sha256": "3c3d4ba03a7fa766e1c35f94eeb2e40ed6bf6c879e1e11f20e475e9fe05de469"
+    },
+    "pipeline.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/pipeline.py",
+      "sha256": "1c5f07997a0302df19abb3ced7c1dadb399bc349c4d59fe57115c6ec713cb53d"
+    },
+    "planning_protocols.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/planning_protocols.py",
+      "sha256": "a0e823b67ee6e6b97f660abf44c2d767a160e020f89b59392f09c6082bb0dd52"
+    },
+    "profiling.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/profiling.py",
+      "sha256": "841a245846b603cfebd5a539fbd4c69c8d8cfb59b5f1712174f09c6067be38af"
+    },
+    "prompts.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/prompts.py",
+      "sha256": "1c6d1a20c359cef18913d1f1cf4fa42193a483e934cd3071625d3d4b1449f89d"
+    },
+    "release_control.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/release_control.py",
+      "sha256": "874b8041f8b9ae3b646b186244943ed4f9fc75b81d62ee008c80b409d04c5e34"
+    },
+    "report.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/report.py",
+      "sha256": "a8d2161f9aca35b9171b014abb3cac581d7c187933a1bd796f37edaeeb058e46"
+    },
+    "resources.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/resources.py",
+      "sha256": "d3861bd4944834ab0d9aec0df5d9e80eda133e73663ef5087315b655e6b8e269"
+    },
+    "review.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/review.py",
+      "sha256": "1d46644f744cd3b8dc7ac3ce471d71f6f8065b856673417032cacb8677244d12"
+    },
+    "review_audit.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/review_audit.py",
+      "sha256": "88b4caf06a64ece25292149c333f7c2a1709f3d1b5f285d7ea0ee0d846a84340"
+    },
+    "review_schema_qualification.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/review_schema_qualification.py",
+      "sha256": "64497b96905b4a029d83e12326072304f7d2e66a0449f2cfcdc3625a25efa16d"
+    },
+    "review_transport.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/review_transport.py",
+      "sha256": "66877684b4f0959b279722e0ba1cf041cebf0bf00dd9f3beed0a90e2b07e9ebf"
+    },
+    "scene_pilot.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/scene_pilot.py",
+      "sha256": "54929650158d31e3256338fe4150022b3404f7b238bff79b504e7ce036d138b4"
+    },
+    "scene_tasks.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/scene_tasks.py",
+      "sha256": "8d77c3b501269ddf94e81d3130daf08d96a446cea661833ce490f152a829a022"
+    },
+    "schema_probe.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/schema_probe.py",
+      "sha256": "4b5202c3450f5cdf9a0ce8e08257b5c987fc7a3270b9407bb5b2ced7fe7e66b6"
+    },
+    "simulation.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/simulation.py",
+      "sha256": "d8616a753eed514e1dfe76caed912ad982efcfb8c8fe17d4bf2c7383df600e8c"
+    },
+    "source.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/source.py",
+      "sha256": "262d2026d36fa861ba1603219c89bce24d389a555498448c2209f8793246435c"
+    },
+    "source_mechanisms.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/source_mechanisms.py",
+      "sha256": "1b62beea282cfcfecfc7649f48bc1cb4599fc73c740873e8be60bc2cd71b295b"
+    },
+    "timing.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/timing.py",
+      "sha256": "9164a0a98d596aa1ecc4ef6b1343de18b1ea775cc999a79d2836a0a3b849ece4"
+    },
+    "tool_motion.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/tool_motion.py",
+      "sha256": "7a00a7975e8eaef49a1c61e22a02001164304fc57697582f8615dff86527211b"
+    },
+    "workbench.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/workbench.py",
+      "sha256": "b14f36f2b6d676749c1b4d8b87fb581d80807dcb5c54633224e2190c3d1dbd69"
+    },
+    "workbench_solvers.py": {
+      "path": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/corl2026_workshop/experiments/autonomous_pipeline_v4/workbench_solvers.py",
+      "sha256": "537400728192b69d65468e8a52ec3e3c39ee61b0facb1db3153ab2582ed8f225"
+    }
+  },
+  "planning_failure": {
+    "type": "RuntimeError",
+    "message": "independent_guard_rejected:lift",
+    "trace": "Traceback (most recent call last):\n  File \"/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/resimpair_pickplace/stability_runner.py\", line 95, in worker\n    performance.phase='execution';solve(rec,task,'cached_antipodal',release_policy=spec.get('release_policy','legacy_v1'),\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/resimpair_pickplace/stability_motion.py\", line 133, in solve\n    move(sapien.Pose(lift_T), \"lift\")\n  File \"/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/resimpair_pickplace/stability_motion.py\", line 93, in move\n    def move(pose, stage): follow(guard.plan(pose, stage), stage)\n                                  ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/resimpair_pickplace/transport_fallback_v2.py\", line 102, in plan\n    return super().plan(pose, stage, current)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/resimpair_pickplace/cartesian_transfer.py\", line 108, in plan\n    return MeshMotion.plan(self, pose, stage, current)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/resimpair_grasp/motion.py\", line 190, in plan\n    raise RuntimeError(\"independent_guard_rejected:\" + stage)\nRuntimeError: independent_guard_rejected:lift\n"
+  },
+  "qualification_scope": "native dynamics, measured grasp/support/release, stability and monitored contacts; not strict continuous path qualification",
+  "source_scene_reconstruction_claimed": false,
+  "training_admitted": false,
+  "derived_replay_fixture": true
+}

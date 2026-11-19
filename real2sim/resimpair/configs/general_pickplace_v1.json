@@ -1,0 +1,23 @@
+{
+  "schema": "general_pickplace_candidate_v1",
+  "baseline_commit": "ec0154f8877b9cfc68c3d449d3c41594464c89f1",
+  "api_limit": 0,
+  "api_cost_usd": 0,
+  "gpu": 0,
+  "max_concurrent_physics": 1,
+  "physical_attempt_limit": 24,
+  "per_attempt_timeout_seconds": 360,
+  "container_mesh_limit": 512,
+  "container_workers": 4,
+  "container_timeout_seconds": 60,
+  "additional_offline_asset_limit": 12000,
+  "graspgenx_inference_asset_limit": 6,
+  "graspgenx_inference_timeout_seconds": 600,
+  "development_and_validation_are_separate": true,
+  "promotion": "candidate only; geometric candidates, native-ready assets, measured lifts and completed tasks counted separately",
+  "source_xy_m": [[-0.34, 0.16], [-0.54, 0.54]],
+  "destination_xy_m": [[-0.30, 0.18], [-0.54, 0.54]],
+  "handover": "unsupported: reject when no single arm can complete both endpoints",
+  "unchanged_acceptance": "generic_mesh_acceptance_v1 plus separately frozen container containment checks",
+  "clutter_count": [3, 8]
+}

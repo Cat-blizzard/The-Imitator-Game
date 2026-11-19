@@ -1,0 +1,91 @@
+diff --git a/setup.py b/setup.py
+index 393d489..ffdc40c 100644
+--- a/setup.py
++++ b/setup.py
+@@ -26,7 +26,7 @@ from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+ 
+ extra_cuda_args = {
+     "nvcc": [
+-        "--threads=8",
++        "--threads=2",
+         "-O3",
+         "--ftz=true",
+         "--fmad=true",
+diff --git a/src/curobo/geom/cpp/hppfcl_parallel.cpp b/src/curobo/geom/cpp/hppfcl_parallel.cpp
+index e830d7a..ce84736 100644
+--- a/src/curobo/geom/cpp/hppfcl_parallel.cpp
++++ b/src/curobo/geom/cpp/hppfcl_parallel.cpp
+@@ -8,9 +8,10 @@
+ #include <pybind11/numpy.h>
+ #include <pybind11/stl.h>
+ #include <Eigen/Dense>
++#include <omp.h>
+ #include <memory>
+ #include <iostream>
+-#define HPPFCL_NUM_THREADS 16
++#define HPPFCL_NUM_THREADS 2
+ 
+ namespace py = pybind11;
+ 
+diff --git a/src/curobo/geom/cpp/setup.py b/src/curobo/geom/cpp/setup.py
+index 127b4c3..673594a 100644
+--- a/src/curobo/geom/cpp/setup.py
++++ b/src/curobo/geom/cpp/setup.py
+@@ -3,7 +3,7 @@ import pybind11
+ import os
+ 
+ # Get the paths from the environment
+-conda_prefix = os.environ['CONDA_PREFIX']
++conda_prefix = os.environ['CUDEX_GEOMETRY_PREFIX']
+ lib_dir = os.path.join(conda_prefix, 'lib')
+ include_dir = os.path.join(conda_prefix, 'include')
+ eigen_include_dir = os.path.join(include_dir, 'eigen3')
+@@ -13,11 +13,12 @@ extension_mod = Extension(
+     "hppfcl_openmp_wrapper",
+     sources=["hppfcl_parallel.cpp"],
+     library_dirs=[lib_dir],
++    runtime_library_dirs=[lib_dir],
+     libraries=[
+         'coal', 'boost_filesystem', 'qhull_r', 'octomap', 'octomath', 'assimp', 'stdc++', 'gcc_s', 'pthread', 'm', 'rt', 'c'
+     ],
+     include_dirs=[include_dir, eigen_include_dir, pybind11.get_include()],
+-    extra_compile_args=["-fopenmp", "-std=c++14"],  # OpenMP and C++14 support
++    extra_compile_args=["-fopenmp", "-std=c++17"],  # OpenMP and C++14 support
+     extra_link_args=[f"-L{lib_dir}", "-lcoal", "-fopenmp"],
+     language="c++"
+ )
+diff --git a/src/curobo/rollout/cost/grasp_cost.py b/src/curobo/rollout/cost/grasp_cost.py
+index f852436..34230b3 100644
+--- a/src/curobo/rollout/cost/grasp_cost.py
++++ b/src/curobo/rollout/cost/grasp_cost.py
+@@ -188,7 +188,7 @@ class GraspCost(CostBase, GraspCostConfig):
+         # gripper should be top-down
+         gripper_rotation = torch_quaternion_to_matrix(link_pos_quat[:, :, 0, 3:]) # N, 1, 3, 3
+         # E_top_down_regu = torch.clamp(gripper_rotation[:, :, :, 0][:, :, 2], min=-0.939) * 10 # b, 1
+-        E_top_down_regu = gripper_rotation[:, :, :, 0][:, :, 2] * 10 # b, 1
++        E_top_down_regu = gripper_rotation[:, :, :, 2][:, :, 2] * 10  # native Panda approach is +Z # b, 1
+ 
+         # # the deeper grasp, the better
+         # E_depth_regu = contact_center[:, :, 2] * 100 # b, 1
+diff --git a/src/curobo/rollout/rollout_base.py b/src/curobo/rollout/rollout_base.py
+index d8e9331..d3b990f 100644
+--- a/src/curobo/rollout/rollout_base.py
++++ b/src/curobo/rollout/rollout_base.py
+@@ -14,7 +14,7 @@ from __future__ import annotations
+ 
+ # Standard Library
+ from abc import abstractmethod, abstractproperty
+-from dataclasses import dataclass
++from dataclasses import dataclass, field
+ from typing import Dict, List, Optional, Sequence
+ 
+ # Third Party
+@@ -91,7 +91,7 @@ class Goal(Sequence):
+ 
+     name: str = "goal"
+     goal_state: Optional[State] = None
+-    goal_pose: Pose = Pose()
++    goal_pose: Pose = field(default_factory=Pose)
+     links_goal_pose: Optional[Dict[str, Pose]] = None
+     current_state: Optional[State] = None
+     retract_state: Optional[T_DOF] = None

@@ -1,0 +1,52 @@
+{
+  "schema": "resimpair_portable_validation_lineage_v1",
+  "base_snapshot_sha256": "272fef553c95efdcbb77702e872eb44486bc546f59592b35582f8cf75b5ebfd1",
+  "additional_started_calls": {
+    "image": 1,
+    "video": 1,
+    "review": 2
+  },
+  "unresolved_submissions": 0,
+  "campaigns": [
+    {
+      "campaign_id": "portable_smoke_20261025",
+      "budget_sha256": "e07fdf11a0a07af9349404baba4552185e52b62ad7161cfee7458009349bb933",
+      "markers": [
+        {
+          "stage": "image_3a082355da0954b323f3ab25270e0f1e",
+          "kind": "image",
+          "sha256": "657a35b8272446c05482b51883960b656271883a08f822e3d6feffe6cc5d1195",
+          "resolved": true,
+          "evidence_path": "provenance/portable_validation_calls/image_3a082355da0954b323f3ab25270e0f1e/call_started.json"
+        },
+        {
+          "stage": "review_9dc0552344ea2ff17e7b84c62aabdb3e",
+          "kind": "review",
+          "sha256": "365bd4dbe9127dc6cca717bd30fed9307496db3fcc875733e20ed0467d4a1a8c",
+          "resolved": true,
+          "evidence_path": "provenance/portable_validation_calls/review_9dc0552344ea2ff17e7b84c62aabdb3e/call_started.json"
+        },
+        {
+          "stage": "review_a3f0ad6d3b1bcb612e624231366b1765",
+          "kind": "review",
+          "sha256": "2b0bff952eb9a1f3a72f015c6ff0a9b53d0318079eece9f6f46bda57ba2076af",
+          "resolved": true,
+          "evidence_path": "provenance/portable_validation_calls/review_a3f0ad6d3b1bcb612e624231366b1765/call_started.json"
+        },
+        {
+          "stage": "video_f6c34e10dc4b5d1c9130bac233f6f9bf",
+          "kind": "video",
+          "sha256": "edcfa9085e6872413c97ba29f9379f4d80a64ff1b90d8b4ad5f0da6e3248c328",
+          "resolved": true,
+          "evidence_path": "provenance/portable_validation_calls/video_f6c34e10dc4b5d1c9130bac233f6f9bf/call_started.json"
+        }
+      ]
+    }
+  ],
+  "observed_quota_units": 3128918,
+  "nominal_usd": 6.257836,
+  "actual_rmb_charge": null,
+  "qualification_status": "one_video_completed_second_not_submitted_conservative_credit_reserve_guard",
+  "full_campaign_data_retained_locally": "/mnt/sdg/datasets/real_sim_human_pipeline/standalone_repositories/ReSimPair/runs/portable_smoke_20261025",
+  "accounting_only_not_quality_evidence": true
+}

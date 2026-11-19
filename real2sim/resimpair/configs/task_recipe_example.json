@@ -1,0 +1,11 @@
+{
+  "schema": "resimpair_task_recipe_v1",
+  "description": "Two rigid objects, two built-in shallow trays, several goals sharing one scene",
+  "role_queries": [
+    {"role": "object_a", "categories": ["fruit"], "required_skill": "pick_place"},
+    {"role": "object_b", "categories": ["bottle", "can"], "required_skill": "pick_place"}
+  ],
+  "families": ["select", "clear", "arrange", "ordered"],
+  "partition": "development",
+  "scope": "Metadata category retrieval plus geometry/grasp eligibility; physical success is determined after execution"
+}

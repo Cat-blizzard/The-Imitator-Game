@@ -10,6 +10,10 @@ from __future__ import annotations
 
 import copy
 
+import numpy as np
+import sapien
+
+from mani_skill.agents.base_agent import Keyframe
 from mani_skill.agents.registration import register_agent
 from mani_skill.agents.robots.panda.panda import Panda
 
@@ -20,6 +24,11 @@ CLOTH_Q_CLOSE = 0.002
 class PandaCloth(Panda):
     uid = "panda_cloth"
     cloth_q_close = CLOTH_Q_CLOSE
+
+    # ManiSkill 3.0.1's Panda rest pose: the Imitator fork changed joint 7 to -pi/4 (fingers rotated 90 deg about the
+    # vertical axis); the cloth bridge, its expert and the analytic gripper model were built for +pi/4
+    keyframes = dict(rest=Keyframe(qpos=np.array([0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, np.pi / 4,
+                                                  0.04, 0.04]), pose=sapien.Pose()))
 
     # ManiSkill 3.0.1's Panda has these properties; the Imitator fork's Panda does not
     @property

@@ -41,6 +41,7 @@ their behaviour is unchanged.
 | the fork's `TableSceneBuilder` is the RoboTwin-style table (top at 0.725 m, needs a render system) | the single-arm Panda tasks use ManiSkill 3.0.1's stock builder (`imitator/envs/stock_table.py`) |
 | the fork's `PandaArmMotionPlanningSolver` has a different API, `base_motionplanner` is missing | ManiSkill 3.0.1's planner stack is vendored (`imitator/planning/ms_planner/`) |
 | the fork's Panda has no `tcp_pose` | added to the cloth Panda agent |
+| the fork's Panda `rest` keyframe has joint 7 = -π/4 (ManiSkill 3.0.1: +π/4; fingers rotated 90° about the vertical axis) | the cloth Panda agent (`panda_cloth`) keeps the 3.0.1 rest pose; the topological tasks set it through the stock table builder |
 | `import mani_skill.utils.x as y` resolves `mani_skill.utils` to the tabletop `utils` package in the fork | `from ... import` forms are used instead |
 | the fork has no stock tabletop tasks (PickCube, ...) | the ten Panda wrappers of those tasks register only if the stock tasks exist; their tests skip |
 | robot meshes were absolute paths into a local research folder | the needed source files are vendored in `imitator/assets/embodiments/_src/` (licenses in `NOTICE.md`), URDF paths are relative |
@@ -49,4 +50,11 @@ their behaviour is unchanged.
 Parity check (same scripted behaviours and seeds, contract verdicts compared episode by episode, ManiSkill 3.0.1 +
 imsim vs this branch): DualCubePlace on all four gripper embodiments, DualCubePlace `hold`, DualHandover, DualStack,
 DualDrawer, DualLiftBox, DualPegInHole, RingOnPeg (`expert`, `held`), MugOnHook (`expert`, `on_tip`) on CPU; FoldTowel
-and DualFoldTowel (Newton cloth, GPU) and batched GPU DualCubePlace (4 envs x 4 seeds). All verdicts identical.
+and DualFoldTowel (Newton cloth, GPU) and batched GPU DualCubePlace (4 envs x 4 seeds). All verdicts identical
+(47 episode verdicts). GPU cloth is not run-to-run deterministic on either platform, so FoldTowel was also compared as
+a distribution: 4 seeds x 2 repeats x 4 worlds, expert accepted 28/32 (ManiSkill 3.0.1) vs 31/32 (fork).
+
+## real2sim (ReSimPair)
+
+`real2sim/resimpair/` vendors the ReSimPair pipeline as an optional feature (`python -m imitator.real2sim ...`,
+`pip install -e ".[real2sim]"`); see `real2sim/README.md` for what was copied, what was changed and what was run.

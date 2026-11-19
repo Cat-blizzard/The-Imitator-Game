@@ -1,0 +1,17 @@
+{
+  "protocol": "tabletop_heldout_random_sample_v1",
+  "population": "all offline_tabletop_feasible assets in the completed 12000-job v2 library whose partition is heldout_asset",
+  "sample_size": 24,
+  "seed": 2026102662,
+  "sampling": "random without replacement, before observing materialization or native outcomes",
+  "primary_materializer": "resimpair_tabletop.materialize, retained whole-surface 3 mm qualification",
+  "preprocessing_failures": "retain in sample denominator; do not replace",
+  "controller": "retained generic grasp r6, cached_antipodal",
+  "layouts_per_asset": 1,
+  "layout_seed": 2026102663,
+  "gpu": 2,
+  "maximum_physical_attempts": 24,
+  "api_calls": 0,
+  "outcomes": "frozen tabletop_sample_grasp_lift_v1 and retained generic_mesh_acceptance_v1, separately",
+  "proxy_ablation": "development only; no substitution in this primary heldout result"
+}

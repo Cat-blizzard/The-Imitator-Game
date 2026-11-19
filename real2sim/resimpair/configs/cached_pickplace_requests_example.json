@@ -1,0 +1,35 @@
+{
+  "schema": "cached_pickplace_requests_v1",
+  "scenes": [
+    {
+      "id": "bottle_workspace",
+      "objects": [
+        {
+          "id": "object",
+          "source_id": "google_scanned_objects_original_fuel:Ultra_JarroDophilus",
+          "xy": [-0.25, -0.30],
+          "yaw": 0.20,
+          "max_dimension_m": 0.12
+        }
+      ],
+      "containers": [
+        {"id": "destination", "xy": [0.10, -0.30], "yaw": 0.25}
+      ],
+      "distractors": {"count": 4, "max_dimension_m": 0.16},
+      "tasks": [
+        {
+          "id": "place_in_container",
+          "placements": [
+            {"object": "object", "target": {"kind": "container", "container": "destination", "offset_xy_m": [0.01, 0.0]}}
+          ]
+        },
+        {
+          "id": "place_at_table_position",
+          "placements": [
+            {"object": "object", "target": {"kind": "table", "xy": [-0.22, 0.06], "yaw": 0.45}}
+          ]
+        }
+      ]
+    }
+  ]
+}

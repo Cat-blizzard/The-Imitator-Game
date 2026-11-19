@@ -1,0 +1,29 @@
+{
+  "version": "tabletop_metadata_roles_v1",
+  "semantic_status": "metadata_candidate_not_visual_confirmation",
+  "size_policy": "Explicit category engineering sizes in meters, not recovered metric ground truth; fixed before processing or grasp results",
+  "exclude_name_patterns": ["\\b(scene|diorama|collection|interior|furniture|architecture|building|room|weapon|rifle|pistol|sword|character|vehicle)\\b", "\\b(pack|set) of [0-9]", "\\b(kitchen|office|bedroom|living) (set|scene|interior)\\b"],
+  "exclude_categories": ["furniture_seating", "furniture_storage", "furniture_tables_beds", "home_fixtures", "textiles", "CHAIR", "SOFA", "TABLE", "BED", "DESK", "DRESSER", "RUG", "WALL_ART", "LAMP", "SHELF", "CABINET"],
+  "categories": [
+    {"id": "bottle", "patterns": ["\\bbottles?\\b"], "source_categories": ["bottles_jars", "BOTTLE"], "longest_m": 0.14, "manipulation_candidate": true},
+    {"id": "jar", "patterns": ["\\bjars?\\b"], "source_categories": ["JAR"], "longest_m": 0.10, "manipulation_candidate": true},
+    {"id": "cup", "patterns": ["\\b(mug|mugs|cups?|teacup|tumbler)\\b"], "source_categories": ["drinkware", "DRINKING_CUP", "COFFEE_MUG"], "longest_m": 0.11, "manipulation_candidate": true},
+    {"id": "bowl", "patterns": ["\\b(bowls?|ramekin)\\b"], "source_categories": ["BOWL"], "longest_m": 0.15, "manipulation_candidate": false},
+    {"id": "plate", "patterns": ["\\b(plates?|saucer|dish|dishes)\\b"], "source_categories": ["bowls_plates", "DISHWARE_PLATE"], "longest_m": 0.17, "manipulation_candidate": false},
+    {"id": "can", "patterns": ["\\b(cans?|tinned|tin)\\b"], "source_categories": ["FOOD_CAN"], "longest_m": 0.09, "manipulation_candidate": true},
+    {"id": "box", "patterns": ["\\b(box|boxes|carton|package|packet)\\b"], "source_categories": ["STORAGE_BOX", "SHIPPING_BOX"], "longest_m": 0.12, "manipulation_candidate": true},
+    {"id": "fruit", "patterns": ["\\b(apple|banana|orange|lemon|lime|pear|peach|avocado|tomato|potato|onion|eggplant|mango|kiwi)\\b"], "source_categories": [], "longest_m": 0.08, "manipulation_candidate": true},
+    {"id": "book", "patterns": ["\\b(books?|notebook|diary|journal)\\b"], "source_categories": ["BOOK"], "longest_m": 0.16, "manipulation_candidate": true},
+    {"id": "pen", "patterns": ["\\b(pens?|pencils?|marker|crayon)\\b"], "source_categories": ["WRITING_INSTRUMENT"], "longest_m": 0.14, "manipulation_candidate": false},
+    {"id": "hand_tool", "patterns": ["\\b(screwdriver|hammer|wrench|pliers|spanner|scissors)\\b"], "source_categories": ["hand_tools"], "longest_m": 0.16, "manipulation_candidate": true},
+    {"id": "utensil", "patterns": ["\\b(spoon|fork|spatula|ladle|whisk|chopsticks|knife)\\b"], "source_categories": ["cutlery_utensils"], "longest_m": 0.16, "manipulation_candidate": false},
+    {"id": "remote", "patterns": ["\\bremote\\b"], "source_categories": ["REMOTE_CONTROL"], "longest_m": 0.13, "manipulation_candidate": true},
+    {"id": "phone", "patterns": ["\\b(phone|smartphone|telephone|iphone)\\b"], "source_categories": ["CELLULAR_PHONE"], "longest_m": 0.14, "manipulation_candidate": true},
+    {"id": "mouse", "patterns": ["\\b(computer|gaming|wireless) mouse\\b"], "source_categories": ["INPUT_MOUSE"], "longest_m": 0.10, "manipulation_candidate": true},
+    {"id": "stationery", "patterns": ["\\b(stapler|eraser|tape|sharpener)\\b"], "source_categories": ["OFFICE_PRODUCTS"], "longest_m": 0.09, "manipulation_candidate": true},
+    {"id": "soap", "patterns": ["\\b(soap|dispenser|shampoo|lotion)\\b"], "source_categories": ["SOAP_DISPENSER"], "longest_m": 0.13, "manipulation_candidate": true},
+    {"id": "toy", "patterns": ["\\b(toy|rubik|block|dice|lego)\\b"], "source_categories": ["TOY_FIGURE", "TOY_BUILDING_BLOCK"], "longest_m": 0.08, "manipulation_candidate": true},
+    {"id": "vase", "patterns": ["\\bvases?\\b"], "source_categories": ["VASE"], "longest_m": 0.17, "manipulation_candidate": false},
+    {"id": "container", "patterns": ["\\b(basket|container|tub|tray)\\b"], "source_categories": ["containers_storage", "FOOD_STORAGE_CONTAINER"], "longest_m": 0.16, "manipulation_candidate": false}
+  ]
+}

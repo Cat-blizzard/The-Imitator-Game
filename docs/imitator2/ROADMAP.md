@@ -15,9 +15,9 @@ real-to-sim-to-human pipeline (ReSimPair), a streamlined workflow and a larger b
 | rendering | SAPIEN (incl. `rt-fast`), Newton ray-cast camera for cloth / no-Vulkan machines | quality tier (e.g. Filament through MuJoCo 4) evaluated on the Imitator scenes |
 | soft bodies | Newton VBD cloth bridge (route A), MuJoCo-Warp route B | deterministic replay, two-way finger coupling, static-friction anchors, rope / bag / sponge |
 | agent tooling | `veritask.ai` (model drafts contracts and counterexamples, simulation decides), CLI for every step | white-box / black-box tool layer, clause-level diagnostics, disturbance library |
-| real2sim2human | not yet (see below) | port ReSimPair |
+| real2sim2human | ReSimPair vendored as an optional feature (`real2sim/`, `python -m imitator.real2sim`); its tests and the pick-and-place sample run on the fork (see `real2sim/README.md`) | publish its asset packs; GPU-rendered end-to-end runs; judge accepted scenes with the benchmark contracts; port the newest chain (pp2) inputs |
 
-## ReSimPair (real2sim2human) — what porting needs
+## ReSimPair (real2sim2human) — what the port had to handle
 
 Findings from a read-only inventory of `fufumeichi/ReSimPair` (2026-11-19):
 
@@ -34,7 +34,7 @@ Findings from a read-only inventory of `fufumeichi/ReSimPair` (2026-11-19):
    local stages (asset qualification, grasps, scene and task factories, physics, acceptance, rendering, dataset
    export) need no API.
 
-Proposed port: a `real2sim/` subpackage with the minimal core (`resimpair_{grasp, pickplace, tasks (pp2 versions),
+Done (first port, 2026-11-20): `real2sim/resimpair/` (see `real2sim/README.md`). Originally proposed: a `real2sim/` subpackage with the minimal core (`resimpair_{grasp, pickplace, tasks (pp2 versions),
 assets, tabletop, scene, validation, pp2}` and the `autonomous_pipeline_v4 / task_contract_v3 / state_anchor_v2`
 experiments it imports), code and data roots set by environment variables, asset packs hosted on Hugging Face next to
 IG-10K, and accepted scenes judged by the same contracts as the rest of the benchmark.
