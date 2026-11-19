@@ -163,10 +163,25 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
         return {**receipt, "max_contact_depth_m": max(v[0] for v in values), "depth_limit_m": depth_limit,
                 "raw_contacts": [{"depth": d, "normal": n.tolist(), "position": p.tolist()} for d, n, p in values]}
 
+    def _capture_initial_geometry(self) -> None:
+        """Build fixed registration evidence; live guards still validate geometry.
+
+        The captured vertices and shape-local transforms belong to this support
+        registration. Refresh measures poses and support state, while the live
+        checker continues checking actual shape identity and mesh/scale changes.
+        """
+        self._initial_geometry_export = {
+            name: {"scaled_shape_local_vertices": vertices.tolist(), "shape_local_T": self._shape_local[name].tolist()}
+            for name, vertices in sorted(self._local_vertices.items())}
+        self._initial_geometry_fingerprints = {
+            name: hashlib.sha256(vertices.tobytes()).hexdigest()
+            for name, vertices in sorted(self._local_vertices.items())}
+
     def _register_initial_support(self, objects: dict[str, Any]) -> None:
         self.numerical_top_support_receipts: list[dict[str, Any]] = []
         self._local_vertices: dict[str, np.ndarray] = {}
         self._initial_geometry_export: dict[str, Any] = {}
+        self._initial_geometry_fingerprints: dict[str, str] = {}
         self._legacy_support_mode: str | None = None
         self._initial_support_exists = False
         self._initial_object_depth_m = 0.
@@ -192,9 +207,7 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
             self._support_state_receipt.update(reason=self._legacy_support_mode)
             return
         self._local_vertices = {name: _scaled_vertices(self.live, name).copy() for name in self._target_names}
-        self._initial_geometry_export = {
-            name: {"scaled_shape_local_vertices": vertices.tolist(), "shape_local_T": self._shape_local[name].tolist()}
-            for name, vertices in sorted(self._local_vertices.items())}
+        self._capture_initial_geometry()
         self._table_pose, self._table_side = self._table(objects)
         initial_pieces = self._pieces(self._initial_object)
         pieces_by_name = {piece["target"]: piece for piece in initial_pieces}
@@ -359,6 +372,5 @@ class NumericalTableSupportCollisionChecker(AttachedObjectCollisionChecker):
             support_state_transition_history=copy.deepcopy(self._support_state_history),
             support_validation_history=copy.deepcopy(self._support_validation_history),
             last_support_validation=copy.deepcopy(self._last_support_validation),
-            support_geometry_fingerprints={name: hashlib.sha256(v.tobytes()).hexdigest()
-                                           for name, v in sorted(self._local_vertices.items())})
+            support_geometry_fingerprints=self._initial_geometry_fingerprints.copy())
         return coverage
