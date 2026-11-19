@@ -77,6 +77,31 @@ def load_checkpoint(ckpt_path: str, args_override: Any, device: torch.device):
     return agent, train_args
 
 
+def action_coordinate_metadata(raw: Any, keys: list[str], sizes: list[int],
+                               action_order: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Describe native action coordinates without changing controller settings."""
+    coordinates = []
+    for side, (key, size) in enumerate(zip(keys, sizes)):
+        spec = action_order[side] if action_order else {}
+        joints = spec.get("arm_joint_names", [])
+        agent = raw.agent.agents[side]
+        controllers = getattr(getattr(agent, "controller", None), "controllers", {})
+        gripper = getattr(controllers.get("gripper"), "config", None)
+        normalized = getattr(gripper, "normalize_action", None)
+        for local_index in range(size):
+            arm_joint = local_index < len(joints)
+            known_gripper = bool(joints) and local_index == len(joints)
+            unit = (spec.get("arm_coordinate_unit", "controller_action_unit") if arm_joint
+                    else "normalized_controller_command" if known_gripper and normalized is True
+                    else spec.get("gripper_coordinate_unit", "controller_action_unit")
+                    if known_gripper and normalized is False else "controller_action_unit")
+            coordinates.append({"robot_key": key, "side": "left" if side == 0 else "right",
+                "name": joints[local_index] if arm_joint else "gripper" if known_gripper else f"coordinate_{local_index}",
+                "kind": "arm_joint" if arm_joint else "gripper" if known_gripper else "controller_coordinate",
+                "unit": unit})
+    return coordinates
+
+
 def evaluation_seeds(args: Any) -> list[int]:
     if args.seeds is not None and args.seeds_file is not None:
         raise ValueError("Choose --seeds or --seeds-file")
@@ -285,6 +310,13 @@ def evaluate_episode(agent: ACTSingleTaskAgent, env: Any, normalizer: SingleTask
         raise ValueError("Live action dimensions differ from the checkpoint")
     if action_order is not None and [item["size"] for item in action_order] != sizes:
         raise ValueError("Live per-arm action widths differ from the checkpoint")
+    action_diagnostics = None
+    if getattr(args, "action_diagnostics", False):
+        from examples.baselines.act.action_limit_diagnostics import ActionLimitDiagnostics
+        action_diagnostics = ActionLimitDiagnostics(
+            action_coordinate_metadata(raw, keys, sizes, action_order),
+            np.concatenate([raw.action_space[key].low for key in keys]),
+            np.concatenate([raw.action_space[key].high for key in keys]))
     dataset_idx = normalizer.resolve_idx(env_id)
     rgb_history: deque[torch.Tensor] = deque(maxlen=train_args.obs_horizon)
     state_history: deque[torch.Tensor] = deque(maxlen=train_args.obs_horizon)
@@ -310,12 +342,20 @@ def evaluate_episode(agent: ACTSingleTaskAgent, env: Any, normalizer: SingleTask
             actions = agent.get_action(rgb, state)
         prediction = normalizer.denormalize_action(actions[0, step % args.execute_steps], dataset_idx)
         action = split_action(prediction, keys, sizes)
+        requested = (np.concatenate([action[key] for key in keys])
+                     if action_diagnostics is not None else None)
         clipped = False
         for key in keys:
             bounded = np.clip(action[key], raw.action_space[key].low, raw.action_space[key].high)
             clipped |= not np.array_equal(action[key], bounded)
             action[key] = bounded.astype(np.float32)
         clip_steps += int(clipped)
+        if action_diagnostics is not None:
+            # Observe the existing prediction/clamp only. Never feed diagnostic
+            # values back into actions, rewards, termination or official success.
+            action_diagnostics.record(
+                actions[0, step % args.execute_steps].detach().cpu().numpy(), requested,
+                np.concatenate([action[key] for key in keys]))
         observation, _, term, trunc, final_info = env.step(action)
         terminated, truncated = _bool(term), _bool(trunc)
         success = _bool(final_info.get("success", False))
@@ -343,7 +383,7 @@ def evaluate_episode(agent: ACTSingleTaskAgent, env: Any, normalizer: SingleTask
         failure_stage = "transport_or_release_incomplete"
     else:
         failure_stage = "placement_not_successful"
-    return {
+    result = {
         "seed": seed, "steps": len(events), "official_success_once": success_once,
         "official_success_at_end": final_success, "first_success_step": first_success_step,
         "terminated": terminated, "truncated": truncated,
@@ -354,6 +394,14 @@ def evaluate_episode(agent: ACTSingleTaskAgent, env: Any, normalizer: SingleTask
                      "grasp_placement": grasp_placement_measurements(events),
                      "final": final, "settling": settling_measurements(events)}, "events": events,
     }
+    if action_diagnostics is not None:
+        directory = Path(args.output_dir) / "action_diagnostics"
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{env_id}_seed_{seed}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.npz"
+        np.savez_compressed(path, **action_diagnostics.arrays())
+        result["action_limit_diagnostics"] = {
+            **action_diagnostics.summary(), "arrays_path": str(path.resolve())}
+    return result
 
 
 def parse_args(argv=None):
@@ -380,6 +428,8 @@ def parse_args(argv=None):
     parser.add_argument("--obs-horizon", type=int, default=None)
     parser.add_argument("--save-video", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--save-trajectory", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--action-diagnostics", action="store_true",
+                        help="Record normalized/requested/executed actions and per-coordinate limit statistics; read-only")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return parser.parse_args(argv)

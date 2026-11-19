@@ -8,7 +8,7 @@ import torch
 from gymnasium import spaces
 
 
-def test_drop_regrasp_and_final_success_are_not_vetoed_by_physical_facts():
+def test_drop_regrasp_and_final_success_are_not_vetoed_by_physical_facts(tmp_path):
     """Optional facts must not change actions, rewards, done or official success.
 
     Run the real public-observation adapter and seeded native evaluator twice,
@@ -29,7 +29,7 @@ def test_drop_regrasp_and_final_success_are_not_vetoed_by_physical_facts():
             assert rgb.shape == (1, 1, 3, 8, 8)
             assert state.shape == (1, 1, 18)
             self.queries += 1
-            return (torch.arange(64, dtype=torch.float32).reshape(1, 4, 16) / 100.
+            return (torch.arange(64, dtype=torch.float32).reshape(1, 4, 16) / 50.
                     + (self.queries - 1) / 10.)
 
     class Environment:
@@ -80,7 +80,9 @@ def test_drop_regrasp_and_final_success_are_not_vetoed_by_physical_facts():
     train = SimpleNamespace(cameras=["zed2i"], state_type="qpos", single_arm=False,
                             action_dim=16, image_size=[8, 8], obs_horizon=1, pred_horizon=4)
     outputs = []
-    for report in (True, False):
+    for report, diagnostics in ((True, False), (False, False), (True, True)):
+        args.action_diagnostics = diagnostics
+        args.output_dir = str(tmp_path)
         env, policy = Environment(report), Policy()
         result = evaluation.evaluate_episode(policy, env, normalizer, args, train,
                                              401, "fixture", torch.device("cpu"))
@@ -98,7 +100,7 @@ def test_drop_regrasp_and_final_success_are_not_vetoed_by_physical_facts():
                 np.testing.assert_array_equal(actual[key], original[key])
         outputs.append((env, result))
 
-    observed, unobserved = (row[0] for row in outputs)
+    observed, unobserved = (row[0] for row in outputs[:2])
     assert [bool(row["is_pill_a_grasped"][0]) for row in observed.physical_info] == [
         True, False, True, True, False]
     assert observed.native_results == unobserved.native_results
@@ -111,6 +113,16 @@ def test_drop_regrasp_and_final_success_are_not_vetoed_by_physical_facts():
     for key in ("steps", "official_success_once", "official_success_at_end", "first_success_step",
                 "terminated", "truncated", "timeout", "action_clipped_steps"):
         assert outputs[0][1][key] == outputs[1][1][key]
+        assert outputs[0][1][key] == outputs[2][1][key]
+    assert observed.native_results == outputs[2][0].native_results
+    for actual, expected in zip(observed.actions, outputs[2][0].actions):
+        for key in actual:
+            np.testing.assert_array_equal(actual[key], expected[key])
+    measured = outputs[2][1]["action_limit_diagnostics"]
+    assert measured["any_clip_steps"] == outputs[0][1]["action_clipped_steps"] > 0
+    with np.load(measured["arrays_path"]) as arrays:
+        assert arrays["requested"].shape == arrays["executed"].shape == (5, 16)
+        assert arrays["requested"].max() > 1 and arrays["executed"].max() == 1
 
 
 if __name__ == "__main__":
