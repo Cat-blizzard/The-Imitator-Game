@@ -48,6 +48,9 @@ def test_checkpoint_loader_uses_saved_native_dimensions_and_strict_weights(tmp_p
     assert not restored.training
     assert torch.equal(original.weight, restored.weight)
     assert restored.received_args.image_size == (8, 8)
+    relocated, _ = video_eval.load_checkpoint(
+        str(path), SimpleNamespace(hf_cache_dir="/relocated/hf/hub"), torch.device("cpu"))
+    assert relocated.received_args.hf_cache_dir == "/relocated/hf/hub"
     with pytest.raises(ValueError, match="pred_horizon must match"):
         video_eval.load_checkpoint(str(path), SimpleNamespace(pred_horizon=3), torch.device("cpu"))
     checkpoint["agent_state_dict"]["unrecognized_weight"] = torch.zeros(1)

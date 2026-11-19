@@ -29,6 +29,8 @@ def load_checkpoint(ckpt_path: str, args_override: Any, device: torch.device):
         raise ValueError("Expected a native_video_act checkpoint")
     native_args = NativeTrainingArgs(**checkpoint["args"])
     model_args = VideoTrainingArgs(**checkpoint["model_args"])
+    if getattr(args_override, "hf_cache_dir", None) is not None:
+        model_args.hf_cache_dir = args_override.hf_cache_dir
     for key in ("state_dim", "action_dim", "state_type", "pred_horizon", "obs_horizon",
                 "single_arm", "include_depth"):
         if getattr(native_args, key) != getattr(model_args, key):
@@ -101,13 +103,18 @@ def main(argv=None):
     parser.add_argument("--human-manifest", help="Override the checkpoint's saved human-video manifest")
     parser.add_argument("--human-demo-id", help="Select a demonstration, including explicit replacement diagnostics")
     parser.add_argument("--human-role", default="evaluation", help="Manifest role; defaults to evaluation")
+    parser.add_argument("--hf-cache-dir", help="Relocate the pretrained video backbone cache on another host")
     selected, remaining = parser.parse_known_args(argv)
     if "--help" in remaining or "-h" in remaining:
         parser.print_help()
     prepare_episode = HumanVideoConditioning(selected.human_manifest,
                                              role=selected.human_role,
                                              demo_id=selected.human_demo_id)
-    return eval_act_single.main(remaining, checkpoint_loader=load_checkpoint,
+    def checkpoint_loader(path, args, device):
+        args.hf_cache_dir = selected.hf_cache_dir
+        return load_checkpoint(path, args, device)
+
+    return eval_act_single.main(remaining, checkpoint_loader=checkpoint_loader,
                                 prepare_episode=prepare_episode,
                                 report_prefix="act_native_video")
 
