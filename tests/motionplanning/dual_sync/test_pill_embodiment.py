@@ -451,8 +451,19 @@ def test_original_sync_preparation_sends_native_open_actions(monkeypatch, robot)
     monkeypatch.setattr(module, "bindings", lambda *_: arms)
     def stop(*args, **kwargs): raise RuntimeError("stop after preparation")
     monkeypatch.setattr(module, "pill_planners", stop)
-    module.solve(env, seed=401, task_factory=lambda _: object())
-    assert len(actions) == 10 and raw.elapsed_steps.item() == 10
+    def quiet_preparation(capture, targets, *, policy):
+        assert robot == "panda_wristcam"
+        for _ in range(3):
+            capture.step({arm.key: np.r_[arm.arm_qpos(), 1.] for arm in arms})
+        return {"environment_steps": 3, "max_steps": 10, "early_completion": True}
+    monkeypatch.setattr(module, "prepare_dual_open", quiet_preparation)
+    module.solve(env, seed=401, task_factory=lambda _: NS(targets=(object(), object())))
+    count = 3 if robot == "panda_wristcam" else 10
+    assert len(actions) == count and raw.elapsed_steps.item() == count
+    assert raw.dual_sync_result["preparation"]["environment_steps"] == count
+    assert raw.dual_sync_result["execution_features"] == {
+        "quiet_preparation": robot == "panda_wristcam",
+        "release_separation": robot == "panda_wristcam"}
     for action in actions:
         assert tuple(action) == tuple(a.key for a in arms)
         for arm in arms:

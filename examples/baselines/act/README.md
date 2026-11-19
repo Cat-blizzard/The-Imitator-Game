@@ -154,3 +154,9 @@ evaluation reuse those statistics. Action chunks mask padded tail labels. Evalua
 strictly reloads the model, observes RGB/qpos, and executes the predicted native
 actions on fixed seeds. It records success, timeout, grasp/release observations and
 failure stage; it does not invoke expert planning or restore intermediate states.
+
+The integrated single-task entry uses this native-dimension, seeded evaluation
+path for every robot pair, including Panda. Its default input is one explicitly
+selected RGB stream; RGB augmentation is off unless `--enable-augmentation` is
+set. It does not use the older Panda-only vector evaluator or its DTW reporting.
+The human-video ACT benchmark remains available through `eval_act_imitator`.

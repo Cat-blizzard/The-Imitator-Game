@@ -10,6 +10,7 @@ phases. Explicit window arguments are recorded as per-phase overrides.
 """
 from __future__ import annotations
 
+import copy
 import json
 import time
 from typing import Any, Callable
@@ -65,6 +66,54 @@ def _canonical(env: Any) -> tuple[Any, Any]:
             raise ValueError("Each physical arm requires one unique action key")
         keys.append(found[0])
     return bindings(env, tuple(keys))
+
+
+def _fingers_open(arm: Any, measurements: dict[str, Any]) -> bool:
+    fingers = [index for index in range(9) if index not in arm.indices]
+    upper = as_numpy(arm.agent.robot.get_qlimits())[0, fingers, 1]
+    return bool(np.allclose(measurements[arm.key]["finger_qpos_m"], upper, rtol=0, atol=OPEN_TOL))
+
+
+def prepare_dual_open(env: Any, targets: tuple[Any, Any], *, max_steps: int = 10,
+                      policy: RuntimePolicy = DEFAULT_POLICY) -> dict[str, Any]:
+    """Hold initial joints and open both hands, ending a quiet preparation early.
+
+    Measurements use two seven-joint states and two world object poses [4,4].
+    Only observations after real control ticks count. Existing arm/object speed
+    and hand-opening thresholds select early completion; otherwise the original
+    preparation limit is consumed without introducing a new rejection rule.
+    """
+    policy = _runtime_policy(policy)
+    limit = _budget(max_steps, "max_steps")
+    targets = _pair(targets, "targets")
+    arms = _canonical(env)
+    dt = _positive(env.unwrapped.control_timestep, "control timestep")
+    previous = _measure(arms)
+    previous_poses = [_transform(target.pose.to_transformation_matrix()) for target in targets]
+    action = {arm.key: np.r_[previous[arm.key]["qpos_rad"], 1.] for arm in arms}
+    _actions_valid(env, arms, action)
+    count = 0
+    for steps in range(1, limit+1):
+        before = as_numpy(env.unwrapped.elapsed_steps).copy()
+        env.step(action)
+        if not np.array_equal(as_numpy(env.unwrapped.elapsed_steps), before+1):
+            raise RuntimeError("Preparation must advance one paired control tick")
+        measured = _measure(arms)
+        poses = [_transform(target.pose.to_transformation_matrix()) for target in targets]
+        quiet = all(_fingers_open(arm, measured)
+            and np.max(np.abs(measured[arm.key]["qvel_rad_s"])) <= ARM_SPEED
+            and np.max(np.abs(np.asarray(measured[arm.key]["qpos_rad"])
+                              - previous[arm.key]["qpos_rad"]))/dt <= ARM_SPEED for arm in arms)
+        quiet = quiet and all(np.linalg.norm(pose[:3, 3]-old[:3, 3])/dt <= OBJECT_SPEED
+            and _rotation_distance(old[:3, :3], pose[:3, :3])/dt <= OBJECT_ANGULAR_SPEED
+            for pose, old in zip(poses, previous_poses))
+        count = count+1 if quiet else 0
+        previous, previous_poses = measured, poses
+        if count >= policy.reach_stable_steps:
+            break
+    return {"environment_steps": steps, "max_steps": limit,
+        "stable_steps_observed": count, "stable_steps_required": policy.reach_stable_steps,
+        "early_completion": steps < limit}
 
 
 class _Phase:
@@ -311,7 +360,12 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
         return phase.finish()
     if not phase.preflight():
         return phase.finish()
-    phase.report["validation"] = validate_schedule(schedule, *(np.asarray(initial["measurements"][arm.key]["qpos_rad"]) for arm in phase.arms), checker, max_joint_step_rad=JOINT_STEP)
+    candidate = checker.candidate_checker() if callable(getattr(checker, "candidate_checker", None)) else checker
+    phase.report["validation"] = validate_schedule(schedule, *(np.asarray(initial["measurements"][arm.key]["qpos_rad"]) for arm in phase.arms), candidate, max_joint_step_rad=JOINT_STEP)
+    if phase.report["validation"]["status"] == "passed" and callable(getattr(candidate, "finish", None)):
+        remaining = candidate.finish()
+        if remaining:
+            phase.report["validation"].update(status="collision", first_collision={"collisions": remaining})
     if phase.report["validation"]["status"] != "passed":
         phase.report.update(status="rejected", reason="candidate_collision")
         return phase.finish()
@@ -319,6 +373,9 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
     def stable(row: dict[str, Any]) -> bool:
         speed = row["max_control_frame_joint_speed_rad_s"] if held else row["max_arm_velocity_rad_s"]
         if row["endpoint_error_rad"] > ENDPOINT or speed > ARM_SPEED:
+            return False
+        if getattr(checker, "release_separation", None) is not None and (
+                not checker.release_separation.all_clear or not env.release_separation_complete):
             return False
         return not held or all(obj["is_grasping"] and obj["control_frame_linear_speed_m_s"] <= OBJECT_SPEED
                                and obj["control_frame_angular_speed_rad_s"] <= OBJECT_ANGULAR_SPEED
@@ -359,6 +416,11 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
                 phase.report.update(status="aborted", reason="hold_not_stable"); break
             phase.report["hold_steps_completed"] += 1
         if phase.report["status"] == "running": phase.report["status"] = "passed"
+    separation = getattr(checker, "release_separation", None)
+    if phase.report["status"] == "passed" and separation is not None:
+        remaining = separation.finish()
+        if remaining:
+            phase.report.update(status="aborted", reason="measured_collision", remaining_release_contacts=remaining)
     phase.report["stable_steps_observed"] = count
     return phase.finish()
 
@@ -479,6 +541,97 @@ def _regions(env: Any, targets: Any, keys: Any, predicates: Any) -> list[dict[st
         json.dumps(details, allow_nan=False)
         regions.append({"official_region": _bool(evaluation[key]), "physical_region": details})
     return regions
+
+
+def observe_dual_task_outcome(env: Any, checker: Any, targets: tuple[Any, Any], *,
+                              official_predicate_keys: tuple[str, str] = ("apple_in_basket", "banana_in_basket"),
+                              region_predicates: tuple[Callable[[Any], Any], Callable[[Any], Any]],
+                              max_steps: int = 0,
+                              policy: RuntimePolicy = DEFAULT_POLICY) -> dict[str, Any]:
+    """Return on the first actual released/placed official success, or a failure.
+
+    ``max_steps`` is the caller's remaining control-step budget and may be zero.
+    The caller keeps zero-step results outside action stages/ticks. The returned
+    final observation is a separate copy, including the measured control step;
+    a later measurement failure never relabels an older observation as current.
+    Native termination/truncation and actual collision rejection take priority
+    over a task-success observation at the same tick.
+    """
+    policy = _runtime_policy(policy)
+    targets = _pair(targets, "targets")
+    keys = _pair(official_predicate_keys, "official_predicate_keys")
+    predicates = _pair(region_predicates, "region_predicates")
+    if any(target is None for target in targets) or any(not callable(predicate) for predicate in predicates):
+        raise ValueError("Both actual targets and physical region callbacks are required")
+    if any(not isinstance(key, str) or not key for key in keys):
+        raise ValueError("Explicit official predicate keys are required")
+    if getattr(checker, "attached", False):
+        raise ValueError("Task outcome observation requires detached collision predictions")
+    budget = _budget(max_steps, "max_steps", zero=True)
+    phase = _Phase(env, checker, "observe_task_outcome", targets=targets, policy=policy)
+    phase.report.update(max_steps=budget, official_predicate_keys=list(keys),
+                        quality_window_evaluated=False, velocity_gate_evaluated=False,
+                        task_outcome_observation_evaluated=False,
+                        final_observation=None)
+
+    def action(row: dict[str, Any]) -> dict[str, np.ndarray]:
+        return {arm.key: np.r_[row["measurements"][arm.key]["qpos_rad"], 1.]
+                for arm in phase.arms}
+
+    def observe(row: dict[str, Any]) -> bool:
+        regions = _regions(env, targets, keys, predicates)
+        evaluation = env.unwrapped.evaluate()
+        if "success" not in evaluation:
+            raise ValueError("Missing official task success predicate")
+        success = _bool(evaluation["success"])
+        row.update(fingers_open=[phase.opened(arm, row) for arm in phase.arms],
+                   official_success=success, official_evaluation={key: as_numpy(value).tolist() for key, value in evaluation.items()},
+                   observed_elapsed_steps=as_numpy(env.unwrapped.elapsed_steps).tolist())
+        for obj, region in zip(row["objects"], regions):
+            obj.update(region)
+        valid = bool(success and all(row["fingers_open"]) and all(
+            obj["official_region"] and obj["physical_region"]["inside"] and not obj["is_grasping"]
+            for obj in row["objects"]))
+        row["task_outcome_satisfied"] = valid
+        phase.report.update(task_outcome_observation_evaluated=True,
+                            final_observation=copy.deepcopy(row))
+        return valid
+
+    checker.set_target_contacts_allowed((False, False))
+    try:
+        row = phase.report["initial_observation"]
+        _actions_valid(env, phase.arms, action(row))
+        if not phase.preflight():
+            return phase.finish()
+        try:
+            satisfied = observe(row)
+        except Exception as exc:
+            _error(phase.report, "task_outcome_measurement_failed", exc)
+            return phase.finish()
+        if satisfied:
+            phase.report["status"] = "passed"
+            return phase.finish()
+        for _ in range(budget):
+            row = phase.tick(action(row), "observe_task_outcome")
+            if row is None:
+                break
+            try:
+                satisfied = observe(row)
+            except Exception as exc:
+                row["task_outcome_observation_error"] = f"{type(exc).__name__}: {exc}"
+                if phase.report["status"] == "running":
+                    _error(phase.report, "task_outcome_measurement_failed", exc)
+                break
+            if phase.report["status"] != "running":
+                break
+            if satisfied:
+                phase.report["status"] = "passed"
+                break
+        if phase.report["status"] == "running":
+            phase.report.update(status="task_outcome_timeout", reason="official_released_placements_not_observed")
+        return phase.finish()
+    finally:
+        checker.set_target_contacts_allowed((False, False))
 
 
 def verify_dual_placement(env: Any, checker: Any, targets: tuple[Any, Any], *,

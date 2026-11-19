@@ -24,8 +24,11 @@ python -m mani_skill.examples.motionplanning.dual.two_robot_run \
 ```
 
 Omit `--execution-mode sync` to use the original serial solution. Original
-solution scripts and the Panda planner are unchanged. Sync does not import
-cuRobo or require a worker process.
+solution scripts and the Panda planner are unchanged. The default planning
+backend is MPLib; that route does not import cuRobo or start a worker process.
+For the optional GPU planner, add `--planner-backend curobo` and select an
+interpreter with cuRobo 0.9.0 installed; see [cuRobo backend](curobo-backend.md).
+cuRobo selection requires sync mode and supports the same Panda pill task.
 
 Add `--robot piper`, `--robot arx_x5`, `--robot ur5_wsg` or
 `--robot xarm6_robotiq` to the command above to use that pair on
@@ -65,9 +68,11 @@ Choose a new output name/directory for each experiment.
 ## Planning and execution
 
 MPLib plans each arm without advancing physics. Actual forward kinematics
-checks each endpoint, with bounded native IK correction when needed. Native
+checks each endpoint, with bounded native IK correction when needed. Its native
 geometric paths are retimed against the selected phase velocity/acceleration
-limits, then sampled on the common 20 Hz control clock. Both arms start
+limits. The optional cuRobo backend supplies timestamped trajectories for the
+same phase goals. Both routes use the common 20 Hz control clock and shared
+executor, recording, replay, and conversion entries. Both arms start
 together; a shorter path holds its endpoint and gripper state while its peer
 finishes.
 
@@ -76,12 +81,23 @@ action per control tick. The collision layer checks both robots, actual scene
 geometry, and measured held-object geometry. Initial table support, intended
 finger contact, and destination support have specific phase permissions.
 Measured poses refresh held-object prediction after physics advances.
+During open-hand retreat, existing own-finger/target contact may only separate:
+original mesh/box geometry must not deepen the intersection, and cleared pairs
+cannot re-enter. Candidate scans use independent contact state; execution and
+replay require both geometric and physical contact to clear before proceeding.
 Native contacts and held-object slip are sampled at 100 Hz. These are sampled
 checks, not continuous collision detection or joint 14-DoF planning.
 
 Both task adapters use preparation, pregrasp, descend, confirmed grasp,
 lift, transport to measured release targets, release, optional retreat, and
 optional final stability. There is no automatic recovery or spatial replanning.
+For the Panda pill route, preparation holds the initial arm targets and opens
+both hands for up to ten control ticks. It ends early after the selected
+reach-stability window meets the existing hand-opening and measured arm/object
+speed thresholds. Other robot/task routes retain ten native open-control ticks.
+Replay uses the recorded preparation length; older records without that field
+retain their ten-tick interpretation. The integration branch also records
+release-separation behavior explicitly; see [integration decisions](integration.md#integration-decisions).
 
 ## Check boundaries
 
@@ -117,7 +133,7 @@ and selected future windows; there is no fixed extra three-tick margin veto.
 Each standard episode JSON includes `dual_sync` with independent facts:
 
 - `official`: environment success, elapsed steps, horizon, native done signals.
-- `execution`: planning, budget, physical, control, or runtime failure reason.
+- `execution`: planning, geometry, budget, physical, control, or runtime failure reason.
 - `quality`: selected retreat/stability outcome and evaluated flags.
 - `physics`: actual forbidden contacts, source departure, and measured slip.
 - `recording`: whether the caller saved the standard trajectory.
@@ -128,6 +144,15 @@ collision. Normal generation keeps compact phase summaries, actions, states,
 seed, and resolved configuration; it does not archive source trees or require
 per-file source hashes. Failures remain recordable; `--only-count-success`
 continues to filter on the original environment success rule.
+
+Geometric refusals use the `geometry` execution category. Historical reason
+names such as `measured_collision` mean a geometry query at measured poses;
+native forbidden contacts and observed grasp/drop/slip events remain physical
+failures. The terminal summary reports execution categories, official success
+and quality failures separately. Initial pill/table support is decided by all
+actual convex pieces, finite tabletop containment and the existing penetration
+and depth-growth limits. Actor-origin displacement and rotation are diagnostic;
+measured departure permanently closes the initial-support permission.
 
 ## Replay and dataset conversion
 
@@ -160,7 +185,8 @@ archives that lack this description remain replayable; conversion requires a
 recording with an explicit native layout instead of inferring joint semantics
 from its action width. Earlier Panda archives retain their original fallback.
 Action `t` pairs with observation `t` and advances it to observation `t+1`.
-Sampling is 20 Hz, or 0.05 s per control step.
+Sampling is 20 Hz, or 0.05 s per control step; conversion and training must use
+that recorded frequency.
 
 ```bash
 python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
@@ -170,11 +196,9 @@ python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
 
 `--drop-terminal-frame` produces `T` supervised rows and preserves the terminal
 observation in the source H5. Without the flag, the converter retains its old
-`T+1` rows with the final action duplicated. Single-task ACT now reads sampling
-frequency from selected datasets' `meta/info.json` and rejects mixed rates.
-The converter's original train/test split may leave a one-episode dataset's
-training split empty; select episode 0 explicitly for a smoke test. Conversion
-compatibility does not by itself establish policy learning performance.
+`T+1` rows with the final action duplicated. To train and evaluate a policy from
+the converted data, follow the [single-task ACT guide](../examples/baselines/act/README.md#single-task-simulation-data),
+which covers dataset selection, timing and checkpoint reuse.
 
 ## Validation
 
@@ -184,9 +208,9 @@ python -m pytest -q tests/motionplanning/dual_sync
 
 Tests cover scheduling/order, endpoint correction, retiming, collision/support
 boundaries, failed grasp/drop/slip/release, policy selection, entry dispatch,
-and conversion timing. The fixed UR5 pill regression passes at 183/184/184
-steps, and the default Panda/Piper pill regressions retain 171/194-step
-completion. These are small task integration checks; broader task/seed coverage
+and conversion timing. Historical source-branch UR5 pill regressions passed at 183/184/184
+steps, and Panda/Piper cases completed in 171/194 steps. Combined-branch
+validation is reported in [the integration guide](integration.md#validation). These are small task integration checks; broader task/seed coverage
 is needed before claiming general success rates.
 The corrected Piper basket landing proposal chooses free space beside the
 pre-existing fruit instead of always preferring the basket center. Six fixed
@@ -199,7 +223,8 @@ relabelled as passing.
 
 Pill task profiles also describe robot-specific grasp/pregrasp offsets, positive
 release clearance, optional gripper effort, held-motion acceleration and retreat
-offsets. Default Panda values retain the existing behavior. xArm uses a side
+offsets. Panda profile values are unchanged; preparation and retreat follow the
+explicit integration decisions above. xArm uses a side
 grasp, a task-specific 0.5 Nm gripper drive limit and 2 rad/s² held acceleration;
 its global agent/cube drive default remains 0.1 Nm. These are model settings,
 not a hardware calibration or an equal-speed planner comparison.

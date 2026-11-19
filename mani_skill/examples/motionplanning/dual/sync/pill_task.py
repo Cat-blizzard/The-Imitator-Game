@@ -5,12 +5,9 @@ from typing import Any
 import numpy as np
 import sapien
 
-TASK_ID = "TwoRobotPickPillToRegions-v1"
+from ._arrays import as_float_array as _array
 
-def _array(value: Any) -> np.ndarray:
-    if hasattr(value, "detach"):
-        value = value.detach().cpu().numpy()
-    return np.asarray(value, dtype=float)
+TASK_ID = "TwoRobotPickPillToRegions-v1"
 
 def _finite(value: Any, shape: tuple[int, ...], label: str) -> np.ndarray:
     array = _array(value)
@@ -226,3 +223,18 @@ class PillTask:
                     current_quaternion=_single(actor.pose.q, 4, "WXYZ"))
             return region
         return make(0), make(1)
+
+
+if __name__ == "__main__":
+    local = np.array([[x, y, z] for x in (-.01, .01)
+                      for y in (-.01, .01) for z in (0., .02)])
+    quaternion = np.array([1. + 1e-7, 0., 0., 0.])
+    before = quaternion.copy()
+    vertices = transform_local_vertices(local, [0., 0., .015], quaternion)
+    measurement = pill_region_measurement([0., 0., .015], vertices, [0., 0., 0.])
+    assert vertices.shape == (8, 3) and measurement["inside"]
+    assert np.array_equal(quaternion, before)
+    clearance = support_clearance_tcp_height(local, np.eye(4), quaternion,
+                                             support_top_z=0., clearance=.015)
+    assert np.isclose(clearance["predicted_minimum_collision_vertex_world_z_m"], .015)
+    print("pill geometry CPU check passed: vertices (8,3), quaternion (4,)")

@@ -14,6 +14,7 @@ class ResetReached(Exception):
 def environment(backend, right_mode="pd_joint_pos"):
     raw = SimpleNamespace(
         spec=SimpleNamespace(id=TASK_ID), num_envs=1,
+        robot_uids=("panda_wristcam", "panda_wristcam"),
         # MultiAgent exposes a dictionary here; actual controller modes belong
         # to its individual agents.
         control_mode={"panda_wristcam-0": "pd_joint_pos", "panda_wristcam-1": right_mode},

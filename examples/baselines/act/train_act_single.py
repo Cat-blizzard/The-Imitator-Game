@@ -9,7 +9,7 @@ unmodified — the 1-D projection is essentially inert.
 Architecture:
   obs_encoder   →  obs_feat   (obs_latent_dim)
   state_encoder →  state_feat (state_latent_dim)
-  [obs_feat ; state_feat]  →  DETRVAE (video_feature = zeros(B, 1))
+  [obs_feat ; state_feat]  →  obs_proj → DETRVAE (video_feature = zeros(B, 1))
 
 Usage:
   python train_act_single.py \

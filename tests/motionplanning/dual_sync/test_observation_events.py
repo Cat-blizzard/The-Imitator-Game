@@ -35,6 +35,12 @@ def observer(points):
     capture.phase = "retreat"
     capture.srdf = {0: set(), 1: set()}
     capture.pending_errors = []
+    capture._retreat_contacts = None
+    capture._retreat_initial_contacts = None
+    capture._retreat_separated_contacts = set()
+    capture._retreat_remaining_contacts = set()
+    capture._last_own_finger_contacts = set()
+    capture._last_own_finger_contact_phase = None
     capture.identities = {robot: {"kind": "robot", "robot_index": 0, "link_name": "link6",
                                  "is_grasp_finger": False, "actor": "link6"},
                           payload: {"kind": "payload", "target_index": 0, "actor": "apple_out"}}

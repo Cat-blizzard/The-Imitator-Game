@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 import numpy as np
-from mani_skill.examples.motionplanning.dual.sync.task_outcome import observe_dual_task_outcome
+from mani_skill.examples.motionplanning.dual.sync.dual_arm_execution import observe_dual_task_outcome
 
 def self_test() -> dict[str, Any]:
     """Exercise the real _Phase controller/observation contract using CPU spies."""

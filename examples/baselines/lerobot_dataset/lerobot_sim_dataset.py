@@ -284,6 +284,7 @@ class LeRobotSimDataset(Dataset):
                 sub_ds.hf_dataset = sub_ds.hf_dataset.remove_columns(cols_to_remove)
 
         self.lerobot_dataset = ConcatDataset(sub_datasets)
+        self.sub_datasets = sub_datasets
         self.main_dataset = sub_datasets[0]  # For dimensions and stats fallback
 
         # Statistics always come from selected TRAIN rows, never full-dataset metadata.

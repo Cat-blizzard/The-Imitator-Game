@@ -172,8 +172,22 @@ def held_substep_audit(rows: list[dict[str, Any]], references: Any, *, policy: A
             "physical_substeps": len(held), "objects": objects, "position_limit_m": policy.position_slip_m, "rotation_limit_rad": policy.rotation_slip_rad,
             "scope": "both actual grasp-relative physical poses at100Hz; not collision checking orCCD"}
 
+def own_finger_contact_pair(sides: list[dict[str, Any]]) -> tuple[int, str] | None:
+    """Identify only a physical finger touching its own paired target."""
+    if len(sides) == 2:
+        for i in (0, 1):
+            robot, target = sides[i], sides[1-i]
+            if (robot.get('kind') == 'robot' and target.get('kind') == 'payload'
+                    and robot['robot_index'] == target['target_index']
+                    and robot.get('is_grasp_finger',
+                        robot.get('link_name') in ('panda_leftfinger', 'panda_rightfinger'))):
+                return robot['robot_index'], robot['link_name']
+    return None
+
+
 def contact_allowed(sides: list[dict[str, Any]], phase: str,
-                    srdf: dict[int, set[frozenset[str]]]) -> bool:
+                    srdf: dict[int, set[frozenset[str]]], *,
+                    retreat_contacts: set[tuple[int, str]] | None = None) -> bool:
     """Exact physical robot-contact permissions; no broad target/palm exception."""
     if len(sides) != 2:
         return False
@@ -186,14 +200,11 @@ def contact_allowed(sides: list[dict[str, Any]], phase: str,
     if all(s.get('kind') == 'robot' for s in sides):
         index = sides[0]['robot_index']
         return sides[1]['robot_index'] == index and frozenset(s['link_name'] for s in sides) in srdf[index]
+    pair = own_finger_contact_pair(sides)
+    if phase == 'retreat':
+        return pair is not None and retreat_contacts is not None and pair in retreat_contacts
     if phase in ('descend', 'close_and_confirm', 'lift_and_hold', 'release') or phase.startswith('carry_'):
-        for i in (0, 1):
-            robot, target = sides[i], sides[1-i]
-            if (robot.get('kind') == 'robot' and target.get('kind') == 'payload'
-                    and robot['robot_index'] == target['target_index']
-                    and robot.get('is_grasp_finger',
-                        robot.get('link_name') in ('panda_leftfinger', 'panda_rightfinger'))):
-                return True
+        return pair is not None
     return False
 
 

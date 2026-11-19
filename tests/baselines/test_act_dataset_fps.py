@@ -60,21 +60,26 @@ def test_empty_dataset_configuration_is_rejected(tmp_path: Path) -> None:
 def test_build_dataloader_forwards_recorded_rate(tmp_path: Path, monkeypatch, fps: int) -> None:
     config = _write_config(tmp_path, [fps])
     captured = []
-    dataset = [0]
+    class NativeDataset(list):
+        state_dim = 18
+        action_dim = 16
+
+    dataset = NativeDataset([0])
 
     def capture_config(data_config):
         captured.append(data_config)
         return dataset
 
-    monkeypatch.setattr(training, "_auto_detect_cameras", lambda *args: ["cam1"])
     monkeypatch.setattr(training, "build_lerobot_dataset", capture_config)
     args = training.TrainingArgs(
-        sim_root=str(tmp_path), sub_config=str(config), batch_size=1, num_workers=0
+        sim_root=str(tmp_path), sub_config=str(config), cameras=["zed2i"],
+        batch_size=1, num_workers=0
     )
     loader, returned_dataset = training.build_dataloader(args)
     assert returned_dataset is dataset
     assert loader.dataset is dataset
     assert len(captured) == 1
+    assert captured[0].cameras == ["zed2i"]
     assert captured[0].fps == fps
     assert captured[0].horizon == args.pred_horizon
     assert captured[0].obs_horizon == args.obs_horizon

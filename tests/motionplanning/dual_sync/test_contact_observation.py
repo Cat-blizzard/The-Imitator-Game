@@ -172,7 +172,7 @@ def test_native_monitor_decodes_payload_robot_contact_once_and_preserves_finger_
     observed.record_substep()
     assert not observed.pending_errors
     assert point.reads == dict(separation=1, impulse=1, position=1, normal=1)
-    # Robot-only contacts do not need position/normal readback.
+    # Forbidden robot-only contacts retain position/normal for diagnosis.
     robot_point = Point()
     contacts[:] = [contact(data, 'palm', 'finger', robot_point)]
     observed.record_substep()

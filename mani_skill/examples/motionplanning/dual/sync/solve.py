@@ -1,16 +1,17 @@
-"""Optional MPLib synchronous solution using the original caller-owned env."""
+"""Optional synchronous solution using the original caller-owned environment."""
 from __future__ import annotations
 
 import time
 from dataclasses import asdict
+from typing import Any
 
 import numpy as np
 import sapien
 
 from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
-from .dual_arm_execution import (plan_dual_pose, execute_dual_reach, close_dual_and_confirm,
-    execute_dual_held_move, release_dual_and_confirm, verify_dual_placement)
+from .dual_arm_execution import (prepare_dual_open, plan_dual_pose, execute_dual_reach, close_dual_and_confirm,
+    execute_dual_held_move, release_dual_and_confirm, verify_dual_placement, observe_dual_task_outcome)
 from .trajectory_execution import as_numpy, bindings, native_arm_action
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
 from .phase_kinematics import (SOLVER_LIMIT_FRACTION, attach_topp_capture, compact_phase_limits,
@@ -20,7 +21,6 @@ from .runtime_policy import DEFAULT_POLICY, RuntimePolicy, load_policy as load_p
 from .pill_task import TASK_ID, PillTask
 from .observation import ObservedEnvironment
 from .physical_observation import measured_source_departure
-from .task_outcome import observe_dual_task_outcome
 from .arm_planner import ArmMotionPlanner
 
 LIMITS = {"joint_vel_limit_rad_s": 1.5, "joint_acc_limit_rad_s2": 2.6,
@@ -119,8 +119,27 @@ def _compact_stage(name: str, result: dict) -> dict:
     return row
 
 
-def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
-          task_id: str = TASK_ID, task_factory=None, checker_factory=None):
+def _failure_category(name: str, result: dict[str, Any], *, physical_events: bool) -> str:
+    """Keep geometric checks separate from observed contact or grasp failures."""
+    reason = result.get('reason')
+    if physical_events or reason in (
+            'grasp_lost', 'object_dropped', 'position_slip', 'rotation_slip'):
+        return 'physics'
+    if reason in ('measured_collision', 'initial_collision', 'candidate_collision',
+                  'updated_candidate_collision'):
+        return 'geometry'
+    if result['status'] == 'rejected':
+        return 'planning'
+    if ((name == 'retreat' and result['status'] == 'reach_timeout')
+            or (name == 'verify_placement' and result['status'] == 'placement_timeout')):
+        return 'quality'
+    return 'execution'
+
+
+def solve(env: Any, seed: int | None = None, debug: bool = False, vis: bool = False, *,
+          policy: RuntimePolicy = DEFAULT_POLICY, planner_backend: str = 'mplib',
+          curobo_options: dict[str, Any] | None = None, curobo_session: Any = None,
+          task_id: str = TASK_ID, task_factory=None, checker_factory=None) -> tuple[Any, Any]:
     """Return original two-arm step tuples; write independent result facts.
 
     The caller creates/closes the environment and owns RecordEpisode. Planning
@@ -129,10 +148,17 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
     """
     if not isinstance(policy, RuntimePolicy):
         raise ValueError('Expected RuntimePolicy')
+    if planner_backend not in ('mplib', 'curobo'):
+        raise ValueError('Expected planner_backend mplib or curobo')
+    if planner_backend != 'curobo' and (curobo_options or curobo_session is not None):
+        raise ValueError('cuRobo options/session require planner_backend curobo')
     raw = env.unwrapped
     if (raw.spec.id != task_id or raw.num_envs != 1
             or any(agent.control_mode != 'pd_joint_pos' for agent in raw.agent.agents)):
         raise ValueError(f'Sync supports one {task_id} with pd_joint_pos')
+    panda_pill = task_id == TASK_ID and tuple(raw.robot_uids) == ('panda_wristcam',)*2
+    if planner_backend == 'curobo' and not panda_pill:
+        raise ValueError('cuRobo currently supports only the Panda pill task')
     default_task, default_checker = task_components(task_id)
     task_factory = default_task if task_factory is None else task_factory
     checker_factory = default_checker if checker_factory is None else checker_factory
@@ -145,16 +171,19 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
     env.reset(seed=seed)
     report = {'schema': ('dual-panda-sync-v1' if raw.robot_uids[0] == 'panda_wristcam'
                          else 'dual-arm-sync-v2'),
-        'task_id': task_id, 'robot_uids': list(raw.robot_uids), 'seed': seed, 'backend': 'mplib',
+        'task_id': task_id, 'robot_uids': list(raw.robot_uids), 'seed': seed, 'backend': planner_backend,
         'task_profile': asdict(raw.embodiment_profile),
         'robot_profile': asdict(get_robot_profile(raw.robot_uids[0])),
         'control_freq': 20, 'physics_freq': 100, 'policy': policy.to_dict(),
         'motion_limits': dict(LIMITS), 'stages': [], 'planning': [],
         'execution': {'status': 'running'}, 'quality': {'status': 'not_evaluated'},
         'recording': {'status': 'owned_by_RecordEpisode'}}
+    report['execution_features'] = {'quiet_preparation': panda_pill,
+                                    'release_separation': panda_pill}
     raw.dual_sync_result = report
     task = task_factory(raw)
     checker = None
+    backend = None
     capture = ObservedEnvironment(env, task, lambda: checker, policy)
     started = time.monotonic()
 
@@ -166,41 +195,54 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         if debug:
             print(f'sync {name}: {result["status"]} at step{elapsed()}', flush=True)
         if result['status'] != 'passed':
-            physical = capture.events or result.get('reason') in (
-                'grasp_lost', 'object_dropped', 'position_slip', 'rotation_slip', 'measured_collision')
-            quality_timeout = ((name == 'retreat' and result['status'] == 'reach_timeout')
-                or (name == 'verify_placement' and result['status'] == 'placement_timeout'))
-            category = ('physics' if physical else 'planning' if result['status'] == 'rejected'
-                else 'quality' if quality_timeout else 'execution')
+            category = _failure_category(name, result, physical_events=bool(capture.events))
             raise StageFailure(category, f'{name}: {result.get("reason", result["status"])}')
 
     try:
         capture.install()
-        arms = bindings(raw, tuple(raw.agent.agents_dict))
-        opened = {arm.key: native_arm_action(arm, np.r_[arm.arm_qpos(), 1.]) for arm in arms}
-        for _ in range(10):
-            capture.step(opened)
+        if panda_pill:
+            report['preparation'] = prepare_dual_open(capture, task.targets, policy=policy)
+        else:
+            arms = bindings(raw, tuple(raw.agent.agents_dict))
+            opened = {arm.key: native_arm_action(arm, np.r_[arm.arm_qpos(), 1.]) for arm in arms}
+            for _ in range(10):
+                capture.step(opened)
+            report['preparation'] = {'environment_steps': 10, 'max_steps': 10,
+                                     'early_completion': False}
         solvers = pill_planners(env, debug=debug, vis=vis)
-        for solver in solvers:
-            attach_topp_capture(solver)
+        if planner_backend == 'mplib':
+            for solver in solvers:
+                attach_topp_capture(solver)
         checker = checker_factory.from_solvers(raw, *solvers, targets=task.targets)
         checker.set_measured_attachment_prediction(True)
+        if planner_backend == 'curobo':
+            from .curobo_backend import CuroboBackend
+            backend = CuroboBackend(env, solvers, task, seed=seed,
+                options=curobo_options, limits=LIMITS, session=curobo_session)
+            backend.initialize(checker)
 
         def plan(name, poses, closed):
             capture.phase = name
             before = elapsed()
+            # A failed solve has no endpoint measurement for this phase.
+            for solver in solvers:
+                solver.last_endpoint_audit = {}
             limits = task_phase_limits(raw.embodiment_profile, name)
-            compact_set_phase_limits(solvers, limits)
+            if planner_backend == 'mplib':
+                compact_set_phase_limits(solvers, limits)
             call = time.monotonic()
             try:
-                source = plan_dual_pose(*solvers, poses, gripper_commands=(-1, -1) if closed else (1, 1), policy=policy)
-                results, _ = compact_retime_pair(tuple(s.last_native_result for s in solvers),
-                    tuple(s.last_native_parameterization for s in solvers),
-                    velocity_limit=limits['nominal_velocity_limit_rad_s'],
-                    acceleration_limit=limits['nominal_acceleration_limit_rad_s2'])
-                trajectories = tuple(ArmTrajectory(t.action_key, t.joint_names, r['time'], r['position'], -1. if closed else 1.)
-                    for t, r in zip(source.trajectories, results))
-                schedule = build_hold_schedule(*trajectories, control_timestep_s=raw.control_timestep)
+                if backend is None:
+                    source = plan_dual_pose(*solvers, poses, gripper_commands=(-1, -1) if closed else (1, 1), policy=policy)
+                    results, _ = compact_retime_pair(tuple(s.last_native_result for s in solvers),
+                        tuple(s.last_native_parameterization for s in solvers),
+                        velocity_limit=limits['nominal_velocity_limit_rad_s'],
+                        acceleration_limit=limits['nominal_acceleration_limit_rad_s2'])
+                    trajectories = tuple(ArmTrajectory(t.action_key, t.joint_names, r['time'], r['position'], -1. if closed else 1.)
+                        for t, r in zip(source.trajectories, results))
+                    schedule = build_hold_schedule(*trajectories, control_timestep_s=raw.control_timestep)
+                else:
+                    schedule = backend.plan(name, poses, closed=closed, checker=checker, limits=limits)
                 settle = movement_budget(policy, before, schedule.num_steps, name)
             except StageFailure:
                 raise
@@ -254,8 +296,15 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         if policy.require_retreat:
             retreat_start = np.asarray([as_numpy(a.tcp.pose.p)[0].copy() for a in raw.agent.agents])
             poses = task.retreat_poses(policy.retreat_command_m)
-            schedule, settle = plan('retreat', poses, False)
-            finish('retreat', execute_dual_reach(capture, schedule, checker, settle_max_steps=settle, policy=policy))
+            try:
+                if panda_pill:
+                    capture.begin_release_separation(checker.begin_release_separation())
+                schedule, settle = plan('retreat', poses, False)
+                finish('retreat', execute_dual_reach(capture, schedule, checker, settle_max_steps=settle, policy=policy))
+            finally:
+                if panda_pill:
+                    capture.end_release_separation()
+                    checker.end_release_separation()
             gain = np.asarray([as_numpy(a.tcp.pose.p)[0] for a in raw.agent.agents])-retreat_start
             report['quality']['retreat_displacement_m'] = gain.tolist()
             if np.any(gain[:, 2] < policy.minimum_retreat_m):
@@ -284,6 +333,12 @@ def solve(env, seed=None, debug=False, vis=False, *, policy=DEFAULT_POLICY,
         report['execution'] = {'status': 'failed', 'category': 'runtime',
             'reason': f'{type(exc).__name__}: {exc}'}
     finally:
+        if backend is not None:
+            report['curobo'] = backend.summary()
+            try:
+                backend.close()
+            except Exception as exc:
+                report['curobo']['cleanup_error'] = f'{type(exc).__name__}: {exc}'
         capture.restore()
         success = bool(as_numpy(raw.evaluate()['success']).item())
         report['official'] = {'success': success, 'elapsed_steps': elapsed(),

@@ -34,10 +34,12 @@ SUPPORT_VERSION = "pill_initial_tabletop_geometry_v2"
 def _support_motion_diagnostics(displacement: np.ndarray, angle: float,
                                 band: float) -> dict[str, Any]:
     """Retain the former vertical-pick window without treating it as geometry."""
-    return {"legacy_motion_window_passed": bool(
-                -1e-6 <= displacement[2] <= band
-                and np.linalg.norm(displacement[:2]) <= .001 and angle <= .01),
-            "motion_window_is_collision_gate": False}
+    within_bounds = bool(-1e-6 <= displacement[2] <= band
+        and np.linalg.norm(displacement[:2]) <= .001 and angle <= .01)
+    return {"legacy_motion_window_passed": within_bounds,
+            "motion_window_is_collision_gate": False,
+            "original_motion_window_within_bounds": within_bounds,
+            "original_motion_window_used_for_acceptance": False}
 
 
 class PillTableSupportCollisionChecker(NumericalTableSupportCollisionChecker):
@@ -177,10 +179,10 @@ class PillTableSupportCollisionChecker(NumericalTableSupportCollisionChecker):
             # object. Test actual finite-table convex geometry and depth below;
             # measured permanent departure still revokes this exception.
             pieces = self._pieces(pose)
+            receipt["whole_object_pieces"] = pieces
             if any(not p["entire_footprint_inside"] or not p["vertices_above_top"]
                    or p["vertex_penetration_m"] > limit for p in pieces):
                 raise RuntimeError("Supplied whole-object geometry exceeds bounded top support")
-            receipt["whole_object_pieces"] = pieces
             receipt["geometry"] = self._validate_contact_geometry(target_name, contacts, pose, limit)
             receipt.update(status="allowed", reason="independently_bounded_initial_pill_top_support")
         except (RuntimeError, ValueError, np.linalg.LinAlgError) as exc:
@@ -214,9 +216,45 @@ class PillDualPayloadCollisionChecker(DualPayloadCollisionChecker):
             raise
 
 
-if __name__ == '__main__':
-    diagnostic = _support_motion_diagnostics(np.array([.002, 0., -20e-6]), .02, .003)
-    assert not diagnostic['legacy_motion_window_passed']
-    assert not diagnostic['motion_window_is_collision_gate']
-    assert _support_motion_diagnostics(np.zeros(3), 0., .003)['legacy_motion_window_passed']
-    print('Initial support motion is diagnostic; convex geometry owns collision acceptance')
+def self_test() -> dict[str, Any]:
+    """Exercise geometric support bounds on synthetic convex vertices, on CPU."""
+    checker = PillTableSupportCollisionChecker()
+    checker._initial_object = np.eye(4)
+    checker._target_names = frozenset(("piece",))
+    vertices = np.array([[x, y, z] for x in (-.01, .01) for y in (-.01, .01)
+                         for z in (0., .02)])
+    checker._local_vertices = {"piece": vertices}
+    checker._shape_local = {"piece": np.eye(4)}
+    checker._table_pose = np.eye(4)
+    checker._table_pose[2, 3] = -.05
+    checker._table_side = np.array([2., 1.2, .1])
+    checker._initial_support_exists = True
+    checker._initial_object_depth_m = 0.
+    checker.support_released = False
+    checker.support_band_m = checker.support_penetration_m = .003
+    checker.support_depth_slop_m = .0002
+    checker._support_validation_history = []
+    checker.coverage = {}
+    pose = np.eye(4)
+    pose[2, 3] = -8e-6
+
+    def allowed(value: np.ndarray) -> bool:
+        return checker._support_allowed("piece", TABLE_NAME, value,
+            [{"depth": max(0., -float(value[2, 3])),
+              "normal": [0., 0., 1.], "position": [0., 0., 0.]}])
+
+    assert allowed(pose)
+    assert not checker._last_support_validation["original_motion_window_within_bounds"]
+    deep = pose.copy(); deep[2, 3] = -.0003
+    assert not allowed(deep)
+    edge = pose.copy(); edge[0, 3] = 1.
+    assert not allowed(edge)
+    checker.support_released = True
+    assert not allowed(pose)
+    return {"status": "passed", "vertices_shape": list(vertices.shape),
+            "support_cases": 4, "environment_steps": 0}
+
+
+if __name__ == "__main__":
+    import json
+    print(json.dumps(self_test(), allow_nan=False))

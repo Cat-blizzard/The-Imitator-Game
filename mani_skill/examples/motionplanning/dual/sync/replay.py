@@ -46,6 +46,34 @@ def action_layout(metadata: dict) -> tuple[tuple[str, str], tuple[int, int]]:
     return order, sizes
 
 
+def release_separation_enabled(metadata: dict[str, Any], episode: dict[str, Any]) -> bool:
+    """Replay the archive's retreat semantics, limited to the Panda pill route.
+
+    New archives declare execution features explicitly. Before that declaration
+    existed, cuRobo archives recorded the backend in collection metadata or the
+    episode report; the other sync routes did not use this separation gate.
+    Legacy Panda archives identify their pair through the native action order.
+    """
+    sync = episode["dual_sync"]
+    motion = metadata.get("motion_planning", {})
+    features = sync.get("execution_features", {})
+    if "release_separation" in features:
+        enabled = features["release_separation"]
+        if type(enabled) is not bool:
+            raise ValueError("release_separation execution feature must be boolean")
+    else:
+        enabled = motion.get("planner_backend", sync.get("backend")) == "curobo"
+    if not enabled or metadata["env_info"]["env_id"] != TASK_ID:
+        return False
+    order, _ = action_layout(metadata)
+    if order != ACTION_ORDER:
+        return False
+    panda_pair = ("panda_wristcam",) * 2
+    declarations = (motion, metadata["env_info"].get("env_kwargs", {}), sync)
+    return all("robot_uids" not in source or tuple(source["robot_uids"]) == panda_pair
+               for source in declarations)
+
+
 def load_episode(path: str | Path, episode_id: int = 0) -> tuple:
     """Read T paired actions and S0, requiring explicit sync phase boundaries."""
     path = Path(path)
@@ -66,7 +94,15 @@ def load_episode(path: str | Path, episode_id: int = 0) -> tuple:
     stages = sync["stages"]
     if [row.get("name") for row in stages] != expected or any(row.get("status") != "passed" for row in stages):
         raise ValueError("Replay requires complete successful stage boundaries; partial records are unsupported")
-    phases = [("preparation", 10)] + [(row["name"], row["environment_steps"]) for row in stages]
+    preparation_steps = 10
+    if "preparation" in sync:
+        preparation = sync["preparation"]
+        if (not isinstance(preparation, dict)
+                or type(preparation.get("environment_steps")) is not int
+                or not 1 <= preparation["environment_steps"] <= 10):
+            raise ValueError("Explicit preparation metadata requires environment_steps integer in [1,10]")
+        preparation_steps = preparation["environment_steps"]
+    phases = [("preparation", preparation_steps)] + [(row["name"], row["environment_steps"]) for row in stages]
     if any(type(count) is not int or count < 0 or (count == 0 and name != "observe_task_outcome")
            for name, count in phases):
         raise ValueError("Replay phase action counts must be positive, except a zero-step outcome observation")
@@ -121,6 +157,7 @@ def failure_details(name: str, report: dict[str, Any]) -> dict[str, Any]:
 def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
     metadata, episode, policy, phases, actions, initial_state = load_episode(path, episode_id)
     order, sizes = action_layout(metadata)
+    release_separation = release_separation_enabled(metadata, episode)
     task_id = metadata["env_info"]["env_id"]
     task_factory, checker_factory = task_components(task_id)
     kwargs = dict(metadata["env_info"]["env_kwargs"])
@@ -161,6 +198,8 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 checker.detach()
             phase = None
             if checker is not None:
+                if name == "retreat" and release_separation:
+                    capture.begin_release_separation(checker.begin_release_separation())
                 checker.set_target_contacts_allowed((name in ("descend", "close_and_confirm", "release") or held,)*2)
                 phase = _Phase(capture, checker, name, targets=task.targets, held=held, policy=policy)
                 if not phase.preflight():
@@ -208,6 +247,13 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 raise RuntimeError("Physical source departure did not reproduce")
             if name == "retreat":
                 retreat_gain = np.asarray([as_numpy(agent.tcp.pose.p)[0] for agent in raw.agent.agents])-retreat_start
+                if release_separation:
+                    if checker.release_separation.finish():
+                        raise RuntimeError("Retreat ended before geometry separation completed")
+                    if not capture.release_separation_complete:
+                        raise RuntimeError("Retreat ended before physical contact separation completed")
+                    capture.end_release_separation()
+                    checker.end_release_separation()
         result["execution"]["status"] = "passed"
         final_regions = [predicate(actor) for predicate, actor in zip(predicates, task.targets)]
         final_opened = all(phase.opened(arm, row) for arm in phase.arms)
@@ -224,7 +270,11 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
     except Exception as exc:
         result["execution"] = {"status": "failed", "reason": f"{type(exc).__name__}: {exc}"}
     finally:
+        if checker is not None and release_separation:
+            checker.end_release_separation()
         if capture is not None:
+            if release_separation:
+                capture.end_release_separation()
             capture.restore()
             result["physics"] = capture.summary()
         success = bool(as_numpy(raw.evaluate()["success"]).item())
