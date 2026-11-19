@@ -5,6 +5,10 @@ cuRobo backend, multi-embodiment workflows, and three standalone dataset fixes.
 It is an integration target for development and regression. The feature/fix
 branches remain separate for upstream review, and `main` is unchanged.
 
+Subsequent native human-video ACT work is on `feat/native-video-act`, based on
+this integration target. It has not yet been merged into
+`integration/current-features`. The status and priorities below cover both.
+
 ## Included sources
 
 | Source branch | Frozen head |
@@ -160,40 +164,78 @@ rates, complete task coverage, a new policy training run or a speed comparison.
 See [the compact validation record](integration-validation.json) for source
 identities and machine-readable results.
 
+## TODO status as of 2026-11-19
+
+- [x] Shared synchronous execution, concentrated robot/task configuration,
+  portable runtime, and distinct planning, execution, expert-quality and policy
+  evaluation responsibilities for the supported combinations above.
+- [x] Five robot pairs complete the original pill generation, replay, conversion,
+  separate single-task ACT training and native rollout workflow. Those earlier
+  ACT models have no human video condition.
+- [x] Repair generation/replay initialization: all eight existing integration
+  archives replay with exact actions and T+1 state arrays. The new fourteen-case
+  batch retains one generation-quality failure, xArm6101.
+- [x] Complete the ARX X5 human-video ACT L0 pilot: real human_H31 clips,
+  6,000 training updates, strict reload, 3/3 development and 5/5 initial evaluation
+  success. A subsequent frozen batch of twenty new local-history seeds achieves
+  20/20 final success with the same checkpoint.
+- [x] Diagnose action clipping without changing scoring or execution. Across
+  4,000 new rollout steps the twelve arm coordinates never exceed bounds;
+  gripper excess corresponds to at most 0.247/0.511 mm of per-finger target
+  correction. Denormalization and executed H5 actions agree exactly. The latest
+  applicable CPU suite passes 582 tests. Details and limits are in
+  [the validation report](native_video_act_validation.md).
+- [x] Extract and push four standalone fixes to the fork:
+  `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
+  `fix/act-single-interfaces`. The ACT interface fix is based directly on the
+  official source; preparing that branch is complete, upstream submission is
+  separate.
+
 ## Next implementation priorities
 
-The older A–I implementation plan contains dated status notes. The following
-priorities distinguish implemented interfaces from remaining benchmark work.
+1. **P0: one robot pair, two original tasks, one video-conditioned ACT model.**
+   Start with Piper pill and apple/banana baskets, paired with human_H31 and
+   human_H8. Both expert generation/replay routes and the human datasets already
+   exist. ARX currently needs another original-task expert adapter for this scope.
 
-1. **Use the repaired baseline to characterize remaining task quality failures.**
-   The fixed new-seed batch retains xArm6101's placement quality failure; it is
-   already present in generation and its state trace reproduces exactly.
-   Investigate its physical cause before changing the task procedure or quality
-   settings. Broader coverage and matched timing experiments remain necessary
-   before general success-rate or cuRobo speed claims.
-2. **Extend the native video-conditioned pilot to benchmark coverage.** The
-   `feat/native-video-act` branch connects human_H31 videos to an ARX X5 policy
-   through native robot data, training, strict checkpoint reload and L0 policy
-   rollouts. Its fixed protocol and measured results are in the
-   [validation report](native_video_act_validation.md). Full L0–L3 pairing,
-   multiple tasks and cross-task evaluation remain separate work. The earlier
-   five-body single-task ACT checks have no human video condition.
-3. **Review the minimal ACT interface fix separately.**
-   `fix/act-single-interfaces` has been extracted from the current official base
-   and pushed to the fork. It contains constructor/import, condition projection
-   and evaluation entry fixes. It has not been submitted upstream; training
-   choices and this broader learning workflow remain separate.
-4. **Expand task coverage before increasing robot count.** Add a representative
-   supported task or bounded new-seed set through the same entry, recording,
-   replay and conversion paths. Backend comparisons require the same task,
-   source version, policy and initialization; shared executor support alone
-   does not make every planner/robot combination available.
-5. **Choose one further capability after the baseline is stable.** For dexterous
-   hands, first audit one arm/hand's assets and controls and close a simple rigid
-   grasp/carry/replay loop. For joint planning, use a task where changing both
-   spatial paths is necessary and build on the separate joint-14 prototype.
-   Handover, closed-chain manipulation, automatic recovery, USD/Real2Sim and
-   soft-body tasks each need additional execution/data contracts.
+   - [ ] Freeze small robot train/development/evaluation and human-clip splits,
+     data versions and collection attempts. Add the basket training/development
+     dataset; its six successful expert regression cases are not a complete
+     learning dataset.
+   - [ ] Extend the single-task manifest, dataset, trainer and evaluator. Route
+     each real robot sample to its task's human clips, define task sampling, and
+     save/restore each task's native contract, physical profile and training-only
+     normalizer. The Piper tasks have different mounting poses: removing the
+     trainer's single-task assertion alone would restore the wrong environment.
+     Task identifiers route data/configuration and reports, not an extra policy
+     input.
+   - [ ] Train one shared checkpoint and evaluate both tasks on fixed new seeds;
+     retain per-task results, macro averages, timeouts and interface failures.
+   - [ ] Compare video conditioning with a matched no-video model and controlled
+     condition interventions. The two scenes themselves reveal task identity,
+     so joint success or an invalid cross-task video swap cannot establish video
+     semantics. A goal-following claim additionally needs the same valid robot
+     initial state with multiple executable goals distinguished by the demo.
 
-These priorities do not represent completed policy training or additional
-supported planner/task/robot combinations.
+2. **P1: maintain supported routes and investigate xArm6101.** Its placement
+   reaches only 9/20 stable observations before the original action budget ends,
+   and the generation trace replays exactly. Determine the cause before changing
+   task procedures or quality settings. Broader regression or a speed comparison
+   should use a bounded, separately frozen batch; compare MPLib/cuRobo with the
+   same source, task and initial state, reporting cold/continuous costs and
+   qualified trajectories per hour separately.
+3. **P2: integrate and prepare the fork's deliverable.** Merge the validated
+   native-video workflow into the integration target, verify startup from an
+   independent checkout, and update supported commands and the capability
+   matrix. Retain the separate feature/fix branches for review. Official upstream
+   submission follows the user's explicit instruction.
+4. **Then expand tasks and L0–L3 pairing before adding another capability.**
+   Choose joint planning when a task requires both spatial paths to change, or
+   audit one arm/hand for a rigid grasp/carry/replay loop. Historical handover
+   and recovery prototypes have bounded engineering evidence but are not part
+   of the current clean supported routes. USD/Real2Sim, closed-chain and
+   soft-body work remain later work packages.
+
+The ARX result establishes a single-task learning loop. Multi-task video use,
+full L0–L3 coverage, cross-task transfer and a complete official benchmark
+result remain open.
