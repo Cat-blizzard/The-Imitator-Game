@@ -54,6 +54,15 @@ def test_legacy_curobo_pair_is_identified_by_native_action_order():
     assert not replay.release_separation_enabled(metadata, episode)
 
 
+def test_legacy_mplib_release_facts_preserve_its_recorded_separation_rule():
+    metadata, episode = archive(backend="mplib")
+    episode["dual_sync"]["physics"] = {"release_separation": {
+        "initial_pairs": [], "separated_pairs": [], "remaining_pairs": []}}
+    assert replay.release_separation_enabled(metadata, episode)
+    episode["dual_sync"]["execution_features"] = {"release_separation": False}
+    assert not replay.release_separation_enabled(metadata, episode)
+
+
 def test_release_feature_does_not_enable_panda_gate_for_other_tasks():
     metadata, episode = archive(features={"release_separation": True})
     metadata["env_info"]["env_id"] = "TwoRobotPickAppleBananaToBaskets-v1"

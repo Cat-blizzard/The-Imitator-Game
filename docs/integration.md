@@ -76,8 +76,9 @@ See [generation and conversion](dual-arm-sync.md),
   This intentionally updates the older Panda MPLib execution behavior.
 - Replay reads the recorded preparation length, falling back to ten only for
   old archives. New explicit release-separation metadata takes precedence;
-  old cuRobo Panda archives retain that rule, while old sync/multi archives do
-  not acquire an additional release-separation gate.
+  old Panda archives with recorded release-separation physics retain that rule
+  even when their backend was MPLib, with the old cuRobo backend as an additional
+  fallback. Old sync/multi archives without it do not acquire an additional gate.
 - Single-task ACT uses the multi-embodiment seeded native CPU rollout, with
   saved camera/statistics/state/action contracts. State projection, padding
   masks, exact video frame access, floating-point image statistics and recorded

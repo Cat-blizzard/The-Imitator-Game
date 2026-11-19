@@ -50,8 +50,9 @@ def release_separation_enabled(metadata: dict[str, Any], episode: dict[str, Any]
     """Replay the archive's retreat semantics, limited to the Panda pill route.
 
     New archives declare execution features explicitly. Before that declaration
-    existed, cuRobo archives recorded the backend in collection metadata or the
-    episode report; the other sync routes did not use this separation gate.
+    existed, the cuRobo branch also used separation on its MPLib route. Its
+    physics summary records that fact; older cuRobo archives additionally
+    identify the backend in collection metadata or the episode report.
     Legacy Panda archives identify their pair through the native action order.
     """
     sync = episode["dual_sync"]
@@ -62,7 +63,8 @@ def release_separation_enabled(metadata: dict[str, Any], episode: dict[str, Any]
         if type(enabled) is not bool:
             raise ValueError("release_separation execution feature must be boolean")
     else:
-        enabled = motion.get("planner_backend", sync.get("backend")) == "curobo"
+        enabled = (isinstance(sync.get("physics", {}).get("release_separation"), dict)
+                   or motion.get("planner_backend", sync.get("backend")) == "curobo")
     if not enabled or metadata["env_info"]["env_id"] != TASK_ID:
         return False
     order, _ = action_layout(metadata)
