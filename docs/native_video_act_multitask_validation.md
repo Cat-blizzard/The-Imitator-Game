@@ -18,9 +18,12 @@ complete official TIG result. The scenes also expose task identity, so the
 comparison alone does not establish demonstration-goal understanding.
 
 The subsequent [12,000-update experiment](#completed-12000-update-budget)
-completes the planned development curve. Its two 9,000-update checkpoints are
-the current candidates for an independent evaluation; the table above remains
-the original 6,000-update final batch and is not replaced by development scores.
+completes the planned development curve. Its selected 9,000-update checkpoints
+now complete an [independent scene-seed regression](#independent-9k-scene-seed-regression):
+both achieve pill **18/20**, baskets **20/20**, macro **95%**, with zero interface
+errors. This checks new scenes with the same development human clips. The table
+above remains the original 6,000-update final batch; its human clips and robot
+seeds differ, so its scores are not a controlled training-budget comparison.
 
 ## Data and task routing
 
@@ -311,13 +314,79 @@ both conditions**. Preserve both candidates at the same update budget:
   `61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef`.
 
 The local `budget-12000/selected-checkpoints.json` records those identities and
-their selection basis. Every 3k/6k/9k/12k checkpoint remains retained. The next
-step is a separately frozen fresh-seed comparison of the selected policies,
-keeping execution and scoring fixed. No new final-test episodes were run in
-this budget experiment. Additional long training or task/data expansion is not
-the immediate next step; the current candidates first need that independent
-check. Demonstration following in a common scene with multiple valid goals
-remains a separate experiment.
+their selection basis. Every 3k/6k/9k/12k checkpoint remains retained. Its
+`not_run_for_selected_candidates` field preserves the status at selection;
+the separate scene-seed regression below follows that frozen selection.
+No new final-test episodes were run within the 12k budget experiment.
+
+## Independent 9k scene-seed regression
+
+At source `61740faebc87ee204f3113f733f17c2a3bf4c3bf`, both previously selected
+9k checkpoints execute **seeds 24000–24019 once per task**: 20 seeds, two tasks,
+two conditions, **80 episodes / 16,000 control steps**. The retained readable
+local history contains no seed/command/filename conflict; deleted records,
+remote hosts, denied shell history and untraversed directory symlinks remain
+outside that audit's scope. Both actual checkpoint files were rehashed before
+launch and match their recorded selection identities.
+
+Only robot reset seeds change from the 9k development evaluation. Human clips
+remain development episode 4, H31 for pill and H8 for baskets, and their complete
+recorded identities match development. Prediction horizon 16, execution window 8, the 200-step
+limit, public RGB/qpos, native profiles, training-only normalizers, ordinary
+clamp and official scoring remain fixed. There is no retraining, candidate
+reselection, failed-case retry, seed replacement or extra quality rejection.
+Diagnostics only read state and do not change actions, rewards or termination.
+
+| Condition | Pill final success (Wilson 95% CI) | Baskets final success (Wilson 95% CI) | Macro final success |
+| --- | ---: | ---: | ---: |
+| Human video, 9k | 18/20, 90% (69.9–97.2%) | 20/20, 100% (83.9–100%) | 95% |
+| Constant zero condition, 9k | 18/20, 90% (69.9–97.2%) | 20/20, 100% (83.9–100%) | 95% |
+
+Each process completes all forty allocations and exits zero, in 260.63 seconds
+for video and 263.77 seconds for constant conditioning on separate RTX 5880 Ada
+GPUs. These are run costs, not a controlled speed comparison. Final and
+once-success counts agree: **38/40 per condition**, with two task timeouts and
+zero interface errors each. All failures remain in the denominator. All forty
+paired initial physical states and public RGB/qpos arrays match bitwise. All
+16,000 executed action rows are finite; recomputed ordinary clamp, recorded
+execution and H5 actions match bitwise. Arm action clipping is zero; maximum
+gripper excess is 0.045280 in normalized command units. No range is changed.
+
+| Task | Both succeed | Video only | Constant only | Both fail |
+| --- | ---: | ---: | ---: | ---: |
+| Pill | 16 | 2 | 2 | 0 |
+| Baskets | 20 | 0 | 0 | 0 |
+
+The four pill failures show different behavior:
+
+- **Video, seeds 24012/24014:** the left grasp predicate is transient and lost outside
+  the target region; the left object remains outside at step 200. The right
+  object is placed and ungrasped. Closed-gripper losses occur at steps 83/85
+  and 90 respectively; seed 24014 also has an earlier loss at step 82 while its
+  command is about +0.595. These records do not establish one mechanical cause.
+- **Constant, seed 24003:** both sides grasp at step 81 and retain the objects to 200,
+  lifted about 0.13 m near the starting XY position. The final twenty steps move
+  the objects only about 5 mm; neither enters its region.
+- **Constant, seed 24015:** both sides also retain their grasps from 81 to 200, but move
+  the objects about 0.23/0.21 m in the final twenty steps. Both are still held
+  outside their regions at the horizon. This case is still progressing late;
+  the four failures cannot all be attributed to insufficient time.
+
+Pill success on twenty new scenes is stronger evidence than the previous
+three-seed development result, while **two video failures remain**. The equal
+success rates and symmetric paired differences show no aggregate video gain in
+this batch; they also do not prove that conditioning has no effect. The Wilson
+intervals describe scene sampling for each fixed trained model, not training-seed
+variation. One training seed, two L0 tasks and already-used development clips
+do not establish unseen-video generalization or complete official TIG performance.
+The original 6k batch used human episode 5 and seeds 23000–23009, so its score
+difference cannot be attributed solely to another 3k training updates.
+
+Keep these weights and results fixed. The next learning experiment should test
+different executable demonstration goals in the same valid scene, with a
+separate development/test allocation. The four retained failures can support
+development diagnosis, but this batch must not become fresh test evidence again
+after tuning. Longer training is not justified merely by the remaining failures.
 
 ## Retained evidence
 
@@ -335,7 +404,10 @@ retained separately. The `budget-12000/` subdirectory retains the frozen
 and videos, full prefix and final-training audits, candidate identities and
 action/initial-state audits. A tuple/list comparison mismatch in the standalone
 audit was corrected with its original log retained; it was not a training or
-rollout failure. The compact JSON beside this report preserves
+rollout failure. The `fresh-9k-20261119/` subdirectory retains the pre-run
+protocol, seed-history and checkpoint audits, all eighty trajectories/videos,
+launch receipts, external launcher/auditor scripts and `compact-results.json`.
+The compact JSON beside this report preserves
 portable identities and per-seed outcomes; datasets and weights are not included
 in the fork. Original ARX single-task results remain in
 [their separate validation report](native_video_act_validation.md).

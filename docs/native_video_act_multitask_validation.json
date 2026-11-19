@@ -2025,5 +2025,1349 @@
     },
     "interpretation": "Both conditions perform better at9k than12k on these three development seeds/task. Training loss still decreases. Preserve both9k candidates at a matched budget for fresh independent evaluation; not proof of overfitting, robust video gains or full TIG performance.",
     "next_step": "Freeze and run a fresh-seed comparison of the selected9k video/constant candidates with unchanged execution/scoring. No new final tests in the completed budget protocol."
+  },
+  "fresh_9k_scene_regression": {
+    "status": "completed",
+    "source_commit": "61740faebc87ee204f3113f733f17c2a3bf4c3bf",
+    "runtime_same_as_original_pilot": true,
+    "evidence_subdirectory": "fresh-9k-20261119",
+    "evidence_sha256": {
+      "protocol.json": "723f9a0491babe1e50169e4338e13b71699b7f53c19e3a2d76fa5c76cb0d275a",
+      "regression-seeds.json": "b40e7595210d0bf52cd28ff594deefdfa99de69958fab2528b33b33418590c52",
+      "seed-history-audit.json": "9364029218a0d237e35d9b446b955a780fd6fbe9377a3c109077ffc57a9df0a4",
+      "checkpoint-identity-audit.json": "a42111e148918ca7673cadda6050c4779e1ab4567e63fb4baf901fa736c8d21c",
+      "evaluation-video-receipt.json": "e365e472f4164e86675fded79bd0b953df33818630e01af0dd2e21907b8b1a62",
+      "evaluation-constant-receipt.json": "60f82d7a7c4455c1a48be6b6a060873b1bce53051a84e017c6e3407937a012e7",
+      "compact-results.json": "5635b8d94e5e98f2e3d131c67142a81336d6db6ebdd3fc4ed8bdbdff58f85bff",
+      "independent-result-audit.json": "7378069ab0fe10a661e972dcf222a519fe118bdd08872f967df5d20ae1e8972e"
+    },
+    "scope": "Fixed selected9k models, only robot environment seeds changed from development. Human video stays development ep4. Independent robot-scene regression, not unseen-video generalization or full official TIG benchmark. Original40 evaluation outcomes unchanged; no selection from this batch.",
+    "fixed_protocol": {
+      "selected_update_step": 9000,
+      "selection": "Previously selected by fixed development macro final success; no selection or adaptation from this batch",
+      "robot_seeds_per_task": [
+        24000,
+        24001,
+        24002,
+        24003,
+        24004,
+        24005,
+        24006,
+        24007,
+        24008,
+        24009,
+        24010,
+        24011,
+        24012,
+        24013,
+        24014,
+        24015,
+        24016,
+        24017,
+        24018,
+        24019
+      ],
+      "human_role": "development",
+      "human_episode": 4,
+      "human_sources": {
+        "pill": "human_H31",
+        "basket": "human_H8"
+      },
+      "execute_steps": 8,
+      "prediction_steps": 16,
+      "max_episode_steps": 200,
+      "control_hz": 20,
+      "physics_hz": 100,
+      "attempts_per_case": 1,
+      "public_rgb_qpos_only": true,
+      "official_scoring_unchanged": true,
+      "diagnostics_read_only": true,
+      "retraining_or_reselection_or_failed_case_retries": false
+    },
+    "seed_history_audit": {
+      "no_conflict_in_readable_retained_local_history": true,
+      "limitations": [
+        "Deleted records and remote hosts not covered",
+        "Denied shell history and untraversed directory symlinks not covered"
+      ],
+      "checkpoint_actual_file_sha_matches_frozen_selection": true
+    },
+    "episodes": 80,
+    "control_steps": 16000,
+    "interface_errors": 0,
+    "models": {
+      "video": {
+        "episodes": 40,
+        "macro_final_success": 0.95,
+        "official_success_at_end": 38,
+        "official_success_once": 38,
+        "timeouts": 2,
+        "interface_errors": 0,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "tasks": {
+          "pill": {
+            "episodes": 20,
+            "official_success_at_end": 18,
+            "official_success_once": 18,
+            "success_rate": 0.9,
+            "wilson95": [
+              0.6989663547715196,
+              0.9721335187862309
+            ],
+            "timeouts": 2,
+            "interface_errors": 0,
+            "stage_counts": {
+              "success": 18,
+              "placement_not_successful": 2
+            },
+            "cases": [
+              {
+                "seed": 24000,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 158,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24001,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 131,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24002,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 172,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24003,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 131,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24004,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 150,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24005,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 149,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24006,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 129,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24007,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 146,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24008,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 130,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24009,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 129,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24010,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 138,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24011,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 131,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24012,
+                "steps": 200,
+                "official_success_at_end": false,
+                "official_success_once": false,
+                "first_success_step": null,
+                "timeout": true,
+                "failure_stage": "placement_not_successful",
+                "interface_error": false,
+                "per_arm_grasp_placement": {
+                  "left": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 72,
+                    "grasp_to_ungrasped_steps": [
+                      83,
+                      85
+                    ],
+                    "grasp_to_ungrasped_outside_region_steps": [
+                      83,
+                      85
+                    ],
+                    "first_placed_and_ungrasped_step": null,
+                    "final_placed_and_ungrasped": false
+                  },
+                  "right": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 81,
+                    "grasp_to_ungrasped_steps": [
+                      135,
+                      142,
+                      147,
+                      163
+                    ],
+                    "grasp_to_ungrasped_outside_region_steps": [],
+                    "first_placed_and_ungrasped_step": 135,
+                    "final_placed_and_ungrasped": true
+                  }
+                },
+                "final_predicates": {
+                  "left_in_region": false,
+                  "right_in_region": true,
+                  "left_grasped": false,
+                  "right_grasped": false,
+                  "is_robot_static": false,
+                  "step": 200,
+                  "official_success": false
+                },
+                "recorded_motion": {
+                  "left": {
+                    "max_consecutive_observed_grasp_steps": 11,
+                    "grasp_to_ungrasped_transitions": [
+                      {
+                        "step": 83,
+                        "same_step_gripper_command": -0.9979805946350098,
+                        "previous_step_gripper_command": -1.0,
+                        "in_region": false,
+                        "object_z_m": 0.009061925113201141,
+                        "object_xy_to_region_center_m": 0.36347456444799314,
+                        "arm_joint_tracking_linf_rad": 0.10303494334220886
+                      },
+                      {
+                        "step": 85,
+                        "same_step_gripper_command": -0.9939937591552734,
+                        "previous_step_gripper_command": -0.9951651096343994,
+                        "in_region": false,
+                        "object_z_m": 0.006450936198234558,
+                        "object_xy_to_region_center_m": 0.3606602826030928,
+                        "arm_joint_tracking_linf_rad": 0.07209524512290955
+                      }
+                    ],
+                    "object_max_lift_from_initial_m": 0.007670968654565513,
+                    "object_displacement_last20_observations_m": 0.0,
+                    "final_object_xy_delta_from_region_center_m": [
+                      -0.3595065101981163,
+                      0.04433576762676239
+                    ],
+                    "grasp_predicate_at_end": false
+                  },
+                  "right": {
+                    "max_consecutive_observed_grasp_steps": 54,
+                    "grasp_to_ungrasped_transitions": [
+                      {
+                        "step": 135,
+                        "same_step_gripper_command": 0.9994320869445801,
+                        "previous_step_gripper_command": -0.6491844058036804,
+                        "in_region": true,
+                        "object_z_m": 0.009492531418800354,
+                        "object_xy_to_region_center_m": 0.006608453530396083,
+                        "arm_joint_tracking_linf_rad": 0.012525796890258789
+                      },
+                      {
+                        "step": 142,
+                        "same_step_gripper_command": 0.9957269430160522,
+                        "previous_step_gripper_command": 0.18135905265808105,
+                        "in_region": true,
+                        "object_z_m": 0.0013493970036506653,
+                        "object_xy_to_region_center_m": 0.009185657102464967,
+                        "arm_joint_tracking_linf_rad": 0.017412185668945312
+                      },
+                      {
+                        "step": 147,
+                        "same_step_gripper_command": -0.243699848651886,
+                        "previous_step_gripper_command": -0.2717970609664917,
+                        "in_region": true,
+                        "object_z_m": 0.002993851900100708,
+                        "object_xy_to_region_center_m": 0.009088866859007371,
+                        "arm_joint_tracking_linf_rad": 0.024718523025512695
+                      },
+                      {
+                        "step": 163,
+                        "same_step_gripper_command": -0.9961913824081421,
+                        "previous_step_gripper_command": -0.9960361123085022,
+                        "in_region": true,
+                        "object_z_m": 0.003058888018131256,
+                        "object_xy_to_region_center_m": 0.009232160578098338,
+                        "arm_joint_tracking_linf_rad": 0.1035759449005127
+                      }
+                    ],
+                    "object_max_lift_from_initial_m": 0.11112872755620629,
+                    "object_displacement_last20_observations_m": 0.007727578226130914,
+                    "final_object_xy_delta_from_region_center_m": [
+                      0.005235522985458374,
+                      -0.008526787161827087
+                    ],
+                    "grasp_predicate_at_end": false
+                  }
+                }
+              },
+              {
+                "seed": 24013,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 167,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24014,
+                "steps": 200,
+                "official_success_at_end": false,
+                "official_success_once": false,
+                "first_success_step": null,
+                "timeout": true,
+                "failure_stage": "placement_not_successful",
+                "interface_error": false,
+                "per_arm_grasp_placement": {
+                  "left": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 81,
+                    "grasp_to_ungrasped_steps": [
+                      82,
+                      90
+                    ],
+                    "grasp_to_ungrasped_outside_region_steps": [
+                      82,
+                      90
+                    ],
+                    "first_placed_and_ungrasped_step": null,
+                    "final_placed_and_ungrasped": false
+                  },
+                  "right": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 89,
+                    "grasp_to_ungrasped_steps": [
+                      142
+                    ],
+                    "grasp_to_ungrasped_outside_region_steps": [],
+                    "first_placed_and_ungrasped_step": 142,
+                    "final_placed_and_ungrasped": true
+                  }
+                },
+                "final_predicates": {
+                  "left_in_region": false,
+                  "right_in_region": true,
+                  "left_grasped": false,
+                  "right_grasped": false,
+                  "is_robot_static": true,
+                  "step": 200,
+                  "official_success": false
+                },
+                "recorded_motion": {
+                  "left": {
+                    "max_consecutive_observed_grasp_steps": 3,
+                    "grasp_to_ungrasped_transitions": [
+                      {
+                        "step": 82,
+                        "same_step_gripper_command": 0.5949388742446899,
+                        "previous_step_gripper_command": 0.5970497131347656,
+                        "in_region": false,
+                        "object_z_m": 0.008567042648792267,
+                        "object_xy_to_region_center_m": 0.35922825937358444,
+                        "arm_joint_tracking_linf_rad": 0.16370853781700134
+                      },
+                      {
+                        "step": 90,
+                        "same_step_gripper_command": -0.9984824657440186,
+                        "previous_step_gripper_command": -1.0,
+                        "in_region": false,
+                        "object_z_m": 0.008799485862255096,
+                        "object_xy_to_region_center_m": 0.3562460681706658,
+                        "arm_joint_tracking_linf_rad": 0.15027129650115967
+                      }
+                    ],
+                    "object_max_lift_from_initial_m": 0.03555436048191041,
+                    "object_displacement_last20_observations_m": 0.0,
+                    "final_object_xy_delta_from_region_center_m": [
+                      -0.403146356344223,
+                      0.08320565521717072
+                    ],
+                    "grasp_predicate_at_end": false
+                  },
+                  "right": {
+                    "max_consecutive_observed_grasp_steps": 53,
+                    "grasp_to_ungrasped_transitions": [
+                      {
+                        "step": 142,
+                        "same_step_gripper_command": 0.5019969940185547,
+                        "previous_step_gripper_command": -0.9871211051940918,
+                        "in_region": true,
+                        "object_z_m": 0.0027773454785346985,
+                        "object_xy_to_region_center_m": 0.02123905648172412,
+                        "arm_joint_tracking_linf_rad": 0.008363127708435059
+                      }
+                    ],
+                    "object_max_lift_from_initial_m": 0.10498938953969628,
+                    "object_displacement_last20_observations_m": 0.0,
+                    "final_object_xy_delta_from_region_center_m": [
+                      0.009440883994102478,
+                      -0.01974928379058838
+                    ],
+                    "grasp_predicate_at_end": false
+                  }
+                }
+              },
+              {
+                "seed": 24015,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 155,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24016,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 173,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24017,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 138,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24018,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 140,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24019,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 131,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              }
+            ]
+          },
+          "basket": {
+            "episodes": 20,
+            "official_success_at_end": 20,
+            "official_success_once": 20,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "stage_counts": {
+              "success": 20
+            },
+            "cases": [
+              {
+                "seed": 24000,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 152,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24001,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 137,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24002,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 138,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24003,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 145,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24004,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 145,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24005,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 141,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24006,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 136,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24007,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 137,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24008,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 145,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24009,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 148,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24010,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 137,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24011,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 146,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24012,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 136,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24013,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 138,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24014,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 143,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24015,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 137,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24016,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 139,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24017,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 148,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24018,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 138,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24019,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 148,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              }
+            ]
+          }
+        }
+      },
+      "constant": {
+        "episodes": 40,
+        "macro_final_success": 0.95,
+        "official_success_at_end": 38,
+        "official_success_once": 38,
+        "timeouts": 2,
+        "interface_errors": 0,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "tasks": {
+          "pill": {
+            "episodes": 20,
+            "official_success_at_end": 18,
+            "official_success_once": 18,
+            "success_rate": 0.9,
+            "wilson95": [
+              0.6989663547715196,
+              0.9721335187862309
+            ],
+            "timeouts": 2,
+            "interface_errors": 0,
+            "stage_counts": {
+              "success": 18,
+              "transport_or_release_incomplete": 2
+            },
+            "cases": [
+              {
+                "seed": 24000,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 168,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24001,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 155,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24002,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 151,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24003,
+                "steps": 200,
+                "official_success_at_end": false,
+                "official_success_once": false,
+                "first_success_step": null,
+                "timeout": true,
+                "failure_stage": "transport_or_release_incomplete",
+                "interface_error": false,
+                "per_arm_grasp_placement": {
+                  "left": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 81,
+                    "grasp_to_ungrasped_steps": [],
+                    "grasp_to_ungrasped_outside_region_steps": [],
+                    "first_placed_and_ungrasped_step": null,
+                    "final_placed_and_ungrasped": false
+                  },
+                  "right": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 81,
+                    "grasp_to_ungrasped_steps": [],
+                    "grasp_to_ungrasped_outside_region_steps": [],
+                    "first_placed_and_ungrasped_step": null,
+                    "final_placed_and_ungrasped": false
+                  }
+                },
+                "final_predicates": {
+                  "left_in_region": false,
+                  "right_in_region": false,
+                  "left_grasped": true,
+                  "right_grasped": true,
+                  "is_robot_static": true,
+                  "step": 200,
+                  "official_success": false
+                },
+                "recorded_motion": {
+                  "left": {
+                    "max_consecutive_observed_grasp_steps": 120,
+                    "grasp_to_ungrasped_transitions": [],
+                    "object_max_lift_from_initial_m": 0.12953922885935754,
+                    "object_displacement_last20_observations_m": 0.005309101243514499,
+                    "final_object_xy_delta_from_region_center_m": [
+                      -0.3469550684094429,
+                      0.05059768259525299
+                    ],
+                    "grasp_predicate_at_end": true
+                  },
+                  "right": {
+                    "max_consecutive_observed_grasp_steps": 120,
+                    "grasp_to_ungrasped_transitions": [],
+                    "object_max_lift_from_initial_m": 0.13001693284604698,
+                    "object_displacement_last20_observations_m": 0.004744171522743792,
+                    "final_object_xy_delta_from_region_center_m": [
+                      -0.36101606488227844,
+                      -0.06116195023059845
+                    ],
+                    "grasp_predicate_at_end": true
+                  }
+                }
+              },
+              {
+                "seed": 24004,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 194,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24005,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 196,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24006,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 143,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24007,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 151,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24008,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 157,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24009,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 142,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24010,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 187,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24011,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 159,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24012,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 147,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24013,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 180,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24014,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 189,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24015,
+                "steps": 200,
+                "official_success_at_end": false,
+                "official_success_once": false,
+                "first_success_step": null,
+                "timeout": true,
+                "failure_stage": "transport_or_release_incomplete",
+                "interface_error": false,
+                "per_arm_grasp_placement": {
+                  "left": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 81,
+                    "grasp_to_ungrasped_steps": [],
+                    "grasp_to_ungrasped_outside_region_steps": [],
+                    "first_placed_and_ungrasped_step": null,
+                    "final_placed_and_ungrasped": false
+                  },
+                  "right": {
+                    "grasp_measurements_complete": true,
+                    "region_measurements_complete": true,
+                    "ever_grasped": true,
+                    "first_grasp_step": 81,
+                    "grasp_to_ungrasped_steps": [],
+                    "grasp_to_ungrasped_outside_region_steps": [],
+                    "first_placed_and_ungrasped_step": null,
+                    "final_placed_and_ungrasped": false
+                  }
+                },
+                "final_predicates": {
+                  "left_in_region": false,
+                  "right_in_region": false,
+                  "left_grasped": true,
+                  "right_grasped": true,
+                  "is_robot_static": false,
+                  "step": 200,
+                  "official_success": false
+                },
+                "recorded_motion": {
+                  "left": {
+                    "max_consecutive_observed_grasp_steps": 120,
+                    "grasp_to_ungrasped_transitions": [],
+                    "object_max_lift_from_initial_m": 0.1306214554933831,
+                    "object_displacement_last20_observations_m": 0.2300113398699002,
+                    "final_object_xy_delta_from_region_center_m": [
+                      -0.1458852980285883,
+                      0.08306793123483658
+                    ],
+                    "grasp_predicate_at_end": true
+                  },
+                  "right": {
+                    "max_consecutive_observed_grasp_steps": 120,
+                    "grasp_to_ungrasped_transitions": [],
+                    "object_max_lift_from_initial_m": 0.12359166389796883,
+                    "object_displacement_last20_observations_m": 0.2124551126368204,
+                    "final_object_xy_delta_from_region_center_m": [
+                      -0.15326076745986938,
+                      -0.0860678106546402
+                    ],
+                    "grasp_predicate_at_end": true
+                  }
+                }
+              },
+              {
+                "seed": 24016,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 177,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24017,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 168,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24018,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 164,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24019,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 165,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              }
+            ]
+          },
+          "basket": {
+            "episodes": 20,
+            "official_success_at_end": 20,
+            "official_success_once": 20,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "stage_counts": {
+              "success": 20
+            },
+            "cases": [
+              {
+                "seed": 24000,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 139,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24001,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 118,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24002,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 121,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24003,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 129,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24004,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 136,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24005,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 128,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24006,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 124,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24007,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 114,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24008,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 144,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24009,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 125,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24010,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 139,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24011,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 140,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24012,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 123,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24013,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 128,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24014,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 126,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24015,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 120,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24016,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 121,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24017,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 137,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24018,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 122,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              },
+              {
+                "seed": 24019,
+                "steps": 200,
+                "official_success_at_end": true,
+                "official_success_once": true,
+                "first_success_step": 136,
+                "timeout": false,
+                "failure_stage": null,
+                "interface_error": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    "receipts": {
+      "video": {
+        "status": "complete",
+        "exit_code": 0,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "source_commit": "61740faebc87ee204f3113f733f17c2a3bf4c3bf",
+        "protocol_sha256": "723f9a0491babe1e50169e4338e13b71699b7f53c19e3a2d76fa5c76cb0d275a",
+        "history_audit_sha256": "9364029218a0d237e35d9b446b955a780fd6fbe9377a3c109077ffc57a9df0a4",
+        "elapsed_seconds": 260.6306384271011,
+        "allocated_episodes": 40,
+        "attempts_per_case": 1
+      },
+      "constant": {
+        "status": "complete",
+        "exit_code": 0,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "source_commit": "61740faebc87ee204f3113f733f17c2a3bf4c3bf",
+        "protocol_sha256": "723f9a0491babe1e50169e4338e13b71699b7f53c19e3a2d76fa5c76cb0d275a",
+        "history_audit_sha256": "9364029218a0d237e35d9b446b955a780fd6fbe9377a3c109077ffc57a9df0a4",
+        "elapsed_seconds": 263.76793653098866,
+        "allocated_episodes": 40,
+        "attempts_per_case": 1
+      }
+    },
+    "paired_outcomes_by_task": {
+      "pill": {
+        "both_success": 16,
+        "video_only": 2,
+        "constant_only": 2,
+        "both_failure": 0
+      },
+      "basket": {
+        "both_success": 20,
+        "video_only": 0,
+        "constant_only": 0,
+        "both_failure": 0
+      }
+    },
+    "paired_initial_state_audit": {
+      "cases": 40,
+      "all_bitwise_equal": true
+    },
+    "action_audit": {
+      "all_finite": true,
+      "all_clamp_and_h5_bitwise": true,
+      "arm_clipped_coordinates": 0,
+      "max_gripper_excess_normalized_command": 0.045279622077941895
+    },
+    "wilson_interval": {
+      "confidence": 0.95,
+      "z": 1.95996398454,
+      "scope": "Per-condition/task binomial descriptive interval; no added pass threshold or significance test"
+    },
+    "interpretation": "Both fixed9k models achieve pill18/20 and baskets20/20, macro95%, on new scenes with known development ep4. Video retains two left-grasp losses; constant retains two holding/transport failures. No aggregate video success gain in this batch. Not unseen-human-video generalization or full official TIG performance; one training seed. Original6k ep5 scores are not a controlled training-budget comparison.",
+    "next_step": "Keep selected checkpoints and all outcomes fixed. Design same-valid-scene multiple-executable-goal demonstration following with separate development/test allocation. Retained failures may inform development, but this consumed batch cannot be reused as fresh test after tuning. No automatic longer training.",
+    "independent_result_audit_passed": true
   }
 }

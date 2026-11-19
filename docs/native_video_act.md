@@ -353,8 +353,11 @@ The completed Piper pilot and matched zero-condition run are documented in
 [the two-task validation report](native_video_act_multitask_validation.md).
 The subsequent matched runs use `--max-updates 12000` with new output directories
 and the same 3,000-update snapshot interval. Their development comparison selects
-the 9,000-update checkpoints for a fresh-seed evaluation; see the report for
-results and exact candidate identities.
+the 9,000-update checkpoints. Both now complete twenty fresh robot seeds per
+task with the same development human clips: pill 18/20, baskets 20/20, macro 95%,
+without interface errors. This independent scene regression keeps eight-step
+execution and official scoring; it does not test new human clips. See the
+report for all outcomes, failures and exact checkpoint identities.
 
 Piper supports two original L0 tasks through the shared expert and learning
 entries:

@@ -210,6 +210,13 @@ identities and machine-readable results.
   2/3 and 1/3. All twenty-four new development episodes complete without
   interface errors. Both 9k checkpoints are selected as candidates for an
   independent fresh-seed comparison, with all weights and failures retained.
+- [x] Run both selected 9k checkpoints once on twenty new robot seeds per task:
+  eighty episodes and 16,000 control steps. Both reach pill 18/20 and baskets
+  20/20 (macro 95%), with zero interface errors and all forty paired initial
+  physical/public states bitwise equal. Human clips stay development episode 4;
+  this is new-scene regression, not new-video generalization. Video's two pill
+  failures lose the left grasp; constant's two failures retain the objects
+  outside their regions. All allocations remain recorded, without retries.
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -239,13 +246,13 @@ identities and machine-readable results.
      and checks at 9,000/12,000. Fresh seed1 runs reproduce the old 6k prefixes
      exactly. The two 9k candidates score better than 12k on this development
      set even though training loss keeps falling.
-   - [ ] Freeze fresh robot seeds and compare the selected 9k video/constant
-     candidates once with unchanged scoring and eight-step execution. Retain
-     every allocation, checkpoint and human identity, timeout, interface error,
-     per-task result and failed video. The earlier forty final episodes remain
-     unchanged and do not become new final tests. Decide any additional data or
-     training changes from the resulting evidence rather than increasing the
-     budget immediately.
+   - [x] Freeze seeds 24000–24019 and compare the selected 9k video/constant
+     candidates once with unchanged clips, scoring and eight-step execution.
+     Both achieve 18/20 pill and 20/20 baskets. Pill paired outcomes are sixteen
+     shared successes, two video-only and two constant-only successes. Keep
+     both candidates, every failure and the original forty final outcomes.
+     The new batch shows no aggregate video success gain; it must not be reused
+     as fresh test evidence after tuning.
    - [ ] Test demonstration following with the same valid initial scene and
      multiple executable goals. Different task scenes and cross-task video swaps
      do not establish a reliable video benefit or semantic necessity.
