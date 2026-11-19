@@ -3369,5 +3369,261 @@
     "interpretation": "Both fixed9k models achieve pill18/20 and baskets20/20, macro95%, on new scenes with known development ep4. Video retains two left-grasp losses; constant retains two holding/transport failures. No aggregate video success gain in this batch. Not unseen-human-video generalization or full official TIG performance; one training seed. Original6k ep5 scores are not a controlled training-budget comparison.",
     "next_step": "Keep selected checkpoints and all outcomes fixed. Design same-valid-scene multiple-executable-goal demonstration following with separate development/test allocation. Retained failures may inform development, but this consumed batch cannot be reused as fresh test after tuning. No automatic longer training.",
     "independent_result_audit_passed": true
+  },
+  "paired_pill_failure_diagnosis": {
+    "schema_version": 1,
+    "status": "completed",
+    "source_commit": "b9eefb786fa408245f78d559ddafa01c7358caca",
+    "recorded_evaluation_source_commit": "61740faebc87ee204f3113f733f17c2a3bf4c3bf",
+    "evidence_subdirectory": "fresh-9k-20261119/failure-diagnosis",
+    "input_compact_results_sha256": "5635b8d94e5e98f2e3d131c67142a81336d6db6ebdd3fc4ed8bdbdff58f85bff",
+    "saved_pairs": 4,
+    "saved_episodes": 8,
+    "saved_control_steps": 1600,
+    "new_simulator_episodes": 0,
+    "new_training_updates": 0,
+    "offline_model_calls_valid": 16,
+    "offline_model_calls_rejected_preprocessing": 1,
+    "offline_model_calls_total": 17,
+    "all_valid_reconstructed_first8_normalized_and_requested_bitwise_equal": true,
+    "extracted_original_frames": 36,
+    "evidence_sha256": {
+      "analysis-plan.json": "72b7d7d34e8a73ac65395e90572fdb5e24660ca12bac6d86edfdd95212537b28",
+      "analysis-plan.initial.json": "7e8ddd19d186521a74c0609eb8d2093bc14adc51cc90180941fbbc3a67481ebe",
+      "analyze-video-pairs.py": "79bd1a909407a9aea3cd57983be870479ae391bcc14658d7ff15a15ca08bc307",
+      "video-pairs.json": "3d581c6da9f3cd72454b7881fe317fd95f23421e53a2e5e059e78a140fcf50b1",
+      "analyze-constant-pairs.py": "95a0f71c95a71288dcf9f716c0026c29c4fb5d2e704fef1a8d6596a113484e22",
+      "constant-pairs.json": "ca99d572a81ef7eb1256d544f3e4fe887c991097147e37d6377028dc72fb58ca",
+      "constant-pairs.npz": "280cf9cce76c2cbc0145b9dc208f1f31e523652ee28c56f6878f7365489d9b15",
+      "audit-controller-contract.py": "230bd6bbd584e79ed78bd0d491a78592da4619c97a8a269e5333cd334e936d87",
+      "controller-contract-audit.json": "ddd29cca1ca7a1fed1926f0dd0393a06d6ca4d762048d12b2f7826ff1e635498",
+      "controller-contract-audit.log": "bf5c01eed2ec0dcd11a545d483cc4cf9e252a54f8c3f39b0b06b0cf00d60c312",
+      "reconstruct-offline-chunks.py": "81c36d99c4b1073d723c680332ca13dd4156b21a9560b4949242b03998536a69",
+      "offline-chunks.json": "efdb7e38d4bda5121fcabc6cceb30b94db8d78b2bd1c4cf729a45ff9e9508263",
+      "offline-chunks.npz": "e36c0421a4a75c961f120aa4305d497e1e3bec0fcbaa2d0c89ad71fbbd98b178",
+      "offline-chunks-receipt.json": "cc216c68979ad063b0484036fda2bc4c6b454bc1863735377af8af6a95876aae",
+      "offline-chunks.log": "0f4282a22f3de9d6a22eee50bcea520a2ac7bfe70f38dfca9f7a3384f16ad209",
+      "offline-chunks-partial.json": "6887f7a76f558ed26a67d206d45fd284cdbaed832d16421f69536737927e158e",
+      "offline-chunks-partial.npz": "3990be0f582cb76fa109f146870286eb18465b884e4bb39f93aedaed292ff7cc",
+      "offline-chunks-attempt2-receipt.json": "90982a0490558b727f8ac8fcf7834f4348adbe47902fdec087cb7004ed4024ba",
+      "offline-chunks-attempt2.log": "43d9a0ac96913fcef3fcc544f6eeefd8d947453ca62ff7bf4e39d205276b93a4",
+      "offline-chunks-selftest.log": "d97ec97fe5a18174acb9370dfe35a67e0e171a3b1fbd8988c528223bef68427f",
+      "offline-preprocessing-device-audit.json": "9253b6a4ffe0d138be1d04cbab2c4b0c041f9a89a094a093e7e0763d073380a7",
+      "paired-object-progress.json": "edd19798922a11fe60a95ebdc8a004a951962d69e25dd02d9324e9c752f23f68",
+      "paired-object-progress.png": "a0dd1bab7886faa2b1f08fc9901612670c981368548bd860337305cab4471e1a",
+      "plot-paired-progress.py": "4d1d5ef20f005edb5e6fc04c1347ea75d5e3c683b94153605b86aac45dff2943"
+    },
+    "comparison_scope": "Four failure/success pairs share initial scene state, but their separately trained policies and later observations differ. These trajectories do not isolate a causal effect of video content alone.",
+    "time_contract": "Post-state/event s follows action[s-1]; offline t112/128/160/184 are saved pre-action observation/replanning indices.",
+    "video_failures": [
+      {
+        "seed": 24012,
+        "left_max_origin_lift_m": 0.007670968770980835,
+        "left_max_origin_lift_while_grasp_predicate_true_m": 0.007634900510311127,
+        "same_seed_constant_first_official_success_step": 147,
+        "same_seed_constant_final_left_grasped": false,
+        "interpretation": "Approach disturbed the left object and transient contact did not develop into stable lifted possession; right object placed. Contact geometry/forces not uniquely identified."
+      },
+      {
+        "seed": 24014,
+        "left_max_origin_lift_m": 0.03555436059832573,
+        "left_max_origin_lift_while_grasp_predicate_true_m": 0.007210008800029755,
+        "same_seed_constant_first_official_success_step": 189,
+        "same_seed_constant_final_left_grasped": true,
+        "interpretation": "Approach disturbed the left object and transient contact did not develop into stable lifted possession; right object placed. Contact geometry/forces not uniquely identified."
+      }
+    ],
+    "constant_failures": [
+      {
+        "seed": 24003,
+        "same_seed_video_first_official_success_step": 131,
+        "fact": "Both grasp from81 to200; after lifting, commanded and actual arms remain near pickup. Post-action mean arm error during action[128,200) about0.0023rad; final objects outside regions."
+      },
+      {
+        "seed": 24015,
+        "same_seed_video_first_official_success_step": 155,
+        "fact": "Both grasp from81 to200; commands and actual arms dwell after lifting, then progress late. During action[112,184) mean arm error about0.0019rad; final16 actions move TCPs about0.215/0.205m, but objects remain held outside regions."
+      }
+    ],
+    "offline_reconstruction": [
+      {
+        "condition": "constant",
+        "seed": 24003,
+        "saved_observation_index": 112,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.3726924955844879,
+        "last8_max_coordinate_range_rad": 0.27546215057373047,
+        "first8_max_deviation_from_current_qpos_rad": 0.4244181513786316,
+        "last8_max_deviation_from_current_qpos_rad": 0.7457292079925537
+      },
+      {
+        "condition": "constant",
+        "seed": 24003,
+        "saved_observation_index": 128,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.008887052536010742,
+        "last8_max_coordinate_range_rad": 0.10030782222747803,
+        "first8_max_deviation_from_current_qpos_rad": 0.04723989963531494,
+        "last8_max_deviation_from_current_qpos_rad": 0.09607934951782227
+      },
+      {
+        "condition": "constant",
+        "seed": 24003,
+        "saved_observation_index": 160,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.02010369300842285,
+        "last8_max_coordinate_range_rad": 0.26179516315460205,
+        "first8_max_deviation_from_current_qpos_rad": 0.012454748153686523,
+        "last8_max_deviation_from_current_qpos_rad": 0.2776188850402832
+      },
+      {
+        "condition": "constant",
+        "seed": 24003,
+        "saved_observation_index": 184,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.027774930000305176,
+        "last8_max_coordinate_range_rad": 0.313869833946228,
+        "first8_max_deviation_from_current_qpos_rad": 0.022657394409179688,
+        "last8_max_deviation_from_current_qpos_rad": 0.3446325957775116
+      },
+      {
+        "condition": "constant",
+        "seed": 24015,
+        "saved_observation_index": 112,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.008478760719299316,
+        "last8_max_coordinate_range_rad": 0.1438981294631958,
+        "first8_max_deviation_from_current_qpos_rad": 0.02966594696044922,
+        "last8_max_deviation_from_current_qpos_rad": 0.14027798175811768
+      },
+      {
+        "condition": "constant",
+        "seed": 24015,
+        "saved_observation_index": 128,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.01427149772644043,
+        "last8_max_coordinate_range_rad": 0.20769113302230835,
+        "first8_max_deviation_from_current_qpos_rad": 0.018316268920898438,
+        "last8_max_deviation_from_current_qpos_rad": 0.2167367935180664
+      },
+      {
+        "condition": "constant",
+        "seed": 24015,
+        "saved_observation_index": 160,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.01686561107635498,
+        "last8_max_coordinate_range_rad": 0.24923408031463623,
+        "first8_max_deviation_from_current_qpos_rad": 0.012450456619262695,
+        "last8_max_deviation_from_current_qpos_rad": 0.2564297616481781
+      },
+      {
+        "condition": "constant",
+        "seed": 24015,
+        "saved_observation_index": 184,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.22408616542816162,
+        "last8_max_coordinate_range_rad": 0.5331014394760132,
+        "first8_max_deviation_from_current_qpos_rad": 0.22170263528823853,
+        "last8_max_deviation_from_current_qpos_rad": 0.8245444893836975
+      },
+      {
+        "condition": "video",
+        "seed": 24003,
+        "saved_observation_index": 112,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.18083912134170532,
+        "last8_max_coordinate_range_rad": 0.5021474361419678,
+        "first8_max_deviation_from_current_qpos_rad": 0.1809546947479248,
+        "last8_max_deviation_from_current_qpos_rad": 0.7358331084251404
+      },
+      {
+        "condition": "video",
+        "seed": 24003,
+        "saved_observation_index": 128,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.2529029846191406,
+        "last8_max_coordinate_range_rad": 0.0158693790435791,
+        "first8_max_deviation_from_current_qpos_rad": 0.41372549533843994,
+        "last8_max_deviation_from_current_qpos_rad": 0.4318355321884155
+      },
+      {
+        "condition": "video",
+        "seed": 24003,
+        "saved_observation_index": 160,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.0012696683406829834,
+        "last8_max_coordinate_range_rad": 0.0022051334381103516,
+        "first8_max_deviation_from_current_qpos_rad": 0.01562786102294922,
+        "last8_max_deviation_from_current_qpos_rad": 0.01685357093811035
+      },
+      {
+        "condition": "video",
+        "seed": 24003,
+        "saved_observation_index": 184,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.001748114824295044,
+        "last8_max_coordinate_range_rad": 0.0025583505630493164,
+        "first8_max_deviation_from_current_qpos_rad": 0.0030208230018615723,
+        "last8_max_deviation_from_current_qpos_rad": 0.0037714093923568726
+      },
+      {
+        "condition": "video",
+        "seed": 24015,
+        "saved_observation_index": 112,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.4216230511665344,
+        "last8_max_coordinate_range_rad": 0.18943923711776733,
+        "first8_max_deviation_from_current_qpos_rad": 0.44435036182403564,
+        "last8_max_deviation_from_current_qpos_rad": 0.6942557692527771
+      },
+      {
+        "condition": "video",
+        "seed": 24015,
+        "saved_observation_index": 128,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.0525667667388916,
+        "last8_max_coordinate_range_rad": 0.4001871347427368,
+        "first8_max_deviation_from_current_qpos_rad": 0.045914292335510254,
+        "last8_max_deviation_from_current_qpos_rad": 0.4654708504676819
+      },
+      {
+        "condition": "video",
+        "seed": 24015,
+        "saved_observation_index": 160,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.0248260498046875,
+        "last8_max_coordinate_range_rad": 0.1614975929260254,
+        "first8_max_deviation_from_current_qpos_rad": 0.049816012382507324,
+        "last8_max_deviation_from_current_qpos_rad": 0.18459904193878174
+      },
+      {
+        "condition": "video",
+        "seed": 24015,
+        "saved_observation_index": 184,
+        "first8_matches_history_bitwise": true,
+        "first8_max_coordinate_range_rad": 0.044021427631378174,
+        "last8_max_coordinate_range_rad": 0.14131784439086914,
+        "first8_max_deviation_from_current_qpos_rad": 0.041201889514923096,
+        "last8_max_deviation_from_current_qpos_rad": 0.18875724077224731
+      }
+    ],
+    "offline_interpretation": "Selected holding observations have substantially larger coordinated joint-target changes in unexecuted queries8..15 than in queries0..7. Supports an execution-window/phase-progression interaction as a candidate explanation, not proof that execute16 will move toward the target or succeed. Video success cases can also have larger later-half motion.",
+    "controller_contract": {
+      "confirmed_engineering_bug": false,
+      "denormalization_order_limits_and_recording_checks_passed": true,
+      "grasp_predicate": "Instantaneous double-finger contact force/direction, not sustained load-bearing possession. Positive gripper command may still be partially closed.",
+      "official_success": "Original region membership remains authoritative; constant24014 succeeds while still grasping left object. No added release requirement.",
+      "physical_uncertainty": "Contact force vectors, drive targets/torques and physics-substep contact details are absent; cannot uniquely assign geometry, friction or force saturation."
+    },
+    "diagnostic_preprocessing_correction": "Retained first1-call failure. Offline script initially divided RGB by255 on CPU; recorded CUDA-renderer RGB divides on GPU. Correcting only offline preprocessing yields exact first8 reproduction for all16 designed calls. No policy/evaluator fix.",
+    "decision": {
+      "runtime_changes_required_by_current_evidence": false,
+      "checkpoint_reselection": false,
+      "training_restart": false,
+      "next_development_step": "Reuse existing fixed9k execute8 development records and compare execute16 on the same three development seeds/task for both tasks and conditions (12 additional development episodes, not run here). Hold horizon200, human ep4 and scoring fixed; no tuning on the consumed80-case scene regression.",
+      "then": "Investigate grasp approach robustness and goal following through separate controlled development studies; do not alter task physics or add evaluation gates to eliminate these failures."
+    },
+    "original80_outcomes_unchanged": true,
+    "summary_file_sha256": "8821ed60aa8808e1c0e663d7f42cb6e915122b8d0539871e63d02091e9b17115"
   }
 }

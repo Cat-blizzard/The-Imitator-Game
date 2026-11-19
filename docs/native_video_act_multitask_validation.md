@@ -382,11 +382,97 @@ do not establish unseen-video generalization or complete official TIG performanc
 The original 6k batch used human episode 5 and seeds 23000–23009, so its score
 difference cannot be attributed solely to another 3k training updates.
 
-Keep these weights and results fixed. The next learning experiment should test
-different executable demonstration goals in the same valid scene, with a
-separate development/test allocation. The four retained failures can support
-development diagnosis, but this batch must not become fresh test evidence again
-after tuning. Longer training is not justified merely by the remaining failures.
+Keep these weights and results fixed. The paired diagnosis below examines the
+four retained failures before extending the learning experiment. This consumed
+batch must not become fresh test evidence again after tuning. Longer training
+is not justified merely by the remaining failures.
+
+## Paired diagnosis of the four pill failures
+
+At source `b9eefb786fa408245f78d559ddafa01c7358caca`, a read-only analysis uses
+the eight existing pill trajectories for seeds 24003/24012/24014/24015. Each
+failure has an official success from the other model at the same initial state.
+The policies have different learned weights and later observations, so their
+trajectory differences do not isolate the effect of video content alone.
+No simulator episode or training update is added; all eighty original outcomes
+and both selected checkpoints remain unchanged.
+
+| Failure | Recorded behavior | Same-seed successful comparison |
+| --- | --- | --- |
+| Video 24012 | Left bottle disturbed during approach; maximum origin lift only 7.671 mm, then hand rises without sustained possession | Constant first official success at step 147 |
+| Video 24014 | Left grasp predicate is transient; maximum lift while true only 7.210 mm. Global 35.554 mm peak occurs after grasp loss | Constant first official success at step 189; left object still grasped at step 200 |
+| Constant 24003 | Both objects grasped from step 81 through 200; commands remain near the lifted pickup pose | Video first official success at step 131 |
+| Constant 24015 | Both objects held; a long commanded dwell precedes late movement, with neither object in its region at step 200 | Video first official success at step 155 |
+
+### Approach and contact, rather than established carrying
+
+The video failures are more precisely described as **approach disturbance and
+transient contact that does not develop into stable lifted possession**. At
+observation 80, the left bottle's full orientation change from reset is about 20.1°
+and 21.4° for seeds 24012/24014, versus 1.2°/0.1° for their constant comparisons.
+Original camera frames show the tilted bottles. The nominal grasp-point offsets
+of the video TCP are about 36–37 mm laterally and 28–32 mm vertically, while the
+comparison is within about 2 mm on each axis. These are measurements relative to
+the recorded profile's nominal grasp point, not a new grasp acceptance rule.
+
+During approach, video finger commands near +1 request nearly 40 mm per finger,
+but measured fingers reach about 28 mm, alongside joint-target residual peaks of
+0.30–0.36 rad. The successful comparisons remain near 40 mm until closure, with
+approach residuals about 0.08–0.09 rad. This is consistent with constrained or
+unfavorable contact during approach; the records lack contact-force vectors,
+drive torques and physics-substep contacts needed to distinguish geometry,
+friction and force saturation. In particular, a true grasp flag denotes current
+two-finger contact force/direction, not sustained load-bearing possession.
+
+### Commanded dwell and unexecuted later queries
+
+The constant models' holding intervals have mean post-action arm-target errors
+about 0.002 rad: measured joints largely follow the commands they receive. In
+seed 24003, actions[128,200) move the TCPs only about 0.32/0.56 mm in world x.
+In seed 24015, actions[112,184) move them about 4.52/5.20 mm; the final sixteen
+actions then move them about 21.5/20.5 cm. These observations distinguish late
+policy progression from a controller ignoring sustained transport commands.
+Action indices are zero-based: action[s-1] produces state/event s.
+
+An offline reconstruction loads the fixed checkpoints and their actual saved
+public observations at t=112/128/160/184, for both models and seeds 24003/24015.
+All **sixteen valid predictions reproduce their original first eight normalized
+and requested actions bitwise**, with maximum difference zero. The following
+values measure the largest single-arm-coordinate range within each half of
+the reconstructed chunk, in radians:
+
+| Constant model observation | First eight queries | Last eight queries |
+| --- | ---: | ---: |
+| Seed 24003, t=160 | 0.0201 | 0.2618 |
+| Seed 24003, t=184 | 0.0278 | 0.3139 |
+| Seed 24015, t=128 | 0.0143 | 0.2077 |
+| Seed 24015, t=160 | 0.0169 | 0.2492 |
+
+Thus these holding observations do not predict sixteen stationary targets.
+Larger coordinated changes repeatedly lie in the unexecuted later half. This
+supports an interaction between the prediction timing and eight-step replanning
+as a candidate explanation for delayed progression. Successful video examples
+also exhibit larger later-half changes, so this pattern is not sufficient to
+cause failure. No forward-kinematics or execute16 rollout was run here; larger
+joint changes do not establish their Cartesian direction or future success.
+
+### Engineering decision and next development comparison
+
+The bounded controller review finds no ordering, normalization, bounds,
+execution or action/observation indexing error in the eight saved trajectories.
+The eighteen referenced runtime files match the original pilot source.
+Consequently this diagnosis makes **no runtime, physics, grasp-threshold,
+episode-limit or checkpoint change**. Constant24014 remains an official success
+despite its final left grasp; no release requirement is added to scoring.
+
+The next targeted development comparison is to reuse the existing 9k execute8
+development records and add execute16 on the same three development seeds per
+task for both conditions: **twelve additional development episodes, not run in
+this diagnosis**. Keep human episode 4, horizon 200 and scoring fixed, and inspect
+grasp and transport behavior alongside success. This tests the observed timing
+mechanism without selecting settings on the consumed fresh-seed batch. Approach
+robustness and same-scene multiple-goal demonstration following remain separate
+development questions; no automatic retraining is started.
 
 ## Retained evidence
 
@@ -407,6 +493,13 @@ audit was corrected with its original log retained; it was not a training or
 rollout failure. The `fresh-9k-20261119/` subdirectory retains the pre-run
 protocol, seed-history and checkpoint audits, all eighty trajectories/videos,
 launch receipts, external launcher/auditor scripts and `compact-results.json`.
+Its `failure-diagnosis/` directory retains the paired H5 measurements, original
+camera frames, object-progress plot, controller audit, full offline predictions
+and `paired-failure-summary.json`. The first offline reconstruction call used
+CPU pixel division while the recorded CUDA camera input divided on GPU; its
+small mismatch, partial output and original plan are retained. Correcting only
+the diagnostic preprocessing yields the sixteen exact reconstructions above.
+Total diagnostic model calls are seventeen, with zero new simulator episodes.
 The compact JSON beside this report preserves
 portable identities and per-seed outcomes; datasets and weights are not included
 in the fork. Original ARX single-task results remain in

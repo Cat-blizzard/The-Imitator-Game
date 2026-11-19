@@ -217,6 +217,13 @@ identities and machine-readable results.
   this is new-scene regression, not new-video generalization. Video's two pill
   failures lose the left grasp; constant's two failures retain the objects
   outside their regions. All allocations remain recorded, without retries.
+- [x] Diagnose the four pill failures against the other model's same-seed
+  success using eight saved trajectories. Video approach disturbs the left
+  bottle before stable lifted possession; constant commands dwell after lift.
+  Sixteen offline predictions exactly reproduce the archived first eight
+  actions and expose larger changes in the unexecuted later half at selected
+  holding observations. No controller/interface error is confirmed; runtime and
+  all original scores remain fixed. See the report's paired diagnosis.
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -253,6 +260,15 @@ identities and machine-readable results.
      both candidates, every failure and the original forty final outcomes.
      The new batch shows no aggregate video success gain; it must not be reused
      as fresh test evidence after tuning.
+   - [x] Compare all four pill failures with their same-seed successes, check
+     the controller contract, and reconstruct full chunks at saved holding
+     observations. The diagnosis uses no new simulator episode or training.
+   - [ ] Test the execution-window interaction on development cases: reuse
+     the existing 9k execute8 records, add execute16 for three seeds/task and
+     both conditions (twelve development episodes). Keep human episode4,
+     horizon200 and scoring fixed. Larger unexecuted joint changes do not yet
+     demonstrate that sixteen-step execution improves success. Use separate
+     development evidence for approach robustness if those failures persist.
    - [ ] Test demonstration following with the same valid initial scene and
      multiple executable goals. Different task scenes and cross-task video swaps
      do not establish a reliable video benefit or semantic necessity.
