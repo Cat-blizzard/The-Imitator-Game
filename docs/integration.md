@@ -89,16 +89,60 @@ See [generation and conversion](dual-arm-sync.md),
 
 ## Validation
 
-Validation results for this combined tree are recorded below after execution.
-Historical results from the source branches do not certify the merged tree.
+The combined runtime was exercised at `cc60d7f`; the legacy MPLib archive
+compatibility fix is `6d0e8b7`. The final applicable CPU suite passes **511 tests**.
+
+| Fresh generation | Seed | Control actions | Official / execution / quality | Action replay |
+| --- | --- | ---: | --- | --- |
+| Panda pill, MPLib | 6000 | 162 | pass / pass / pass | pass |
+| Piper pill, MPLib | 6000 | 193 | pass / pass / pass | pass |
+| ARX X5 pill, MPLib | 6000 | 194 | pass / pass / pass | pass |
+| UR5+WSG pill, MPLib | 6000 | 184 | pass / pass / pass | pass |
+| xArm6+Robotiq pill, MPLib | 9300 | 190 | pass / pass / pass | pass |
+| Piper apple/banana baskets, MPLib | 450 | 191 | pass / pass / pass | pass |
+| Panda pill, shared cuRobo session | 541 | 171 | pass / pass / pass | official/execution pass; quality fails |
+| Panda pill, same cuRobo session | 542 | 183 | pass / pass / pass | pass |
+
+**Known discrepancy:** the new cuRobo541 recording passes generation's twenty
+stable placement observations. Replaying its exact 171 recorded actions reaches
+official success with no forbidden contacts, but counts 18 final stable steps,
+so the unchanged quality rule rejects it. This result is retained; the branch
+is not certified as passing every quality replay. A control with the original
+cuRobo branch `1a51690` produces the same 18-step result and identical execution,
+physics and placement reports. That control only converts the new metadata's
+`robot_uids` list to the same Panda tuple at environment construction; files,
+actions and thresholds are unchanged. The initial control without this metadata
+compatibility stopped before physics and is retained separately. No action was
+appended and no stability or collision threshold was changed.
+
+Four historical archives (sync Panda542, Piper6000, cuRobo541 and the old cuRobo
+branch's MPLib542 route) also replay successfully. The last archive's recorded
+release-separation facts are preserved by the compatibility fix. The known
+Piper450 negative still produces the same forbidden robot contacts at physics
+substeps 749/750; its complete diagnostic result equals the historical result.
+
+A fresh Piper recording converts to 193 real 20 Hz rows with 16 state and 14 action
+coordinates. Numeric rows and timestamps agree with the source H5; RGB/depth
+frames are actually decoded on CPU, and all exported statistics are finite
+with nonnegative standard deviations. This one-episode product is a format
+smoke check, not a training dataset; use an explicit episode manifest for
+training splits.
+
+These are fixed development cases and interface checks, not benchmark success
+rates, complete task coverage, a new policy training run or a speed comparison.
+See [the compact validation record](integration-validation.json) for source
+identities and machine-readable results.
 
 ## Next implementation priorities
 
 The older A–I implementation plan contains dated status notes. The following
 priorities distinguish implemented interfaces from remaining benchmark work.
 
-1. **Finish a releasable integrated baseline.** Freeze dependencies and source,
-   retain known positive/negative inputs, and run a small fixed cross-seed
+1. **Resolve the cuRobo541 generation/replay stability discrepancy and finish a
+   releasable integrated baseline.** Compare recorded numeric state and stability
+   traces under the source and combined branches before changing execution.
+   Freeze dependencies and source, retain known positive/negative inputs,
+   and run a small fixed cross-seed
    regression. Report official success, quality pass, failure categories, cold
    startup and continuous throughput separately. Existing development seeds
    do not establish general success rates or a cuRobo speed advantage.

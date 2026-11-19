@@ -1,0 +1,205 @@
+{
+  "date": "2026-11-19",
+  "generation_runtime_commit": "cc60d7f4eabc343d2d07bd695576c98f57efc5f6",
+  "legacy_compatibility_runtime_commit": "6d0e8b716b0a18066c3311e676791f8029a3f286",
+  "automated_tests": {
+    "passed": 511,
+    "failed": 0,
+    "scope": [
+      "tests/motionplanning/dual_sync",
+      "tests/baselines",
+      "tests/agents",
+      "tests/test_embodiment_smoke.py"
+    ]
+  },
+  "fresh_generation_and_replay": [
+    {
+      "case": "panda-pill",
+      "backend": "mplib",
+      "seed": 6000,
+      "actions": 162,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": true,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "passed",
+      "replay_final_stable_steps": 20
+    },
+    {
+      "case": "piper-pill",
+      "backend": "mplib",
+      "seed": 6000,
+      "actions": 193,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": true,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "passed",
+      "replay_final_stable_steps": 20
+    },
+    {
+      "case": "arx-pill",
+      "backend": "mplib",
+      "seed": 6000,
+      "actions": 194,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": true,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "passed",
+      "replay_final_stable_steps": 20
+    },
+    {
+      "case": "ur5-pill",
+      "backend": "mplib",
+      "seed": 6000,
+      "actions": 184,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": true,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "passed",
+      "replay_final_stable_steps": 20
+    },
+    {
+      "case": "xarm-pill",
+      "backend": "mplib",
+      "seed": 9300,
+      "actions": 190,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": true,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "passed",
+      "replay_final_stable_steps": 20
+    },
+    {
+      "case": "piper-baskets",
+      "backend": "mplib",
+      "seed": 450,
+      "actions": 191,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": true,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "passed",
+      "replay_final_stable_steps": 20
+    },
+    {
+      "case": "curobo-pill",
+      "backend": "curobo",
+      "seed": 541,
+      "actions": 171,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": false,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "failed",
+      "replay_final_stable_steps": 18
+    },
+    {
+      "case": "curobo-pill",
+      "backend": "curobo",
+      "seed": 542,
+      "actions": 183,
+      "official_success": true,
+      "generation_execution": "passed",
+      "generation_quality": "passed",
+      "replay_passed": true,
+      "replay_execution": "passed",
+      "replay_official_success": true,
+      "replay_quality": "passed",
+      "replay_final_stable_steps": 20
+    }
+  ],
+  "legacy_replays": [
+    {
+      "name": "sync",
+      "passed": true,
+      "actions": 171
+    },
+    {
+      "name": "piper",
+      "passed": true,
+      "actions": 193
+    },
+    {
+      "name": "curobo",
+      "passed": true,
+      "actions": 170
+    },
+    {
+      "name": "mplib-cu-branch",
+      "passed": true,
+      "actions": 164
+    }
+  ],
+  "legacy_mplib_separation_after_fix": {
+    "initial_pairs": [],
+    "separated_pairs": [],
+    "remaining_pairs": []
+  },
+  "known_negative": {
+    "passed": false,
+    "executed_actions": 150,
+    "event_count": 2,
+    "physical_substeps": [
+      749,
+      750
+    ],
+    "failure_reasons": [
+      "forbidden_robot_contact"
+    ],
+    "whole_report_equal": true
+  },
+  "piper_format_smoke": {
+    "rows": 193,
+    "fps": 20,
+    "state_dim": 16,
+    "action_dim": 14,
+    "numeric_rows_match_h5": true,
+    "cpu_video_decode": true,
+    "finite_statistics_nonnegative_std": true,
+    "purpose": "format only; not training"
+  },
+  "interpretation": "All eight generations pass official/execution/quality. Seven replays pass quality; cuRobo541 replay succeeds officially but has 18 of 20 stable steps. No success-rate or speedup claim. The original cuRobo branch reproduces the same replay result after list-to-tuple metadata compatibility.",
+  "source_branch_control": {
+    "source_commit": "1a516903a7862c4ed58a7aadb15779b16586709a",
+    "metadata_compatibility": [
+      {
+        "operation": "list_to_tuple",
+        "parameter": "robot_uids",
+        "before": [
+          "panda_wristcam",
+          "panda_wristcam"
+        ],
+        "after_same_robot_identity": [
+          "panda_wristcam",
+          "panda_wristcam"
+        ],
+        "physical_actions_added": 0
+      }
+    ],
+    "is_unmodified_metadata_control": false,
+    "matching_execution_official_quality": true,
+    "matching_physics": true,
+    "matching_placement": true,
+    "placement_window_calls": 20,
+    "final_stable_steps": 18,
+    "initial_unadapted_control": "Stopped at environment construction on robot_uids JSON list; no physics executed; retained separately."
+  }
+}
