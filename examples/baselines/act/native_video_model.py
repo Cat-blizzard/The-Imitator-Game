@@ -40,7 +40,10 @@ class NativeVideoACTAgent(ACTAgent):
     Evaluation caches the current adapted task latent after set_demonstration.
     """
 
-    def __init__(self, model_args: TrainingArgs, device: torch.device) -> None:
+    def __init__(self, model_args: TrainingArgs, device: torch.device, *,
+                 conditioning_mode: str = "video") -> None:
+        if conditioning_mode not in {"video", "constant"}:
+            raise ValueError("conditioning_mode must be video or constant")
         if (model_args.obs_horizon != 1 or model_args.include_depth
                 or len(model_args.cameras) != 1):
             raise ValueError("Native video ACT requires one RGB camera and obs_horizon=1")
@@ -49,6 +52,8 @@ class NativeVideoACTAgent(ACTAgent):
                 or model_args.frozen_backbone_lora_rank != 0):
             raise ValueError("Native video ACT requires video_only and a frozen backbone without LoRA")
         super().__init__(model_args, torch.device(device), dataloader=None)
+        self.conditioning_mode = conditioning_mode
+        self.task_latent_dim = model_args.task_latent_dim
         # Load before optimizer/state_dict creation: lazy loading can replace
         # adapter dimensions and introduce frozen backbone state-dict keys.
         self.task_encoder._load_backbone()
@@ -84,6 +89,10 @@ class NativeVideoACTAgent(ACTAgent):
             raise ValueError("Expected human_video (B,T,3,H,W) and one nonempty demo ID per clip")
         if not video.is_floating_point() or not torch.isfinite(video).all() or video.min() < 0 or video.max() > 1:
             raise ValueError("Human RGB clips must be finite floating point in [0,1]")
+        if self.conditioning_mode == "constant":
+            # Same visual ACT and dataset routing, with the human condition
+            # removed. No clip pixels/identity enter the policy in this ablation.
+            return torch.zeros(video.shape[0], self.task_latent_dim, device=self.device)
         cache = self.task_encoder._raw_cache
         # Deduplicate cold clips in a robot minibatch; repeated windows share
         # their human demonstration but never share a detached adapter output.
@@ -140,6 +149,7 @@ class NativeVideoACTAgent(ACTAgent):
         cpu_z = self._cached_task_z.float().cpu().contiguous()
         self._demonstration_summary = {
             "human_demo_id": demo_id,
+            "conditioning_mode": self.conditioning_mode,
             "task_z_sha256": hashlib.sha256(cpu_z.numpy().tobytes()).hexdigest(),
             "task_z_norm": float(cpu_z.norm()),
             "task_z_shape": list(cpu_z.shape),

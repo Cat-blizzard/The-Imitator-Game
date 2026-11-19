@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import json
 import pickle
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -199,3 +200,83 @@ def test_torchcodec_matches_exact_physical_frame_requests(manifest):
     reference = load_human_demo(manifest, role="evaluation", image_size=(16, 16), video_backend="opencv")
     assert decoded["human_demo_id"] == reference["human_demo_id"]
     torch.testing.assert_close(decoded["human_video"], reference["human_video"], atol=2 / 255, rtol=0)
+
+
+def multitask_manifest(manifest):
+    """Create two real clips whose task identities differ despite shared file."""
+    other = copy.deepcopy(manifest["demos"])
+    for record in other:
+        record.update(id="fruit-" + record["id"], repo_id="human_H8")
+    return {"schema_version": 2, "tasks": [
+        {"task_id": manifest["task_id"], "demos": manifest["demos"]},
+        {"task_id": "TwoRobotPickAppleBananaToBaskets-v1", "demos": other},
+    ]}
+
+
+def test_v2_scopes_demo_selection_by_task_and_keeps_v1_identity(manifest):
+    payload = multitask_manifest(manifest)
+    parsed = load_human_manifest(payload)
+    assert len(parsed["tasks"]) == 2 and len(parsed["demos"]) == 4
+    assert parsed["tasks"][1]["demos"][0]["task_id"] == payload["tasks"][1]["task_id"]
+    with pytest.raises(ValueError, match="exactly one"):
+        load_human_demo(payload, video_backend="opencv")
+    old = load_human_demo(manifest, video_backend="opencv")
+    selected = load_human_demo(payload, task_id=manifest["task_id"], video_backend="opencv")
+    assert selected["human_demo_id"] == old["human_demo_id"]
+    assert load_human_manifest(parsed)["tasks"] == parsed["tasks"]
+
+
+def test_task_pairing_follows_actual_sample_identity_under_reordered_access(manifest):
+    payload = multitask_manifest(manifest)
+    base = NativeFixture()
+    base.sub_datasets = [SimpleNamespace(repo_id="pills"), SimpleNamespace(repo_id="fruit")]
+    # Sample position zero intentionally belongs to dataset 1: modulo over a
+    # global list of clips would silently return the pill demonstration.
+    base.samples[0].update(dataset_idx=torch.tensor(1), repo_id="fruit")
+    base.samples[1].update(dataset_idx=torch.tensor(0), repo_id="pills")
+    tasks = {0: payload["tasks"][0]["task_id"], 1: payload["tasks"][1]["task_id"]}
+    wrapped = NativeVideoDataset(base, payload, dataset_tasks=tasks, video_backend="opencv")
+    fruit = load_human_demo(payload, role="train", task_id=tasks[1], video_backend="opencv")
+    pill = load_human_demo(payload, role="train", task_id=tasks[0], video_backend="opencv")
+    assert wrapped[0]["human_demo_id"] == fruit["human_demo_id"]
+    assert wrapped[1]["human_demo_id"] == pill["human_demo_id"]
+    assert wrapped[0]["actions"] is base[0]["actions"]
+    assert "task_id" not in wrapped[0]
+    batch = next(iter(DataLoader(wrapped, batch_size=2)))
+    assert batch["human_video"].shape == (2, 3, 3, 224, 224)
+    base.samples[0]["repo_id"] = "pills"
+    with pytest.raises(ValueError, match="repo_id"):
+        wrapped[0]
+    base.samples[0]["dataset_idx"] = torch.tensor(99)
+    with pytest.raises(ValueError, match="Unknown robot dataset_idx"):
+        wrapped[0]
+
+
+def test_multitask_pairing_requires_identity_and_each_tasks_train_role(manifest):
+    payload = multitask_manifest(manifest)
+    base = NativeFixture()
+    with pytest.raises(ValueError, match="dataset_tasks"):
+        NativeVideoDataset(base, payload, video_backend="opencv")
+    tasks = {0: payload["tasks"][0]["task_id"], 1: payload["tasks"][1]["task_id"]}
+    wrapped = NativeVideoDataset(base, payload, dataset_tasks=tasks, video_backend="opencv")
+    with pytest.raises(ValueError, match="dataset_idx"):
+        wrapped[0]
+    payload["tasks"][1]["demos"][0]["role"] = "development"
+    with pytest.raises(ValueError, match="No human demonstrations"):
+        NativeVideoDataset(base, payload, dataset_tasks=tasks, video_backend="opencv")
+
+
+@pytest.mark.parametrize("mutation,error", [
+    (lambda payload: payload["tasks"].append(copy.deepcopy(payload["tasks"][0])), "Duplicate human task_id"),
+    (lambda payload: payload["tasks"][1]["demos"][0].update(task_id="wrong"), "task group"),
+    (lambda payload: payload["tasks"][1]["demos"][0].update(id="train-ep0"), "Duplicate human demo"),
+])
+def test_v2_rejects_ambiguous_groups(manifest, mutation, error):
+    payload = multitask_manifest(manifest)
+    mutation(payload)
+    with pytest.raises(ValueError, match=error):
+        load_human_manifest(payload)
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__, "-q"]))

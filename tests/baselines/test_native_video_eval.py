@@ -161,6 +161,53 @@ def test_missing_manifest_requires_an_explicit_input():
                                            6100, TASK, torch.device("cpu"))
 
 
+def test_multitask_condition_cache_selects_each_task_and_returns_to_first(monkeypatch):
+    calls = []
+    other = "TwoRobotPickAppleBananaToBaskets-v1"
+
+    def load(source, *, task_id, **kwargs):
+        calls.append(task_id)
+        return {"human_video": torch.full((3, 3, 8, 8), .2 if task_id == TASK else .4),
+                "human_demo_id": f"content:{task_id}", "metadata": {"task_id": task_id}}
+
+    monkeypatch.setattr(native_video_data, "load_human_demo", load)
+    checkpoint = _checkpoint()
+    checkpoint["human_manifest"] = {"schema_version": 2, "tasks": []}
+    agent, conditioner = _ConditionedPolicy(), video_eval.HumanVideoConditioning()
+    reports = [conditioner(agent, checkpoint, {}, None, 1, task, torch.device("cpu"))
+               for task in (TASK, other, TASK)]
+    assert calls == [TASK, other]
+    assert reports[0]["human_demo_id"] == reports[2]["human_demo_id"]
+    assert reports[0]["human_demo_id"] != reports[1]["human_demo_id"]
+    assert all(row["human_demonstration"]["task_matches_environment"] for row in reports)
+
+
+def test_per_dataset_contract_routes_mounts_image_size_and_rejects_wrong_task():
+    basket = "TwoRobotPickAppleBananaToBaskets-v1"
+    checkpoint = {"data_contract": {"fps": 20, "datasets": [
+        {"repo_id": "piper-pill", "env_id": TASK,
+         "native": {"task_profile": {"mount_poses": [-.30]}} , "source_image_size": [224, 224]},
+        {"repo_id": "piper-basket", "env_id": basket,
+         "native": {"task_profile": {"mount_poses": [-.25]}}, "source_image_size": [256, 256]},
+    ]}}
+    for repo, task, mount, size in [("piper-pill", TASK, -.30, 224), ("piper-basket", basket, -.25, 256)]:
+        selected = eval_act_single.dataset_contract(checkpoint, {"repo_id": repo, "env_id": task})
+        assert selected["native"]["task_profile"]["mount_poses"] == [mount]
+        assert selected["source_image_size"] == [size, size] and selected["fps"] == 20
+    with pytest.raises(ValueError, match="saved dataset contract"):
+        eval_act_single.dataset_contract(checkpoint, {"repo_id": "piper-basket", "env_id": TASK})
+
+
+def test_basket_reporting_reads_native_predicates_without_inventing_grasp():
+    info = {"apple_in_basket": True, "banana_in_basket": False,
+            "is_apple_grasped": False, "is_banana_grasped": True, "is_robot_static": False}
+    original = dict(info)
+    events = eval_act_single._task_events(SimpleNamespace(), info)
+    assert events["left_in_region"] and not events["right_in_region"]
+    assert not events["left_grasped"] and events["right_grasped"]
+    assert info == original
+
+
 def test_native_main_uses_shared_live_rollout_and_records_condition(tmp_path, monkeypatch):
     _install_demo_loader(monkeypatch)
     checkpoint, agent = _checkpoint(), _ConditionedPolicy()

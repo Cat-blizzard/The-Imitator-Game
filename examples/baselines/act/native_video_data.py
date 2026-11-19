@@ -1,4 +1,4 @@
-"""Pair one native robot task with explicitly selected human video clips.
+"""Pair native robot tasks with explicitly selected human video clips.
 
 The robot dataset owns observation/action ordering, normalization and padding.
 This wrapper only adds ``human_video`` (T, 3, H, W), float32 in [0, 1], and a
@@ -9,7 +9,8 @@ Manifest v1 contains ``task_id`` and ``demos``. Each demo names ``id``, ``path``
 and either ``frame_indices`` or ``num_frames``. Paths are relative to the JSON
 file. For concatenated LeRobot videos, ``episode_frame_range: [start, end]``
 sets the episode's inclusive/exclusive physical frame bounds. Explicit frame
-indices are always global indices in the video file.
+indices are always global indices in the video file. Manifest v2 uses
+``tasks: [{task_id, demos: [...]}]`` for explicit task-scoped pairing.
 """
 from __future__ import annotations
 
@@ -52,15 +53,36 @@ def load_human_manifest(manifest: Manifest) -> dict[str, Any]:
         with path.open() as stream:
             payload = json.load(stream)
         directory = path.parent
-    if payload.get("schema_version") != 1:
-        raise ValueError("Human manifest requires schema_version=1")
-    if not isinstance(payload.get("task_id"), str) or not payload["task_id"]:
-        raise ValueError("Human manifest requires a nonempty task_id")
-    demos = payload.get("demos")
-    if not isinstance(demos, list) or not demos:
-        raise ValueError("Human manifest requires a nonempty demos list")
+    version = payload.get("schema_version")
+    if version == 1:
+        groups = [{"task_id": payload.get("task_id"), "demos": payload.get("demos")}]
+    elif version == 2:
+        groups = payload.get("tasks")
+        if not isinstance(groups, list) or not groups:
+            raise ValueError("Human manifest schema_version=2 requires a nonempty tasks list")
+    else:
+        raise ValueError("Human manifest requires schema_version=1 or schema_version=2")
+    entries, tasks = [], set()
+    for group in groups:
+        if not isinstance(group, Mapping):
+            raise ValueError("Each human task must be a mapping")
+        task_id = group.get("task_id")
+        if not isinstance(task_id, str) or not task_id:
+            raise ValueError("Human manifest requires a nonempty task_id")
+        if task_id in tasks:
+            raise ValueError(f"Duplicate human task_id: {task_id}")
+        tasks.add(task_id)
+        demos = group.get("demos")
+        if not isinstance(demos, list) or not demos:
+            raise ValueError("Human manifest requires a nonempty demos list per task")
+        for entry in demos:
+            if not isinstance(entry, Mapping):
+                raise ValueError("Each human demo must be a mapping")
+            if "task_id" in entry and entry["task_id"] != task_id:
+                raise ValueError("Human demo task_id differs from its task group")
+            entries.append(dict(entry, task_id=task_id))
     records, identifiers, hashes = [], set(), {}
-    for entry in demos:
+    for entry in entries:
         record = dict(entry)
         for key in ("id", "repo_id", "camera", "path"):
             if not isinstance(record.get(key), str) or not record[key]:
@@ -106,7 +128,12 @@ def load_human_manifest(manifest: Manifest) -> dict[str, Any]:
             raise ValueError(f"Human video SHA256 mismatch: {path}")
         record.update(path=str(path), video_sha256=actual_hash)
         records.append(record)
-    return dict(payload, demos=records)
+    normalized = dict(payload, demos=records)
+    if version == 2:
+        normalized["tasks"] = [dict(group, demos=[record for record in records
+                                                if record["task_id"] == group["task_id"]])
+                               for group in groups]
+    return normalized
 
 
 def _read_video(record: Mapping[str, Any], backend: str) -> tuple[torch.Tensor, list[int]]:
@@ -181,40 +208,67 @@ def _load_record(record: Mapping[str, Any], task_id: str, image_size: Sequence[i
 
 def load_human_demo(
     manifest: Manifest, *, role: str = "evaluation", demo_id: str | None = None,
+    task_id: str | None = None,
     image_size: Sequence[int] = (224, 224), video_backend: str = "torchcodec",
 ) -> dict[str, Any]:
     """Load one explicitly scoped demo, rejecting ambiguous implicit selection."""
     payload = load_human_manifest(manifest)
-    records = [record for record in payload["demos"] if record["role"] == role and (demo_id is None or record["id"] == demo_id)]
+    records = [record for record in payload["demos"] if record["role"] == role
+               and (demo_id is None or record["id"] == demo_id)
+               and (task_id is None or record["task_id"] == task_id)]
     if len(records) != 1:
         raise ValueError(f"Select exactly one human demo for role={role!r}, id={demo_id!r}; found {len(records)}")
-    return _load_record(records[0], payload["task_id"], image_size, video_backend)
+    return _load_record(records[0], records[0]["task_id"], image_size, video_backend)
 
 
 class NativeVideoDataset(Dataset):
-    """Add task-level human clips to an unchanged native robot dataset.
+    """Add human clips (T,3,H,W) using each robot sample's dataset identity.
 
-    Clips are decoded once before DataLoader worker creation. Multiple demos of
-    this task are assigned deterministically by ``sample_index % num_demos``.
-    No state/action statistics are computed from the human video.
+    State/action tensors and train-only normalization remain owned by the base
+    dataset. Within the identified task, clips cycle deterministically through
+    its selected role. Robot task IDs are metadata, never policy inputs.
     """
 
     def __init__(
         self, base_dataset: Dataset, manifest: Manifest, *, role: str = "train",
         image_size: Sequence[int] = (224, 224), video_backend: str = "torchcodec",
-        task_id: str | None = None,
+        task_id: str | None = None, dataset_tasks: Mapping[int, str] | None = None,
     ) -> None:
         self.base_dataset = base_dataset
         self.manifest = load_human_manifest(manifest)
-        if task_id is not None and self.manifest["task_id"] != task_id:
+        if dataset_tasks is None:
+            selected_task = task_id or self.manifest.get("task_id")
+            if not selected_task:
+                raise ValueError("Multitask human pairing requires explicit dataset_tasks")
+            dataset_tasks = {0: selected_task}
+        elif task_id is not None:
+            raise ValueError("Specify task_id or dataset_tasks, not both")
+        self.dataset_tasks = dict(dataset_tasks)
+        if not self.dataset_tasks or any(
+            isinstance(index, bool) or not isinstance(index, int) or index < 0
+            or not isinstance(task, str) or not task
+            for index, task in self.dataset_tasks.items()
+        ):
+            raise ValueError("dataset_tasks requires nonnegative dataset indices and nonempty task IDs")
+        manifest_tasks = {record["task_id"] for record in self.manifest["demos"]}
+        if not set(self.dataset_tasks.values()).issubset(manifest_tasks):
             raise ValueError("Human manifest task_id differs from the robot task")
-        records = [record for record in self.manifest["demos"] if record["role"] == role]
-        if not records:
-            raise ValueError(f"No human demonstrations for role {role!r}")
-        counts = {len(record["frame_indices"]) if "frame_indices" in record else record["num_frames"] for record in records}
+        selected_tasks = set(self.dataset_tasks.values())
+        records = [record for record in self.manifest["demos"]
+                   if record["role"] == role and record["task_id"] in selected_tasks]
+        if not records or any(not any(record["task_id"] == task for record in records)
+                              for task in selected_tasks):
+            raise ValueError(f"No human demonstrations for role {role!r} in one or more robot tasks")
+        counts = {len(record["frame_indices"]) if "frame_indices" in record else record["num_frames"]
+                  for record in records}
         if len(counts) != 1:
             raise ValueError("Human demos in one batch require the same sampled frame count")
-        self.human_demos = [_load_record(record, self.manifest["task_id"], image_size, video_backend) for record in records]
+        self.human_demos = [_load_record(record, record["task_id"], image_size, video_backend)
+                            for record in records]
+        self.task_demos = {task: [demo for demo in self.human_demos
+                                  if demo["metadata"]["task_id"] == task] for task in selected_tasks}
+        sub_datasets = getattr(base_dataset, "sub_datasets", [])
+        self.dataset_repos = {index: str(sub.repo_id) for index, sub in enumerate(sub_datasets)}
         self.role = role
 
     def __getattr__(self, name: str) -> Any:
@@ -228,8 +282,27 @@ class NativeVideoDataset(Dataset):
 
     def __getitem__(self, index: int) -> dict[str, Any]:
         sample = dict(self.base_dataset[index])
-        demo = self.human_demos[index % len(self.human_demos)]
-        sample.update(human_video=demo["human_video"], human_demo_id=demo["human_demo_id"])
+        dataset_idx = sample.get("dataset_idx")
+        if dataset_idx is None:
+            if len(self.dataset_tasks) != 1:
+                raise ValueError("Multitask robot samples must identify their dataset_idx")
+            dataset_idx = next(iter(self.dataset_tasks))
+        if isinstance(dataset_idx, torch.Tensor):
+            if dataset_idx.ndim != 0 or dataset_idx.dtype not in (torch.int32, torch.int64):
+                raise ValueError("Robot dataset_idx must be a scalar integer")
+            dataset_idx = int(dataset_idx)
+        if isinstance(dataset_idx, bool) or not isinstance(dataset_idx, int) or dataset_idx not in self.dataset_tasks:
+            raise ValueError(f"Unknown robot dataset_idx: {dataset_idx!r}")
+        expected_repo = self.dataset_repos.get(dataset_idx)
+        if expected_repo is not None and sample.get("repo_id") != expected_repo:
+            raise ValueError("Robot sample repo_id differs from its actual dataset_idx")
+        task = self.dataset_tasks[dataset_idx]
+        demos = self.task_demos[task]
+        # The index chooses only among this task's clips. It cannot select a
+        # different task, including when the caller shuffles/reorders samples.
+        demo = demos[index % len(demos)]
+        sample.update(human_video=demo["human_video"], human_demo_id=demo["human_demo_id"],
+                      native_sample_index=index)
         return sample
 
 

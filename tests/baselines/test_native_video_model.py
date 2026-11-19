@@ -151,6 +151,29 @@ def test_load_clears_features_and_current_conditioning(video_fixture):
     assert agent._cached_task_z is None
 
 
+def test_constant_condition_removes_clip_information_but_keeps_visual_policy(video_fixture):
+    torch.manual_seed(7)
+    args = arguments()
+    agent = native.NativeVideoACTAgent(args, torch.device("cpu"), conditioning_mode="constant")
+    data = batch(args)
+    loss = agent.compute_loss(data)
+    loss.backward()
+    assert torch.isfinite(loss)
+    assert agent.model.backbones[0][0].body["conv1"].weight.grad.abs().sum() > 0
+    assert all(parameter.grad is None for parameter in agent.task_encoder.parameters())
+    first = agent.set_demonstration(torch.zeros(3, 3, 32, 32), "clip-A")
+    actions = agent.get_action(data["view_1"], data["states"])
+    second = agent.set_demonstration(torch.ones(3, 3, 32, 32), "clip-B")
+    assert torch.equal(actions, agent.get_action(data["view_1"], data["states"]))
+    assert first["task_z_sha256"] == second["task_z_sha256"]
+    assert first["conditioning_mode"] == "constant" and first["task_z_norm"] == 0
+    assert not agent.task_encoder.backbone.observed_clips
+    restored = native.NativeVideoACTAgent(args, torch.device("cpu"), conditioning_mode="constant")
+    restored.load_state_dict(agent.state_dict(), strict=True)
+    restored.set_demonstration(torch.ones(3, 3, 32, 32), "clip-C")
+    assert torch.equal(actions, restored.get_action(data["view_1"], data["states"]))
+
+
 def test_native_mask_is_required_and_all_padding_is_rejected(video_fixture):
     args = arguments()
     agent = native.NativeVideoACTAgent(args, torch.device("cpu"))

@@ -210,11 +210,14 @@ def _task_events(raw: Any, info: dict[str, Any]) -> dict[str, Any]:
     else:
         aliases = {"pill_a_in_region": "left_in_region", "pill_b_in_region": "right_in_region",
                    "is_pill_a_grasped": "left_grasped", "is_pill_b_grasped": "right_grasped",
+                   "apple_in_basket": "left_in_region", "banana_in_basket": "right_in_region",
+                   "is_apple_grasped": "left_grasped", "is_banana_grasped": "right_grasped",
                    "is_robot_static": "is_robot_static"}
         for name, alias in aliases.items():
             if name in info:
                 result[alias] = _bool(info[name])
-        named = [(name, getattr(raw, name)) for name in ("pill_a", "pill_b") if hasattr(raw, name)]
+        named = [(name, getattr(raw, name)) for name in
+                 ("pill_a", "pill_b", "apple_out", "banana_out") if hasattr(raw, name)]
     result["objects"] = {
         name: {"position_m": torch.as_tensor(actor.pose.p).detach().cpu().reshape(-1).tolist(),
                "linear_speed_m_s": float(torch.linalg.vector_norm(torch.as_tensor(actor.get_linear_velocity()))),
@@ -435,6 +438,28 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
+def dataset_contract(checkpoint: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    """Select the saved physical/observation contract for this robot dataset.
+
+    Legacy checkpoints contain one top-level contract. New multi-task policies
+    retain common fields there and one explicit row per training dataset.
+    """
+    common = checkpoint.get("data_contract", {})
+    records = common.get("datasets")
+    if records is None:
+        return common
+    matches = [row for row in records if row["repo_id"] == config["repo_id"]]
+    if len(matches) != 1:
+        raise ValueError(f"No unique saved data contract for {config['repo_id']}")
+    selected = {**common, **matches[0]}
+    recorded_task = selected.get("env_id") or (selected.get("native") or {}).get("env_id")
+    configured_task = config.get("env_id")
+    if (recorded_task and configured_task
+            and extract_base_env_name(recorded_task) != extract_base_env_name(configured_task)):
+        raise ValueError("Evaluation task differs from its saved dataset contract")
+    return selected
+
+
 def main(argv=None, *, checkpoint_loader=load_checkpoint, prepare_episode=None,
          report_prefix: str = "act_single"):
     """Run the shared native policy rollout with optional policy conditioning.
@@ -453,8 +478,6 @@ def main(argv=None, *, checkpoint_loader=load_checkpoint, prepare_episode=None,
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     agent, train_args = checkpoint_loader(args.checkpoint, args, device)
     contract = checkpoint.get("data_contract", {})
-    args.native_contract = contract.get("native") or {}
-    source_image_size = contract.get("source_image_size", train_args.image_size)
     if contract.get("fps") != args.fps:
         raise ValueError("Evaluation fps must equal the checkpoint's recorded training fps")
     if not 1 <= args.execute_steps <= train_args.pred_horizon:
@@ -471,6 +494,11 @@ def main(argv=None, *, checkpoint_loader=load_checkpoint, prepare_episode=None,
     L0_L3_utils.set_lr_mirror_enabled(False)
     L0_L3_utils.set_lr_mirror_robot_pose_enabled(False)
     for config in configs:
+        selected_contract = dataset_contract(checkpoint, config)
+        args.native_contract = selected_contract.get("native") or {}
+        source_image_size = selected_contract.get("source_image_size", train_args.image_size)
+        if selected_contract.get("fps") != args.fps:
+            raise ValueError("Evaluation fps must equal the selected dataset's recorded fps")
         repo_id = config["repo_id"]
         env_id = args.env_id or config.get("env_id") or args.native_contract.get("env_id") or extract_base_env_name(repo_id)
         set_l_level(extract_level(env_id))
@@ -534,6 +562,17 @@ def main(argv=None, *, checkpoint_loader=load_checkpoint, prepare_episode=None,
             for result in results),
         "results": str(result_path.resolve()),
     }
+    by_task = {}
+    for env_id in sorted({row["env_id"] for row in results}):
+        task_results = [row for row in results if row["env_id"] == env_id]
+        by_task[env_id] = {
+            "episodes": len(task_results),
+            "official_success_at_end": sum(row["official_success_at_end"] for row in task_results),
+            "timeouts": sum(row["timeout"] for row in task_results),
+        }
+        by_task[env_id]["success_rate"] = by_task[env_id]["official_success_at_end"] / len(task_results)
+    summary["tasks"] = by_task
+    summary["macro_success_rate"] = sum(row["success_rate"] for row in by_task.values()) / len(by_task)
     (output / f"summary_{stamp}.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
     return summary

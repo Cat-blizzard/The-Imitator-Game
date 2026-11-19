@@ -8,6 +8,8 @@ conditioning diagnostic. The selected video identity and latent are reported.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
+import json
 from pathlib import Path
 import re
 from typing import Any
@@ -42,7 +44,11 @@ def load_checkpoint(ckpt_path: str, args_override: Any, device: torch.device):
         value = getattr(args_override, key, None)
         if value is not None and value != getattr(native_args, key):
             raise ValueError(f"Evaluation {key} must match the checkpoint")
-    agent = NativeVideoACTAgent(model_args, device)
+    conditioning_mode = checkpoint.get("conditioning_mode", "video")
+    if checkpoint.get("training_args", {}).get("conditioning_mode", conditioning_mode) != conditioning_mode:
+        raise ValueError("Checkpoint conditioning_mode settings differ")
+    agent = (NativeVideoACTAgent(model_args, device) if conditioning_mode == "video"
+             else NativeVideoACTAgent(model_args, device, conditioning_mode=conditioning_mode))
     agent.load_state_dict(checkpoint["agent_state_dict"], strict=True)
     agent.eval()
     return agent, native_args
@@ -61,36 +67,42 @@ class HumanVideoConditioning:
         self.manifest_override = manifest
         self.role = role
         self.demo_id = demo_id
-        self.demo: dict[str, Any] | None = None
-        self.task_id: str | None = None
+        self.demos: dict[str | None, dict[str, Any]] = {}
 
     def __call__(self, agent: Any, checkpoint: dict[str, Any], config: dict[str, Any],
                  args: Any, seed: int, env_id: str, device: torch.device) -> dict[str, Any]:
         from examples.baselines.act.native_video_data import load_human_demo
 
-        if self.demo is None:
-            source = self.manifest_override or checkpoint.get("human_manifest")
-            if not source:
-                raise ValueError("No saved human manifest; supply --human-manifest")
+        source = self.manifest_override or checkpoint.get("human_manifest")
+        if not source:
+            raise ValueError("No saved human manifest; supply --human-manifest")
+        payload = ({} if self.demo_id is not None else source if isinstance(source, Mapping)
+                   else json.loads(Path(source).read_text(encoding="utf-8")))
+        selected_task = (_task_id(env_id)
+                         if payload.get("schema_version") == 2 and self.demo_id is None else None)
+        if selected_task not in self.demos:
             model_args = checkpoint["model_args"]
-            self.demo = load_human_demo(
+            selection = {"task_id": selected_task} if selected_task is not None else {}
+            self.demos[selected_task] = load_human_demo(
                 source, role=self.role, demo_id=self.demo_id,
                 image_size=tuple(model_args["image_size"]),
                 video_backend=checkpoint["args"].get(
                     "video_backend", model_args.get("video_backend", "torchcodec")),
+                **selection,
             )
-            self.task_id = self.demo["metadata"]["task_id"]
-        task_matches = _task_id(self.task_id) == _task_id(env_id)
+        demo = self.demos[selected_task]
+        task_matches = _task_id(demo["metadata"]["task_id"]) == _task_id(env_id)
         if not task_matches and self.demo_id is None:
             raise ValueError("Human demonstration task differs from the evaluation task; "
                              "an intentional replacement requires --human-demo-id")
         # Content/sampling identity comes from the loader, rather than repo ID.
         # Setting the condition does not receive the environment or alter rollout.
-        effective_id = self.demo["human_demo_id"]
-        conditioning = agent.set_demonstration(self.demo["human_video"], effective_id)
+        effective_id = demo["human_demo_id"]
+        conditioning = agent.set_demonstration(demo["human_video"], effective_id)
         return {
             "policy_type": "native_video_act", "human_demo_id": effective_id,
-            "human_demonstration": {**self.demo["metadata"],
+            "conditioning_mode": checkpoint.get("conditioning_mode", "video"),
+            "human_demonstration": {**demo["metadata"],
                                     "selection_role": self.role,
                                     "explicit_demo_override": self.demo_id is not None,
                                     "task_matches_environment": task_matches},

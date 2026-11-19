@@ -4,8 +4,10 @@ The native-video ACT entry pairs human demonstrations with the selected robot's
 RGB, physical joint positions and native action labels. It reuses the official
 video-conditioned ACT network and frozen DINOv2 task encoder, together with the
 native data converter, normalization and seeded rollout used by the single-task
-baseline. Each invocation pairs one robot dataset/task with its human manifest.
-A separate policy is trained for each embodiment.
+baseline. One invocation can pair multiple tasks from the same embodiment with
+their human demonstrations. A separate policy is trained for each embodiment.
+The original single-task manifest and checkpoints remain supported; the
+[two-task workflow](#7-train-one-model-on-two-tasks) uses manifest version 2.
 
 The initial **L0 engineering pilot** uses ARX X5 on
 `TwoRobotPickPillToRegions-v1`: twenty robot training trajectories, three robot
@@ -344,3 +346,85 @@ Retain every allocated seed, including a completed task failure or an interface
 error. A clipping step means at least one coordinate crossed a controller bound;
 its count alone does not measure severity. Review the affected coordinates and
 magnitudes before considering any training or execution change.
+
+## 7. Train one model on two tasks
+
+Piper supports two original L0 tasks through the shared expert and learning
+entries:
+
+| Robot dataset task | Human task | Native qpos / action widths |
+| --- | --- | --- |
+| `TwoRobotPickPillToRegions-v1` | `human_H31` | 16 / 14 |
+| `TwoRobotPickAppleBananaToBaskets-v1` | `human_H8` | 16 / 14 |
+
+Prepare a converted dataset for each task, including explicit train/development
+episodes. The dataset configuration is a list of the same records used in
+section 2, with a distinct `repo_id`, `root` and correct `env_id` for each task.
+Human manifest version 2 has `schema_version: 2` and a `tasks` list. Each task
+record has `task_id` and `demos`; each demonstration uses the same fields, roles
+and physical MP4 episode bounds as version 1. Demo IDs are unique across tasks.
+
+The wrapper selects videos from each robot sample's actual dataset/task, even
+after shuffling. Within that task it cycles through the training clips. The
+checkpoint stores every dataset's native physical contract, source image size
+and training-only normalization statistics. The evaluator restores the entry
+matching each configuration's `repo_id`. In particular, the two Piper tasks
+have different robot mounting poses; the first task's profile cannot represent
+both. Task IDs route data, configuration and statistics, without becoming an
+extra policy input. Shared-policy training currently requires matching native
+embodiment, joint ordering, state/action widths, camera shapes and control FPS.
+
+Set `MULTITASK_ROOT` to the prepared manifest/configuration directory, and
+`DATA_ROOT` to the parent of the converted datasets. A dataset record may also
+use an absolute `root`. Use the same model JSON encoder settings as section 2.
+Run the video model and its zero-condition ablation with matching budgets:
+
+```bash
+for mode in video constant; do
+  python -m examples.baselines.act.train_act_native_video \
+    --sub-config "$MULTITASK_ROOT/datasets.json" --sim-root "$DATA_ROOT" \
+    --human-manifest "$MULTITASK_ROOT/human-manifest.json" \
+    --model-config "$MULTITASK_ROOT/model-config.json" \
+    --conditioning-mode "$mode" --sampling-policy equal_task \
+    --cameras zed2i --state-type qpos --state-dim 16 --action-dim 14 \
+    --obs-horizon 1 --pred-horizon 16 \
+    --normalization-method bounds_q99 --normalization-min-range 0 \
+    --batch-size 16 --num-workers 2 --max-updates 6000 \
+    --save-freq-updates 3000 --seed 1 \
+    --output-dir "$MULTITASK_ROOT/training-$mode"
+done
+```
+
+`equal_task` samples windows with replacement and equal expected task mass,
+independent of trajectory length. Its dedicated seeded sampler, sampling policy
+and per-dataset statistics are saved. The default `uniform_window` samples
+without replacement, retaining the single-task workflow's sampling semantics.
+The `constant` ablation uses the same visual ACT architecture and robot data,
+replacing the final human condition with a zero vector. Human pixels and clip
+identity then have no effect on policy predictions. It is an ablation of this
+video policy, rather than the separately implemented single-task ACT model.
+
+With a seeds JSON containing the frozen `evaluation` allocation, evaluate both
+final checkpoints through the same task list and original 200-step budget:
+
+```bash
+for mode in video constant; do
+  python -m examples.baselines.act.eval_act_native_video \
+    --checkpoint "$MULTITASK_ROOT/training-$mode/checkpoint_step_006000.pt" \
+    --sub-config "$MULTITASK_ROOT/datasets.json" --hf-cache-dir "$HF_HOME/hub" \
+    --human-manifest "$MULTITASK_ROOT/human-manifest.json" \
+    --seeds-file "$MULTITASK_ROOT/evaluation-seeds.json" \
+    --max-episode-steps 200 --fps 20 --execute-steps 8 \
+    --save-video --action-diagnostics \
+    --output-dir "$MULTITASK_ROOT/evaluation-$mode"
+done
+```
+
+The ordinary evaluation chooses that task's evaluation demonstration. Reports
+include per-task and macro-average final official success. Retain every allocated
+attempt and report interface failures separately from completed policy failures.
+Six thousand updates is a fixed engineering budget, not a convergence claim.
+The two scenes expose task identity through the robot observation; comparing
+the two conditioning modes measures this pilot's outcome but does not by itself
+establish semantic goal-following from video. That question needs the same valid
+robot initial state with multiple executable demonstrated goals.
