@@ -62,6 +62,21 @@ the existing hand-opening and measured arm/object speed thresholds. Otherwise
 it keeps the original ten-tick preparation. Replay uses the recorded preparation
 length; older records without that field retain their ten-tick interpretation.
 
+## Check boundaries
+
+The checks above belong to expert generation and action replay. Policy
+benchmarks step the environment directly; reporting task/contact facts must
+leave policy actions, reward, native termination and official success unchanged.
+A policy can lose an object, recover it and still satisfy the official task.
+
+Within each physics substep, native contact bodies and point values are decoded
+once. Contact classification still runs before and after the source-departure
+latch update; these two passes have different support permissions. Fixed support
+geometry fingerprints are captured at registration. Live scene, geometry,
+finger, attachment and measured contact checks retain their existing guards;
+mutable report evidence is copied for each snapshot. No contact permission,
+quality threshold, sampling frequency or task horizon changes in this cleanup.
+
 ## Configuration and results
 
 Defaults retain the validated pill settings: five grasp observations, 5 mm

@@ -438,5 +438,94 @@ def test_cpu_policy_rollout_reaches_budget_and_reads_episode_metrics(info_layout
     np.testing.assert_array_equal(result["episode_len"], [3])
 
 
+def test_policy_drop_regrasp_success_is_not_gated_by_reported_physical_facts():
+    """Native task facts cannot veto recovery or alter the policy rollout.
+
+    This vectorized evaluator has no physical-event observer. Pair the same
+    scripted native episode with and without optional grasp/region facts in info;
+    the real evaluator must preserve actions and the native final success metric.
+    The fixture tests that boundary, not physical grasp recovery in simulation.
+    """
+    evaluation = _evaluation_module()
+    script = [(True, False, False), (False, False, False), (True, False, False),
+              (True, True, True), (False, True, True)]
+
+    class Policy(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.queries = 0
+
+        def get_action(self, rgb, state):
+            self.queries += 1
+            return (torch.arange(64, dtype=torch.float32).reshape(1, 4, 16) / 100.
+                    + (self.queries - 1) / 10.)
+
+    class Environment:
+        num_envs = 1
+
+        def __init__(self, report_physical_facts):
+            self.report_physical_facts = report_physical_facts
+            self.steps = 0
+            self.actions = []
+            self.native_results = []
+            self.physical_info = []
+
+        def observation(self):
+            return {"rgb": np.full((1, 3, 8, 8), self.steps / 10., dtype=np.float32),
+                    "state": np.full((1, 18), self.steps / 10., dtype=np.float32)}
+
+        def reset(self, seed=None):
+            self.steps = 0
+            return self.observation(), {}
+
+        def step(self, action):
+            self.actions.append(copy.deepcopy(action))
+            grasped, in_region, success = script[self.steps]
+            self.steps += 1
+            terminated, truncated = success, self.steps == len(script)
+            reward = float(sum(value.sum() for value in action.values())) + self.steps
+            self.native_results.append((reward, terminated, truncated, success))
+            info = {"success": np.array([success])}
+            if self.report_physical_facts:
+                info.update(is_pill_a_grasped=np.array([grasped]),
+                            is_pill_b_grasped=np.array([grasped]),
+                            pill_a_in_region=np.array([in_region]),
+                            pill_b_in_region=np.array([in_region]))
+                self.physical_info.append(info)
+            if truncated:
+                info["final_info"] = {"episode": {
+                    "success_once": np.array([True]), "success_at_end": np.array([success]),
+                    "episode_len": np.array([self.steps])}}
+            return (self.observation(), np.array([reward]), np.array([terminated]),
+                    np.array([truncated]), info)
+
+    normalizer = SimpleNamespace(normalize_rgb=lambda value: value,
+                                 normalize_state=lambda value: value,
+                                 denormalize_action=lambda value: value)
+    outputs = []
+    for report in (True, False):
+        env, policy = Environment(report), Policy()
+        result = evaluation.evaluate_episode(
+            1, policy, env, normalizer,
+            SimpleNamespace(seed=401, sim_backend="physx_cpu", camera="zed2i"),
+            torch.device("cpu"), _args())
+        assert policy.queries == 2
+        assert len(env.actions) == len(script)
+        np.testing.assert_array_equal(result["success_once"], [True])
+        np.testing.assert_array_equal(result["success_at_end"], [True])
+        np.testing.assert_array_equal(result["episode_len"], [len(script)])
+        outputs.append((env, result))
+
+    observed, unobserved = (row[0] for row in outputs)
+    assert [bool(row["is_pill_a_grasped"][0]) for row in observed.physical_info] == [
+        True, False, True, True, False]
+    assert observed.native_results == unobserved.native_results
+    for actual, expected in zip(observed.actions, unobserved.actions):
+        for key in ("panda_wristcam-0", "panda_wristcam-1"):
+            np.testing.assert_array_equal(actual[key], expected[key])
+    for key in outputs[0][1]:
+        np.testing.assert_array_equal(outputs[0][1][key], outputs[1][1][key])
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
