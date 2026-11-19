@@ -52,7 +52,7 @@ from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 from mani_skill.envs.tasks.tabletop.utils import L0_L3_utils
 from mani_skill.utils import common
 
-from train_act_single import ACTSingleTaskAgent, TrainingArgs
+from examples.baselines.act.train_act_single import ACTSingleTaskAgent, TrainingArgs
 
 L0_L3_utils.set_lr_mirror_enabled(False)
 L0_L3_utils.set_lr_mirror_robot_pose_enabled(False)
@@ -338,9 +338,9 @@ def evaluate_single_env(
     obs_mode = "rgbd" if args.include_depth else "rgb"
     set_l_level(level)
     try:
-        eval_envs = make_eval_envs_with_level(
-            base_env_name=base_env_name,
-            level=level,
+        eval_envs = make_eval_envs(
+            env_id=base_env_name,
+            l_level=level,
             num_envs=args.num_envs,
             sim_backend=args.sim_backend,
             env_kwargs=dict(

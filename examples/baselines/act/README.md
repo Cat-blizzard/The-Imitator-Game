@@ -97,6 +97,39 @@ The reported ACT experiments are reproduced by the launchers under [`../exp_scri
 - [`exp_scripts/act/run_exp_act.sh`](../exp_scripts/act/run_exp_act.sh) — parallel 45/30/15-task frozen-backbone training on GPUs 0/1/2.
 - [`exp_scripts/act/run_eval_act.sh`](../exp_scripts/act/run_eval_act.sh) — parallel evaluation on the seen/unseen benchmark tasks. Point `RUN_DIR_{45,30,15}` at the training run directories.
 
+## Single-task ACT interfaces
+
+The single-task entry points use robot observations and state without a human
+task encoder. Their concatenated features pass through `obs_proj` before the
+existing video-conditioned DETRVAE: with the defaults, `256 + 64` features become
+a 256-dimensional condition. The physical state remains 18-dimensional. The
+constant zero video feature carries no task information.
+
+Run these entry points as modules from the repository root:
+
+```bash
+python -m examples.baselines.act.train_act_single --help
+python -m examples.baselines.act.eval_act_single --help
+```
+
+Evaluation uses the existing `make_eval_envs` factory with its `env_id` and
+`l_level` arguments. Training defaults, loss formula, data processing, normalization,
+environment wrappers and success metrics retain their existing behavior.
+The human-video imitator entry points and DETRVAE implementation are unchanged.
+Corrected single-task checkpoints load strictly; checkpoints from different
+model classes or conditioning widths are not migrated by this fix.
+
+CPU interface regressions exercise real encoders/CVAE/transformers, training and
+inference, strict checkpoint reload, and L0–L3 factory routing. The ResNet test
+uses random weights to avoid downloading a checkpoint; environment orchestration
+uses fixtures, so these tests do not measure policy success rates.
+
+```bash
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 CUDA_VISIBLE_DEVICES='' \
+  NO_ALBUMENTATIONS_UPDATE=1 \
+  python -m pytest -q tests/baselines/test_act_single_interfaces.py
+```
+
 ## Notes
 
 - The ACT baseline depends on the shared task encoder package under `examples/baselines/encoders`.

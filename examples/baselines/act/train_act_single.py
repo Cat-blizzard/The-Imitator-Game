@@ -2,14 +2,15 @@
 Single-Task ACT Training (LeRobot)
 ====================================
 No task encoder, no human dataset.
-DETRVAE conditioned on obs_latent + state_latent.  A dummy zero vector of
-dim 1 is passed as video_feature so the existing DETRVAE constructor stays
-unmodified — the 1-D projection is essentially inert.
+DETRVAE conditioned on projected obs_latent + state_latent. A dummy zero
+vector of dim 1 is passed as video_feature so the existing video-conditioned
+DETRVAE stays unmodified; this constant feature carries no task information.
 
 Architecture:
   obs_encoder   →  obs_feat   (obs_latent_dim)
   state_encoder →  state_feat (state_latent_dim)
-  [obs_feat ; state_feat]  →  DETRVAE (video_feature = zeros(B, 1))
+  [obs_feat ; state_feat]  →  obs_proj (hidden_dim)  →  DETRVAE
+  video_feature = zeros(B, 1)
 
 Usage:
   python train_act_single.py \
@@ -42,7 +43,7 @@ from examples.baselines.lerobot_dataset.lerobot_dataloader import (
 )
 from examples.baselines.encoders.obs_encoder import ObservationEncoder, ObsEncoderConfig
 from examples.baselines.encoders.state_encoder import StateEncoder, StateEncoderConfig
-from examples.baselines.act.act.detr.detr_vae import (
+from examples.baselines.act.act.detr_video.detr_vae import (
     DETRVAE,
     build_encoder,
     build_transformer,
@@ -181,19 +182,19 @@ class ACTSingleTaskAgent(nn.Module):
         self.obs_proj = nn.Linear(obs_cond_dim, args.hidden_dim).to(device)
 
         # ── DETRVAE ───────────────────────────────────────────────────────────
-        # video_feature_dim=1 with a zero vector → inert task conditioning
+        # video_feature_dim=1 with a zero vector → constant task conditioning
         act_cfg = _ACTCfg(
             args,
             hidden_dim=args.hidden_dim,
             num_queries=args.pred_horizon,
             action_dim=args.action_dim,
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
         )
         self.model = DETRVAE(
             backbones=None,
             transformer=build_transformer(act_cfg),
             encoder=build_encoder(act_cfg),
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
             action_dim=args.action_dim,
             num_queries=args.pred_horizon,
             video_feature_dim=1,             # dummy 1-D task feature (always zero)
@@ -222,7 +223,7 @@ class ACTSingleTaskAgent(nn.Module):
 
         obs_feat,   _ = self.obs_encoder(obs_in)           # (B, obs_latent_dim)
         state_feat, _ = self.state_encoder(state[:, :T])   # (B, state_latent_dim)
-        return torch.cat([obs_feat, state_feat], dim=-1)
+        return self.obs_proj(torch.cat([obs_feat, state_feat], dim=-1))
 
     # ------------------------------------------------------------------
     def compute_loss(self, batch: Dict) -> torch.Tensor:
