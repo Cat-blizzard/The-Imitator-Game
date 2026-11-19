@@ -1,0 +1,508 @@
+{
+  "schema_version": 1,
+  "record_type": "native-video-act-two-task-piper-engineering-pilot",
+  "source_commit": "376c5ecce1b6cf4cc8c8ef1ba8dfe449acc9f904",
+  "evidence_root": "$WORKSPACE_ROOT/infrastructure/validation/native-video-act-multitask-20261119",
+  "raw_evidence_files": [
+    "protocol.json",
+    "data-readiness.json",
+    "actual-data-check.json",
+    "compact-evaluation.json",
+    "training-video-receipt.json",
+    "training-constant-receipt.json",
+    "evaluation-video-receipt.json",
+    "evaluation-constant-receipt.json",
+    "checkpoint-normalizer-audit.json",
+    "paired-initial-state-audit.json",
+    "action-recording-audit.json",
+    "offline-video-intervention.json",
+    "offline-video-intervention.npz"
+  ],
+  "input_sha256": {
+    "protocol.json": "aa17220742f39a586d85c2367df16df6676a57d44d135b3726df2dbc48d8946c",
+    "datasets.json": "b37fc57f8cb4255dbcdbf9eb7445b0e531619e5ba99d4c59226e6f75bf266284",
+    "human-manifest.json": "efa15cbebe95ccb6e5b9d85a78acec23a6fd2fa7b2ff6f851224e62c192d3292",
+    "model-config.json": "8c2eff029a33263d5f1d5fea41e1637db757a5c25ce089aa3b0e5aa62500cab7",
+    "evaluation-seeds.json": "ffa7a94f36cfd097de68888342a2de59c839a2b36158019b057a3a3334233ba1"
+  },
+  "data": {
+    "embodiment": [
+      "piper",
+      "piper"
+    ],
+    "robot_training_episodes": 40,
+    "robot_training_frames": 7673,
+    "robot_development_episodes": 6,
+    "robot_development_frames": 1151,
+    "tasks": [
+      {
+        "task_id": "TwoRobotPickPillToRegions-v1",
+        "train_episodes": 20,
+        "train_frames": 3867,
+        "development_episodes": 3,
+        "development_frames": 582
+      },
+      {
+        "task_id": "TwoRobotPickAppleBananaToBaskets-v1",
+        "train_episodes": 20,
+        "train_frames": 3806,
+        "development_episodes": 3,
+        "development_frames": 569
+      }
+    ],
+    "human_demonstrations": {
+      "task_to_repository": {
+        "TwoRobotPickPillToRegions-v1": "human_H31",
+        "TwoRobotPickAppleBananaToBaskets-v1": "human_H8"
+      },
+      "training_episode_ids": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "development_episode_ids": [
+        4
+      ],
+      "evaluation_episode_ids": [
+        5
+      ],
+      "camera": "zed2i",
+      "sampled_frames_per_clip": 10,
+      "frozen_encoder_frames_per_clip": 4,
+      "episode_video_ranges_source": "Actual per-episode LeRobot metadata, end-exclusive global MP4 frame ranges"
+    },
+    "robot_state_action_statistics": "Computed independently per task from selected robot training rows only; development reuses training statistics",
+    "native_data_actions_and_states_bitwise_equal": true,
+    "new_basket_original_action_replays_passed": 23,
+    "retained_collection_outcomes": {
+      "native_success_execution_quality_and_replay_passed": 23,
+      "asset_environment_failure_completed": 10,
+      "interrupted_launch": 1,
+      "initial_import_failure_without_worker": 1,
+      "physical_quality_failures_on_completed_native_attempts": 0,
+      "no_seed_reuse_or_failure_replacement": true
+    }
+  },
+  "fixed_training_protocol": {
+    "conditions": [
+      "video",
+      "constant"
+    ],
+    "optimizer_updates": 6000,
+    "batch_size": 16,
+    "training_seed": 1,
+    "sampling_policy": "equal_task",
+    "task_sampling_probability": 0.5,
+    "checkpoint_selection": "Final update 6000 selected before evaluation; no selection or retraining on evaluation outcomes",
+    "constant_condition": "Zero task/video condition, same architecture and robot data; no task ID supplied to the policy",
+    "model": {
+      "state_dim": 16,
+      "action_dim": 14,
+      "image_size": [
+        224,
+        224
+      ],
+      "pred_horizon": 16,
+      "obs_horizon": 1,
+      "lr": 0.0001,
+      "lr_backbone": 1e-05,
+      "weight_decay": 0.0001,
+      "grad_clip": 1.0,
+      "normalization_method": "bounds_q99",
+      "normalization_min_range": 0.0
+    },
+    "frozen_human_backbone": "DINOv2 ViT-L/14, generic pretrained weights, no LoRA",
+    "trainable_robot_backbone": "ResNet-18",
+    "parameters": {
+      "total": 337877518,
+      "trainable": 33508878
+    }
+  },
+  "fixed_evaluation_protocol": {
+    "seeds_per_task": [
+      23000,
+      23001,
+      23002,
+      23003,
+      23004,
+      23005,
+      23006,
+      23007,
+      23008,
+      23009
+    ],
+    "episodes_per_condition": 20,
+    "total_episodes": 40,
+    "attempts_per_condition_task_seed": 1,
+    "max_episode_steps": 200,
+    "control_fps": 20,
+    "physics_fps": 100,
+    "execute_steps": 8,
+    "interface_errors": 0,
+    "success_definition": "Official task success at final step, reported separately from success observed earlier",
+    "monitoring": "Action/physical observations are read-only; no added quality rejection or early termination",
+    "all_videos_trajectories_and_failures_retained": true
+  },
+  "models": {
+    "video": {
+      "final_checkpoint": "training-video/checkpoint_step_006000.pt",
+      "final_checkpoint_sha256": "547344cc56b5e4f3848291113329f03d447410efa11142dde5b180a350656c34",
+      "training_exit_code": 0,
+      "evaluation_exit_code": 0,
+      "global_step": 6000,
+      "macro_success_rate": 0.6,
+      "episodes": 20,
+      "tasks": {
+        "TwoRobotPickPillToRegions-v1": {
+          "episodes": 10,
+          "official_success_at_end": 2,
+          "success_rate": 0.2,
+          "timeouts": 8,
+          "interface_errors": 0,
+          "failure_stage_counts": {
+            "transport_or_release_incomplete": 3,
+            "placement_not_successful": 3,
+            "grasp_not_observed": 2
+          },
+          "arm_action_coordinate_clip_count": 0,
+          "clipped_coordinates_only": [
+            {
+              "side": "left",
+              "name": "gripper",
+              "unit": "normalized_controller_command",
+              "clipped_count": 1242,
+              "max_abs_excess_on_clipped": 0.06269896030426025
+            },
+            {
+              "side": "right",
+              "name": "gripper",
+              "unit": "normalized_controller_command",
+              "clipped_count": 1031,
+              "max_abs_excess_on_clipped": 0.055667877197265625
+            }
+          ],
+          "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+          "cases": [
+            {"seed": 23000,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23001,"official_success_at_end": false,"official_success_once": false,"failure_stage": "transport_or_release_incomplete","timeout": true},
+            {"seed": 23002,"official_success_at_end": false,"official_success_once": false,"failure_stage": "placement_not_successful","timeout": true},
+            {"seed": 23003,"official_success_at_end": false,"official_success_once": false,"failure_stage": "placement_not_successful","timeout": true},
+            {"seed": 23004,"official_success_at_end": false,"official_success_once": false,"failure_stage": "transport_or_release_incomplete","timeout": true},
+            {"seed": 23005,"official_success_at_end": false,"official_success_once": false,"failure_stage": "transport_or_release_incomplete","timeout": true},
+            {"seed": 23006,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23007,"official_success_at_end": false,"official_success_once": false,"failure_stage": "placement_not_successful","timeout": true},
+            {"seed": 23008,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23009,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false}
+          ]
+        },
+        "TwoRobotPickAppleBananaToBaskets-v1": {
+          "episodes": 10,
+          "official_success_at_end": 10,
+          "success_rate": 1.0,
+          "timeouts": 0,
+          "interface_errors": 0,
+          "failure_stage_counts": {},
+          "arm_action_coordinate_clip_count": 0,
+          "clipped_coordinates_only": [
+            {
+              "side": "left",
+              "name": "gripper",
+              "unit": "normalized_controller_command",
+              "clipped_count": 1702,
+              "max_abs_excess_on_clipped": 0.04625344276428223
+            },
+            {
+              "side": "right",
+              "name": "gripper",
+              "unit": "normalized_controller_command",
+              "clipped_count": 995,
+              "max_abs_excess_on_clipped": 0.04967820644378662
+            }
+          ],
+          "human_demo_id": "clip-sha256:a47efa467f5eb7c5a18e3572d4b61462364e4fadea824868f3c57e4807ffe39b",
+          "cases": [
+            {"seed": 23000,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23001,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23002,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23003,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23004,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23005,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23006,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23007,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23008,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23009,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false}
+          ]
+        }
+      }
+    },
+    "constant": {
+      "final_checkpoint": "training-constant/checkpoint_step_006000.pt",
+      "final_checkpoint_sha256": "3a49a7437fe96194350be212c921c3947aab0d42df19de98463472e0455cc1d1",
+      "training_exit_code": 0,
+      "evaluation_exit_code": 0,
+      "global_step": 6000,
+      "macro_success_rate": 0.5,
+      "episodes": 20,
+      "tasks": {
+        "TwoRobotPickPillToRegions-v1": {
+          "episodes": 10,
+          "official_success_at_end": 0,
+          "success_rate": 0.0,
+          "timeouts": 10,
+          "interface_errors": 0,
+          "failure_stage_counts": {
+            "grasp_not_observed": 10
+          },
+          "arm_action_coordinate_clip_count": 0,
+          "clipped_coordinates_only": [
+            {
+              "side": "right",
+              "name": "gripper",
+              "unit": "normalized_controller_command",
+              "clipped_count": 20,
+              "max_abs_excess_on_clipped": 0.0006740093231201172
+            }
+          ],
+          "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+          "cases": [
+            {"seed": 23000,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23001,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23002,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23003,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23004,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23005,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23006,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23007,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23008,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true},
+            {"seed": 23009,"official_success_at_end": false,"official_success_once": false,"failure_stage": "grasp_not_observed","timeout": true}
+          ]
+        },
+        "TwoRobotPickAppleBananaToBaskets-v1": {
+          "episodes": 10,
+          "official_success_at_end": 10,
+          "success_rate": 1.0,
+          "timeouts": 0,
+          "interface_errors": 0,
+          "failure_stage_counts": {},
+          "arm_action_coordinate_clip_count": 0,
+          "clipped_coordinates_only": [
+            {
+              "side": "left",
+              "name": "gripper",
+              "unit": "normalized_controller_command",
+              "clipped_count": 1117,
+              "max_abs_excess_on_clipped": 0.04167830944061279
+            },
+            {
+              "side": "right",
+              "name": "gripper",
+              "unit": "normalized_controller_command",
+              "clipped_count": 704,
+              "max_abs_excess_on_clipped": 0.04946708679199219
+            }
+          ],
+          "human_demo_id": "clip-sha256:a47efa467f5eb7c5a18e3572d4b61462364e4fadea824868f3c57e4807ffe39b",
+          "cases": [
+            {"seed": 23000,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23001,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23002,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23003,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23004,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23005,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23006,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23007,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23008,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false},
+            {"seed": 23009,"official_success_at_end": true,"official_success_once": true,"failure_stage": null,"timeout": false}
+          ]
+        }
+      }
+    }
+  },
+  "matched_comparison_checks": {
+    "matched_training_valid": true,
+    "initial_policy_sha256": "744c85140d8e2ba1ac9e482d7ce9bce0fc82c0c8b27badc2560ecb435f218d4a",
+    "initial_policy_equal": true,
+    "initial_policy_hash_scope": "All non-task-encoder policy parameter and buffer names, types, shapes and values before optimizer updates",
+    "actual_sampling_equal": true,
+    "actual_sampling": {
+      "task_windows": {
+        "TwoRobotPickPillToRegions-v1": 47869,
+        "TwoRobotPickAppleBananaToBaskets-v1": 48047
+      },
+      "window_index_sequence_sha256": "201111ec16fe87e7ee39948f031f2701aae5db971264739741c5d986056a7a7a"
+    },
+    "common_configuration_equal": {
+      "model_args": true,
+      "data_contract": true,
+      "human_manifest": true,
+      "human_train_demonstrations": true,
+      "sampling": true,
+      "parameters": true
+    },
+    "training_argument_differences": [
+      "output_dir",
+      "conditioning_mode"
+    ],
+    "final_checkpoint_dataset_stats_bitwise_equal": true,
+    "final_checkpoint_dataset_stats_sha256": "415ee8e7d877fc76bf585a7e269c9a0f2a115beb91d24cceee74c0a9cd9033b5",
+    "task_routing_equal": true,
+    "shared_task_routes": [
+      {
+        "repo_id": "piper-pill-v1",
+        "env_id": "TwoRobotPickPillToRegions-v1",
+        "dataset_idx": 0,
+        "native_contract_sha256": "369b40b25e2b8ec937cf7ff16839d160f806d84d364e61fc1c9c59743b6dfbf9",
+        "stats_sha256": "d40e97cf83563fab2aa1dd8b1dd54d15265d7f6daa897f957ce82bfd762a604c"
+      },
+      {
+        "repo_id": "piper-basket-v1",
+        "env_id": "TwoRobotPickAppleBananaToBaskets-v1",
+        "dataset_idx": 1,
+        "native_contract_sha256": "3e558e15004b8af6ec9c1095a35b6183902565c6596c0a3420660866befb33b7",
+        "stats_sha256": "040bea8255dba7c2a78568216e3670c0d5f433bbb1e12619b54ddd41af73f914"
+      }
+    ],
+    "paired_initial_states": {
+      "cases": 20,
+      "all_initial_arrays_bitwise_equal": true,
+      "checked_arrays": "All recorded S0 env_states arrays and initial public robot RGB/qpos; no requirement that subsequent policy trajectories match"
+    },
+    "recorded_action_checks": {
+      "cases": 40,
+      "control_steps": 8000,
+      "all_recorded_actions_bitwise_match": true,
+      "all_existing_clamps_bitwise_match": true,
+      "all_action_arrays_finite": true
+    },
+    "cpu_regression": {
+      "passed": 603,
+      "warnings": 36,
+      "seconds": 26.66,
+      "log": "cpu-regression-profile-final.log",
+      "sha256": "285bb0e214d43f5c91256ac73373f06dd332e05333b4056818c0d29fcf674bd4"
+    }
+  },
+  "offline_video_intervention": {
+    "new_simulator_episodes": 0,
+    "models": {
+      "video": [
+        {
+          "observation_task": "TwoRobotPickPillToRegions-v1",
+          "development_robot_seed": 7000,
+          "observation_index": 0,
+          "action_shape": [
+            1,
+            16,
+            14
+          ],
+          "mean_absolute_normalized_action_difference": 0.020460406368199204,
+          "max_absolute_normalized_action_difference": 0.08326232433319092,
+          "actions_bitwise_equal": false,
+          "correct_condition_restored_bitwise_equal": true,
+          "conditions": [
+            {
+              "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+              "task_z_sha256": "300f4806489ce47f4dc80f1c96a53d0b1c0429a04ed83547fe24e9a9a8b08d23",
+              "task_z_norm": 15.897708892822266
+            },
+            {
+              "human_demo_id": "clip-sha256:a47efa467f5eb7c5a18e3572d4b61462364e4fadea824868f3c57e4807ffe39b",
+              "task_z_sha256": "60e6bf043f3f601cea60a5b200317530639b0c9a6cc385f83133017141ec3f3d",
+              "task_z_norm": 15.892097473144531
+            }
+          ]
+        },
+        {
+          "observation_task": "TwoRobotPickAppleBananaToBaskets-v1",
+          "development_robot_seed": 22000,
+          "observation_index": 0,
+          "action_shape": [
+            1,
+            16,
+            14
+          ],
+          "mean_absolute_normalized_action_difference": 0.015384842733120812,
+          "max_absolute_normalized_action_difference": 0.049464792013168335,
+          "actions_bitwise_equal": false,
+          "correct_condition_restored_bitwise_equal": true,
+          "conditions": [
+            {
+              "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+              "task_z_sha256": "300f4806489ce47f4dc80f1c96a53d0b1c0429a04ed83547fe24e9a9a8b08d23",
+              "task_z_norm": 15.897708892822266
+            },
+            {
+              "human_demo_id": "clip-sha256:a47efa467f5eb7c5a18e3572d4b61462364e4fadea824868f3c57e4807ffe39b",
+              "task_z_sha256": "60e6bf043f3f601cea60a5b200317530639b0c9a6cc385f83133017141ec3f3d",
+              "task_z_norm": 15.892097473144531
+            }
+          ]
+        }
+      ],
+      "constant": [
+        {
+          "observation_task": "TwoRobotPickPillToRegions-v1",
+          "development_robot_seed": 7000,
+          "observation_index": 0,
+          "action_shape": [
+            1,
+            16,
+            14
+          ],
+          "mean_absolute_normalized_action_difference": 0.0,
+          "max_absolute_normalized_action_difference": 0.0,
+          "actions_bitwise_equal": true,
+          "correct_condition_restored_bitwise_equal": true,
+          "conditions": [
+            {
+              "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+              "task_z_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+              "task_z_norm": 0.0
+            },
+            {
+              "human_demo_id": "clip-sha256:a47efa467f5eb7c5a18e3572d4b61462364e4fadea824868f3c57e4807ffe39b",
+              "task_z_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+              "task_z_norm": 0.0
+            }
+          ]
+        },
+        {
+          "observation_task": "TwoRobotPickAppleBananaToBaskets-v1",
+          "development_robot_seed": 22000,
+          "observation_index": 0,
+          "action_shape": [
+            1,
+            16,
+            14
+          ],
+          "mean_absolute_normalized_action_difference": 0.0,
+          "max_absolute_normalized_action_difference": 0.0,
+          "actions_bitwise_equal": true,
+          "correct_condition_restored_bitwise_equal": true,
+          "conditions": [
+            {
+              "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+              "task_z_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+              "task_z_norm": 0.0
+            },
+            {
+              "human_demo_id": "clip-sha256:a47efa467f5eb7c5a18e3572d4b61462364e4fadea824868f3c57e4807ffe39b",
+              "task_z_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+              "task_z_norm": 0.0
+            }
+          ]
+        }
+      ]
+    },
+    "interpretation": "Changing only the human video at a fixed saved development RGB/qpos observation measures input sensitivity and condition-cache restoration. A cross-task swap does not establish task-semantic necessity or effects on rollout success."
+  },
+  "limitations": [
+    "Two L0 source tasks with supervised Piper robot data; not the full TIG benchmark, held-out task transfer, or zero-shot embodiment transfer.",
+    "One training seed per condition and ten fixed evaluation seeds per task; the 60% versus 50% macro success rates are descriptive observations, not an established general video benefit.",
+    "The fixed 6000-update budget is an engineering pilot budget; convergence, optimal stopping and the cause of lower pill performance have not been established.",
+    "The two task scenes differ, so success and the offline video-sensitivity check do not by themselves show that video semantics are necessary.",
+    "Failure stages summarize sampled task predicates; they do not by themselves establish a unique physical cause.",
+    "Large checkpoints, videos, trajectories and raw world arrays are retained under the evidence root and are not embedded in this record."
+  ]
+}

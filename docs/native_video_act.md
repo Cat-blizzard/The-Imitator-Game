@@ -349,6 +349,9 @@ magnitudes before considering any training or execution change.
 
 ## 7. Train one model on two tasks
 
+The completed Piper pilot and matched zero-condition run are documented in
+[the two-task validation report](native_video_act_multitask_validation.md).
+
 Piper supports two original L0 tasks through the shared expert and learning
 entries:
 

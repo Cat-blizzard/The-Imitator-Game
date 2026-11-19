@@ -89,7 +89,7 @@ See [generation and conversion](dual-arm-sync.md),
   dataset FPS fixes are preserved. Augmentation defaults to off and can be
   enabled explicitly. The native human-video ACT entry builds on this rollout
   and adds the official frozen video encoder and trainable task adapter; see
-  [the ARX video-conditioned workflow](native_video_act.md).
+  [the native video-conditioned workflow](native_video_act.md).
 - Official success, physical events, expert execution/quality and recording
   facts remain separate. Optional policy-evaluation observation is read-only.
 
@@ -182,9 +182,19 @@ identities and machine-readable results.
 - [x] Diagnose action clipping without changing scoring or execution. Across
   4,000 new rollout steps the twelve arm coordinates never exceed bounds;
   gripper excess corresponds to at most 0.247/0.511 mm of per-finger target
-  correction. Denormalization and executed H5 actions agree exactly. The latest
-  applicable CPU suite passes 582 tests. Details and limits are in
+  correction. Denormalization and executed H5 actions agree exactly. The
+  applicable CPU suite at that point passed 582 tests. Details and limits are in
   [the validation report](native_video_act_validation.md).
+- [x] Complete the Piper two-task pilot: each task contributes twenty training
+  and three development trajectories, paired with human_H31/H8. One shared
+  video model and a matched zero-condition model each complete 6,000 updates.
+  Across forty fixed new-seed episodes, final success is pill 2/10 versus 0/10,
+  baskets 10/10 for both (macro 60% versus 50%), with zero interface errors.
+  Initial states, initial policy weights/buffers outside `task_encoder.*`, actual
+  sampling, task routing and normalizers match across conditions. Offline
+  condition swapping changes video-model output and preserves constant-model
+  output. The latest applicable CPU suite
+  passes 603 tests. See [the two-task report](native_video_act_multitask_validation.md).
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -193,29 +203,26 @@ identities and machine-readable results.
 
 ## Next implementation priorities
 
-1. **P0: one robot pair, two original tasks, one video-conditioned ACT model.**
-   Start with Piper pill and apple/banana baskets, paired with human_H31 and
-   human_H8. Both expert generation/replay routes and the human datasets already
-   exist. ARX currently needs another original-task expert adapter for this scope.
+1. **P0: improve and validate the two-task learning result.** The Piper pilot
+   now connects pill and apple/banana baskets to one model using human_H31/H8.
 
-   - [ ] Freeze small robot train/development/evaluation and human-clip splits,
-     data versions and collection attempts. Add the basket training/development
-     dataset; its six successful expert regression cases are not a complete
-     learning dataset.
-   - [ ] Extend the single-task manifest, dataset, trainer and evaluator. Route
-     each real robot sample to its task's human clips, define task sampling, and
-     save/restore each task's native contract, physical profile and training-only
-     normalizer. The Piper tasks have different mounting poses: removing the
-     trainer's single-task assertion alone would restore the wrong environment.
-     Task identifiers route data/configuration and reports, not an extra policy
-     input.
-   - [ ] Train one shared checkpoint and evaluate both tasks on fixed new seeds;
-     retain per-task results, macro averages, timeouts and interface failures.
-   - [ ] Compare video conditioning with a matched no-video model and controlled
-     condition interventions. The two scenes themselves reveal task identity,
-     so joint success or an invalid cross-task video swap cannot establish video
-     semantics. A goal-following claim additionally needs the same valid robot
-     initial state with multiple executable goals distinguished by the demo.
+   - [x] Freeze splits and collect/convert basket data. The combined robot set
+     has forty training episodes (7,673 frames) and six development episodes
+     (1,151 frames); collection failures and all replays are retained.
+   - [x] Implement task-paired video manifests, equal-task sampling, saved native
+     profiles and per-task training-only normalizers, with strict shared-model
+     reload. Task IDs route configuration and reports without extra policy input.
+   - [x] Complete fixed-budget training and new-seed evaluation for the video
+     model and matched zero-condition baseline; retain all forty outcomes.
+   - [x] Verify offline video-condition sensitivity and A-to-B-to-A cache
+     restoration. This intervention does not establish goal semantics.
+   - [ ] Diagnose pill approach/grasp and transport/placement failures on fixed
+     development cases. Compare development checkpoints before deciding further
+     training/data budgets. Reserve a new final batch after those choices;
+     do not tune on the forty reported evaluation episodes.
+   - [ ] Test demonstration following with the same valid initial scene and
+     multiple executable goals. Different task scenes and cross-task video swaps
+     do not establish a reliable video benefit or semantic necessity.
 
 2. **P1: maintain supported routes and investigate xArm6101.** Its placement
    reaches only 9/20 stable observations before the original action budget ends,
@@ -236,6 +243,7 @@ identities and machine-readable results.
    of the current clean supported routes. USD/Real2Sim, closed-chain and
    soft-body work remain later work packages.
 
-The ARX result establishes a single-task learning loop. Multi-task video use,
-full L0–L3 coverage, cross-task transfer and a complete official benchmark
-result remain open.
+The ARX result establishes a single-task learning loop; the Piper pilot adds a
+shared two-task model and a matched condition ablation. Reliable demonstration
+following, full L0–L3 coverage, cross-task transfer and a complete official
+benchmark result remain open.
