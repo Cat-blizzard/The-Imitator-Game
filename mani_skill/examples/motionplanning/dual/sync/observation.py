@@ -7,8 +7,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 from .trajectory_execution import as_numpy
-from .physical_observation import (contact_identities, contact_allowed, physical_contact_points,
-    physical_support_transition, task_object_contact_rows, pose_matrix, measured_source_departure,
+from .physical_observation import (contact_identities, contact_allowed, decode_native_contacts,
+    classify_task_object_contacts, physical_support_transition, pose_matrix, measured_source_departure,
     own_finger_contact_pair)
 from .measurements import _rotation_distance
 
@@ -91,10 +91,11 @@ class ObservedEnvironment:
     def record_substep(self):
         self.original_hook()
         self.substeps += 1
-        contacts = self.unwrapped.scene.px.get_contacts()
+        native_contacts = self.unwrapped.scene.px.get_contacts()
         checker = self.checker_provider()
         geometry = measured_source_departure(checker, refresh=False)
-        rows = task_object_contact_rows(contacts, self.identities, tuple(self.physical_released),
+        contacts = decode_native_contacts(native_contacts, self.identities)
+        rows = classify_task_object_contacts(contacts, tuple(self.physical_released),
             self.phase, self.task)
         source_contact = [False, False]
         for row in rows:
@@ -111,7 +112,7 @@ class ObservedEnvironment:
                     self.reference_z[i] = min(self.reference_z[i], height)
             self.physical_released[i] = physical_support_transition(self.physical_released[i],
                 geometry[i], self.reference_z[i], height, source_contact[i])
-        rows = task_object_contact_rows(contacts, self.identities, tuple(self.physical_released),
+        rows = classify_task_object_contacts(contacts, tuple(self.physical_released),
             self.phase, self.task)
         present = {pair for row in rows if row['physical_contact']
                    if (pair := own_finger_contact_pair(row['bodies'])) is not None}
@@ -124,13 +125,10 @@ class ObservedEnvironment:
             if row['physical_contact'] and row['class'] == 'forbidden':
                 self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies']})
         for contact in contacts:
-            sides = [self.identities.get(body.entity, {'kind': 'unknown', 'actor': body.entity.name})
-                for body in contact.bodies]
+            sides = contact['bodies']
             if not any(side.get('kind') == 'robot' for side in sides):
                 continue
-            points = [{'separation_m': float(p.separation), 'impulse_Ns': np.asarray(p.impulse).tolist()}
-                for p in contact.points]
-            if physical_contact_points(points) and not contact_allowed(sides, self.phase, self.srdf,
+            if contact['physical_contact'] and not contact_allowed(sides, self.phase, self.srdf,
                     retreat_contacts=self._retreat_contacts):
                 self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides})
         if self.references is not None and (self.phase == 'lift_and_hold' or self.phase.startswith('carry_')):
