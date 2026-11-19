@@ -1,0 +1,165 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_lift_peg_upright_v1",
+ "protocol": "v3",
+ "instruction": "Stand the lying peg upright on the table, let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 5.0,
+   "units": "deg",
+   "args": {
+    "signal": "peg_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "Upright: the peg's long axis within 5 deg of vertical at every judged step (ManiSkill: 0.08 rad = 4.6 deg). Real world: pose estimate."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "peg_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "Standing on the table: lowest bounding-box corner within 5 mm of the table top at every judged step. Real world: RGB-D pose vs table plane."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_peg_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Supported by the table: table-peg contact impulse > 0 in every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the peg retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the peg must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "peg_x",
+    "signals": [
+     "peg_x",
+     "peg_y",
+     "peg_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the peg centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_peg_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "peg_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "peg_x",
+     "peg_y",
+     "peg_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: grasp, lift, rotate the peg upright, set it on the table, open, back off and up",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.lift_peg_upright(variant='expert')"
+  },
+  {
+   "name": "hold_upright",
+   "description": "peg set upright on the table, gripper stays closed",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.lift_peg_upright(variant='hold_upright')"
+  },
+  {
+   "name": "tilted_release",
+   "description": "peg rotated only to ~25 deg from upright, set on the table and released (it falls)",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.lift_peg_upright(variant='tilted_release')"
+  },
+  {
+   "name": "lift_flat",
+   "description": "peg lifted 10 cm without rotating, held",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.lift_peg_upright(variant='lift_flat')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "LiftPegUpright-v1",
+  "released_code_predicate": "| |euler_XYZ z| - pi/2 | < 0.08 rad and | z - half_length | < 5 mm, one step (no release, no settle)"
+ },
+ "notes": "Peg bounding box (0.24 x 0.05 x 0.05 m), long axis = local x."
+}

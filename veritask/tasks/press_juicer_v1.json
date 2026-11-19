@@ -1,0 +1,32 @@
+{
+ "task_id": "press_juicer_v1",
+ "instruction": "Press the juicer's knob down until it reaches its pressed position, then let go.",
+ "outcome": [
+  {
+   "metric": "trace.min", "op": "<=", "threshold": -0.218, "units": "rad",
+   "args": {"signal": "knob_qpos"},
+   "real_measurement": "Rationale: the released env itself defines the press target as qmin + 0.25 (qmax - qmin) = -0.218 rad for model 103105 (max_close_frac = 0.25) but never uses it; we require the knob joint to actually reach it at some point (the knob has no return spring, so min over the episode = deepest press). Real world: knob/lever angle from a joint encoder if the appliance is instrumented, otherwise an AprilTag on the knob tracked by a fixed camera (angle relative to the start frame)."
+  },
+  {
+   "metric": "trace.count_true", "op": ">=", "threshold": 1, "units": "control steps",
+   "args": {"signal": "robot_knob_contact"},
+   "real_measurement": "Rationale: the press must be done by the robot, i.e. some robot link touches the knob link (pairwise contact force > 0.05 N, ~5 gram-force, sampled once per 20 Hz control step). Real world: fingertip tactile pads or wrist F/T spike (> 0.05 N) while the fingertip is within 1 cm of the knob in the camera / forward kinematics."
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 0.5,
+ "counterexamples": [
+  {"name": "hover_front_10cm", "description": "TCP 10 cm in front of the knob, no contact", "expected": false, "generator": "e1_press_juicer.hover_front_10cm"},
+  {"name": "hover_above_4cm", "description": "TCP 4 cm above the knob top, no contact", "expected": false, "generator": "e1_press_juicer.hover_above_4cm"},
+  {"name": "touch_and_leave", "description": "come within 0.14 m of the knob, return to start", "expected": false, "generator": "e1_press_juicer.touch_and_leave"},
+  {"name": "no_op", "description": "both arms hold still", "expected": false, "generator": "e1_press_juicer.no_op"},
+  {"name": "press_knob", "description": "positive control: tilted closed gripper pushes the knob edge 1.5 cm down, backs off", "expected": true, "generator": "e1_press_juicer.press_knob"},
+  {"name": "expert", "description": "official motion-planning solution (_050); E1 showed it never moves the knob", "expected": false, "generator": "imitator.solutions._050_press_juicer"}
+ ],
+ "source": {
+  "benchmark": "imitator", "task": "_050_press_juicer (TwoRobotPressJuicer-v1, L0)",
+  "released_code_predicate": "success = juicer_ever_pressed = OR_t(||left TCP - knob mesh centre|| <= 0.14 m); pressed_enough (qpos <= target) computed, unused",
+  "e1_result": "research/results/e1/press_juicer_10seeds.json"
+ },
+ "notes": "released = no robot-knob contact over the final 10 control steps (TraceRecorder 'released' signal). Contacts are taken from the last PhysX substep of each control step, so a contact shorter than 10 ms between two control steps could be missed; sustained presses are not affected."
+}

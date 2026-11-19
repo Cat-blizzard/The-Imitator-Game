@@ -1,0 +1,1033 @@
+{
+ "arms": {
+  "arx_x5": {
+   "name": "arx_x5",
+   "kind": "arm_gripper",
+   "source": "ARX X5 (ARX Robotics) as packaged by RoboTwin 2.0 (assets/embodiments/ARX-X5/X5A.urdf); joint limits, velocity limits and gripper width from real-stanford/arx5-sdk include/app/config.h ('X5')",
+   "source_urdf": "imitator/assets/embodiments/_src/robotwin/ARX-X5/X5A.urdf",
+   "license": "MIT (RoboTwin 2.0 embodiment assets: README 'license: MIT License'; RoboTwin repo LICENSE MIT); joint limits from arx5-sdk (MIT, Copyright (c) 2024 Yihuai Gao). Upstream ARX URDF license not stated.",
+   "agent_uid": "imsim_arx_x5",
+   "agent_base": "imsim generic",
+   "arm_joints": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6"
+   ],
+   "gripper_joints": [
+    "joint7",
+    "joint8"
+   ],
+   "passive_joints": [],
+   "flange_link": "link6",
+   "tcp_link": "tcp",
+   "tcp": {
+    "name": "tcp",
+    "parent": "link6",
+    "xyz": [
+     0.13,
+     0.0,
+     0.0
+    ],
+    "rpy": [
+     -0.0,
+     1.5707963267948966,
+     0.0
+    ]
+   },
+   "grasp_links": [
+    "link7",
+    "link8",
+    "link6"
+   ],
+   "pad_links": [
+    "link7",
+    "link8"
+   ],
+   "gripper_max_opening_m": 0.088,
+   "gripper_cmd_open": [
+    1.0
+   ],
+   "gripper_cmd_closed": [
+    -1.0
+   ],
+   "joint_limits": {
+    "joint1": [
+     -3.14,
+     2.618
+    ],
+    "joint2": [
+     -0.05,
+     3.5
+    ],
+    "joint3": [
+     -0.1,
+     3.2
+    ],
+    "joint4": [
+     -1.6,
+     1.55
+    ],
+    "joint5": [
+     -1.57,
+     1.57
+    ],
+    "joint6": [
+     -2.0,
+     2.0
+    ],
+    "joint7": [
+     0.0,
+     0.044
+    ],
+    "joint8": [
+     0.0,
+     0.044
+    ]
+   },
+   "velocity_limits": {
+    "joint1": 5.0,
+    "joint2": 5.0,
+    "joint3": 5.5,
+    "joint4": 5.5,
+    "joint5": 5.0,
+    "joint6": 5.0,
+    "joint7": 0.3,
+    "joint8": 0.3
+   },
+   "home_arm_qpos": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mount_yaw": 0.0,
+   "reach_m": 0.62,
+   "stiffness": 1000.0,
+   "damping": 100.0,
+   "force_limit": 100.0,
+   "gripper_stiffness": 1000.0,
+   "gripper_damping": 100.0,
+   "gripper_force_limit": 100.0,
+   "gripper_lower": -0.01,
+   "gripper_upper": 0.044,
+   "gripper_mimic": {
+    "joint8": {
+     "joint": "joint7"
+    }
+   },
+   "hand": null,
+   "drop_links": [
+    "camera_base"
+   ],
+   "path_map": {},
+   "curobo_yml": "imitator/assets/embodiments/_src/robotwin/ARX-X5/curobo.yml",
+   "collision_spheres_yml": "imitator/assets/embodiments/_src/robotwin/ARX-X5/collision_X5A.yml",
+   "source_srdf": null,
+   "control_modes": [
+    "pd_joint_pos",
+    "pd_joint_delta_pos",
+    "pd_ee_delta_pose",
+    "pd_ee_pose"
+   ],
+   "finger_side_links": null,
+   "notes": "RoboTwin's X5A.urdf writes +-10 rad joint limits (placeholders); replaced by the SDK's limits. Fingers are two independent prismatic joints in the URDF; the gripper controller couples them (mimic). TCP 0.13 m along link6 x (finger pads span 0.072-0.158 m; RoboTwin uses 0.12, the SDK's eef_link 0.145).",
+   "urdf_path": "imitator/assets/embodiments/arx_x5/arx_x5.urdf",
+   "srdf_path": "imitator/assets/embodiments/arx_x5/arx_x5.srdf",
+   "mplib_srdf_path": "imitator/assets/embodiments/arx_x5/arx_x5_mplib.srdf",
+   "dof_arm": 6,
+   "dof_gripper": 1,
+   "action_dim": 7
+  },
+  "piper": {
+   "name": "piper",
+   "kind": "arm_gripper",
+   "source": "AgileX PiPER 6-DOF arm with parallel gripper, as packaged by RoboTwin 2.0 (assets/embodiments/piper/piper.urdf; official joint limits from the bundled AgileX piper_description.urdf)",
+   "source_urdf": "imitator/assets/embodiments/_src/robotwin/piper/piper.urdf",
+   "license": "MIT (RoboTwin 2.0 embodiment assets); upstream agilexrobotics/piper_ros is MIT per its repository (not re-checked here)",
+   "agent_uid": "imsim_piper",
+   "agent_base": "imsim generic",
+   "arm_joints": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6"
+   ],
+   "gripper_joints": [
+    "joint7",
+    "joint8"
+   ],
+   "passive_joints": [],
+   "flange_link": "link6",
+   "tcp_link": "tcp",
+   "tcp": {
+    "name": "tcp",
+    "parent": "link6",
+    "xyz": [
+     0.0,
+     0.0,
+     0.12
+    ],
+    "rpy": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "grasp_links": [
+    "link7",
+    "link8",
+    "link6"
+   ],
+   "pad_links": [
+    "link7",
+    "link8"
+   ],
+   "gripper_max_opening_m": 0.08,
+   "gripper_cmd_open": [
+    1.0
+   ],
+   "gripper_cmd_closed": [
+    -1.0
+   ],
+   "joint_limits": {
+    "joint1": [
+     -2.618,
+     2.618
+    ],
+    "joint2": [
+     0.0,
+     3.14
+    ],
+    "joint3": [
+     -2.697,
+     0.0
+    ],
+    "joint4": [
+     -1.832,
+     1.832
+    ],
+    "joint5": [
+     -1.22,
+     1.22
+    ],
+    "joint6": [
+     -3.14,
+     3.14
+    ],
+    "joint7": [
+     0.0,
+     0.04
+    ],
+    "joint8": [
+     0.0,
+     0.04
+    ]
+   },
+   "velocity_limits": {
+    "joint1": 3.0,
+    "joint2": 3.0,
+    "joint3": 3.0,
+    "joint4": 3.0,
+    "joint5": 3.0,
+    "joint6": 3.0,
+    "joint7": 1.0,
+    "joint8": 1.0
+   },
+   "home_arm_qpos": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mount_yaw": 0.0,
+   "reach_m": 0.626,
+   "stiffness": 1000.0,
+   "damping": 100.0,
+   "force_limit": 100.0,
+   "gripper_stiffness": 1000.0,
+   "gripper_damping": 100.0,
+   "gripper_force_limit": 100.0,
+   "gripper_lower": -0.01,
+   "gripper_upper": 0.04,
+   "gripper_mimic": {
+    "joint8": {
+     "joint": "joint7"
+    }
+   },
+   "hand": null,
+   "drop_links": [
+    "camera_mount"
+   ],
+   "path_map": {},
+   "curobo_yml": "imitator/assets/embodiments/_src/robotwin/piper/curobo.yml",
+   "collision_spheres_yml": "imitator/assets/embodiments/_src/robotwin/piper/collision_piper.yml",
+   "source_srdf": "imitator/assets/embodiments/_src/robotwin/piper/piper.srdf",
+   "control_modes": [
+    "pd_joint_pos",
+    "pd_joint_delta_pos",
+    "pd_ee_delta_pose",
+    "pd_ee_pose"
+   ],
+   "finger_side_links": null,
+   "notes": "RoboTwin's piper.urdf widens joint3 to +-2.697; the official AgileX description (same folder) has [-2.697, 0], used here. TCP 0.12 m along link6 z (pads span 0.064-0.140 m; RoboTwin gripper_bias 0.12).",
+   "urdf_path": "imitator/assets/embodiments/piper/piper.urdf",
+   "srdf_path": "imitator/assets/embodiments/piper/piper.srdf",
+   "mplib_srdf_path": "imitator/assets/embodiments/piper/piper_mplib.srdf",
+   "dof_arm": 6,
+   "dof_gripper": 1,
+   "action_dim": 7
+  },
+  "ur5_wsg": {
+   "name": "ur5_wsg",
+   "kind": "arm_gripper",
+   "source": "Universal Robots UR5 with Weiss WSG-50 parallel gripper, as packaged by RoboTwin 2.0 (assets/embodiments/ur5-wsg/ur5_wsg_gripper.urdf, ur5.srdf)",
+   "source_urdf": "imitator/assets/embodiments/_src/robotwin/ur5-wsg/ur5_wsg_gripper.urdf",
+   "license": "MIT (RoboTwin 2.0 embodiment assets); UR5 description originates from ros-industrial universal_robot (BSD-3, not re-checked here); WSG-50 meshes origin not stated",
+   "agent_uid": "imsim_ur5_wsg",
+   "agent_base": "imsim generic",
+   "arm_joints": [
+    "shoulder_pan_joint",
+    "shoulder_lift_joint",
+    "elbow_joint",
+    "wrist_1_joint",
+    "wrist_2_joint",
+    "wrist_3_joint"
+   ],
+   "gripper_joints": [
+    "base_joint_gripper_left",
+    "base_joint_gripper_right"
+   ],
+   "passive_joints": [],
+   "flange_link": "ee_link",
+   "tcp_link": "tcp",
+   "tcp": {
+    "name": "tcp",
+    "parent": "ee_link",
+    "xyz": [
+     0.117,
+     0.0,
+     0.0
+    ],
+    "rpy": [
+     -0.0,
+     1.5707963267948966,
+     0.0
+    ]
+   },
+   "grasp_links": [
+    "finger_left",
+    "finger_right",
+    "gripper_left",
+    "gripper_right",
+    "wsg_50_base_link"
+   ],
+   "pad_links": [
+    "finger_left",
+    "finger_right"
+   ],
+   "gripper_max_opening_m": 0.104,
+   "gripper_cmd_open": [
+    -1.0
+   ],
+   "gripper_cmd_closed": [
+    1.0
+   ],
+   "joint_limits": {
+    "shoulder_pan_joint": [
+     -3.142,
+     3.142
+    ],
+    "shoulder_lift_joint": [
+     -3.142,
+     0.0
+    ],
+    "elbow_joint": [
+     -3.142,
+     3.142
+    ],
+    "wrist_1_joint": [
+     -3.142,
+     3.142
+    ],
+    "wrist_2_joint": [
+     -3.142,
+     3.142
+    ],
+    "wrist_3_joint": [
+     -3.142,
+     3.142
+    ],
+    "base_joint_gripper_left": [
+     -0.055,
+     -0.0027
+    ],
+    "base_joint_gripper_right": [
+     0.0027,
+     0.055
+    ]
+   },
+   "velocity_limits": {
+    "shoulder_pan_joint": 3.15,
+    "shoulder_lift_joint": 3.15,
+    "elbow_joint": 3.15,
+    "wrist_1_joint": 3.2,
+    "wrist_2_joint": 3.2,
+    "wrist_3_joint": 3.2
+   },
+   "home_arm_qpos": [
+    -0.5191,
+    -2.3408,
+    2.328,
+    -1.558,
+    -1.5708,
+    -0.5191
+   ],
+   "mount_yaw": 0.0,
+   "reach_m": 0.85,
+   "stiffness": 1000.0,
+   "damping": 100.0,
+   "force_limit": 100.0,
+   "gripper_stiffness": 1000.0,
+   "gripper_damping": 100.0,
+   "gripper_force_limit": 100.0,
+   "gripper_lower": -0.055,
+   "gripper_upper": 0.002,
+   "gripper_mimic": {
+    "base_joint_gripper_right": {
+     "joint": "base_joint_gripper_left",
+     "multiplier": -1.0
+    }
+   },
+   "hand": null,
+   "drop_links": [
+    "camera_base"
+   ],
+   "path_map": {},
+   "curobo_yml": "imitator/assets/embodiments/_src/robotwin/ur5-wsg/curobo.yml",
+   "collision_spheres_yml": "imitator/assets/embodiments/_src/robotwin/ur5-wsg/collision_wsg.yml",
+   "source_srdf": "imitator/assets/embodiments/_src/robotwin/ur5-wsg/ur5.srdf",
+   "control_modes": [
+    "pd_joint_pos",
+    "pd_joint_delta_pos",
+    "pd_ee_delta_pose",
+    "pd_ee_pose"
+   ],
+   "finger_side_links": null,
+   "notes": "Gripper: left finger joint in [-0.055, -0.0027], right = -left (mimic). Normalized gripper action -1 -> -0.055 (fully open), +1 -> +0.002 (closed, squeezing): the sign is the reverse of the other grippers, so planners use gripper_cmd_open / gripper_cmd_closed. wrist_1 limit widened from RoboTwin's +-1.75 to +-pi (UR5 hardware: +-2 pi). TCP 0.117 m along ee_link x (finger pads span 0.081-0.154 m).",
+   "urdf_path": "imitator/assets/embodiments/ur5_wsg/ur5_wsg.urdf",
+   "srdf_path": "imitator/assets/embodiments/ur5_wsg/ur5_wsg.srdf",
+   "mplib_srdf_path": "imitator/assets/embodiments/ur5_wsg/ur5_wsg_mplib.srdf",
+   "dof_arm": 6,
+   "dof_gripper": 1,
+   "action_dim": 7
+  },
+  "xarm6_robotiq": {
+   "name": "xarm6_robotiq",
+   "kind": "arm_gripper",
+   "source": "UFACTORY xArm6 with Robotiq 2F-85, ManiSkill-XArm6 v0.1.1 asset (xarm6_robotiq.urdf/.srdf) and ManiSkill 3.0.1 agent XArm6Robotiq (reused: closed-chain finger drives, passive joints, controllers)",
+   "source_urdf": "imitator/assets/embodiments/_src/xarm6/xarm6_robotiq.urdf",
+   "license": "Apache-2.0 (haosulab/ManiSkill-XArm6 LICENSE); xArm description from xarm_ros (BSD-3, not re-checked); Robotiq meshes from ros-industrial robotiq (BSD-2, not re-checked)",
+   "agent_uid": "imsim_xarm6_robotiq",
+   "agent_base": "mani_skill.agents.robots.xarm6.XArm6Robotiq",
+   "arm_joints": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6"
+   ],
+   "gripper_joints": [
+    "left_outer_knuckle_joint",
+    "right_outer_knuckle_joint"
+   ],
+   "passive_joints": [
+    "left_inner_knuckle_joint",
+    "right_inner_knuckle_joint",
+    "left_inner_finger_joint",
+    "right_inner_finger_joint"
+   ],
+   "flange_link": "link6",
+   "tcp_link": "tcp",
+   "tcp": {
+    "name": "tcp",
+    "parent": "link6",
+    "xyz": [
+     0.0,
+     0.0,
+     0.125
+    ],
+    "rpy": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "grasp_links": [
+    "left_inner_finger_pad",
+    "right_inner_finger_pad",
+    "left_inner_finger",
+    "right_inner_finger",
+    "left_outer_finger",
+    "right_outer_finger",
+    "left_inner_knuckle",
+    "right_inner_knuckle",
+    "left_outer_knuckle",
+    "right_outer_knuckle",
+    "robotiq_arg2f_base_link"
+   ],
+   "pad_links": [
+    "left_inner_finger_pad",
+    "right_inner_finger_pad"
+   ],
+   "gripper_max_opening_m": 0.085,
+   "gripper_cmd_open": [
+    0.0
+   ],
+   "gripper_cmd_closed": [
+    0.81
+   ],
+   "joint_limits": {
+    "joint1": [
+     -6.28318530718,
+     6.28318530718
+    ],
+    "joint2": [
+     -2.059,
+     2.0944
+    ],
+    "joint3": [
+     -3.8,
+     0.19198
+    ],
+    "joint4": [
+     -6.28318530718,
+     6.28318530718
+    ],
+    "joint5": [
+     -1.69297,
+     3.14159265359
+    ],
+    "joint6": [
+     -6.28318530718,
+     6.28318530718
+    ]
+   },
+   "velocity_limits": {
+    "joint1": 3.14,
+    "joint2": 3.14,
+    "joint3": 3.14,
+    "joint4": 3.14,
+    "joint5": 3.14,
+    "joint6": 3.14
+   },
+   "home_arm_qpos": [
+    0.0,
+    0.22,
+    -1.23,
+    0.0,
+    1.01,
+    0.0
+   ],
+   "mount_yaw": 0.0,
+   "reach_m": 0.7,
+   "stiffness": 1000.0,
+   "damping": 100.0,
+   "force_limit": 100.0,
+   "gripper_stiffness": 1000.0,
+   "gripper_damping": 100.0,
+   "gripper_force_limit": 100.0,
+   "gripper_lower": 0.0,
+   "gripper_upper": 0.0,
+   "gripper_mimic": {
+    "right_outer_knuckle_joint": {
+     "joint": "left_outer_knuckle_joint"
+    }
+   },
+   "hand": null,
+   "drop_links": [],
+   "path_map": {},
+   "curobo_yml": null,
+   "collision_spheres_yml": null,
+   "source_srdf": "imitator/assets/embodiments/_src/xarm6/xarm6_robotiq.srdf",
+   "control_modes": [
+    "pd_joint_pos",
+    "pd_joint_delta_pos",
+    "pd_ee_delta_pose",
+    "pd_ee_pose"
+   ],
+   "finger_side_links": [
+    [
+     "left_inner_finger_pad",
+     "left_inner_finger"
+    ],
+    [
+     "right_inner_finger_pad",
+     "right_inner_finger"
+    ]
+   ],
+   "notes": "Gripper command is the outer-knuckle angle: 0 open, 0.81 closed (absolute, ManiSkill convention for this robot). ManiSkill's own 'eef' link sits at 0.15 m, beyond the pad tips (0.149 m); imsim adds 'tcp' at 0.125 m (pad centre between open and closed). ManiSkill sets collision-group-2 bit 31 on every Robotiq link of EVERY copy, which disables gripper-gripper contact between the two arms; dual.py re-assigns the bits per arm.",
+   "urdf_path": "imitator/assets/embodiments/xarm6_robotiq/xarm6_robotiq.urdf",
+   "srdf_path": "imitator/assets/embodiments/xarm6_robotiq/xarm6_robotiq.srdf",
+   "mplib_srdf_path": "imitator/assets/embodiments/xarm6_robotiq/xarm6_robotiq_mplib.srdf",
+   "dof_arm": 6,
+   "dof_gripper": 1,
+   "action_dim": 7
+  },
+  "xarm6_allegro_left": {
+   "name": "xarm6_allegro_left",
+   "kind": "arm_hand",
+   "source": "UFACTORY xArm6 + Wonik Allegro Hand (left), ManiSkill-XArm6 v0.1.1 xarm6_allegro_left.urdf/.srdf (Allegro meshes from ManiSkill 3.0.1 mani_skill/assets/robots/allegro); no ManiSkill agent exists for it",
+   "source_urdf": "imitator/assets/embodiments/_src/xarm6/xarm6_allegro_left.urdf",
+   "license": "Apache-2.0 (ManiSkill-XArm6); Allegro BSD-3-Clause (SimLab)",
+   "agent_uid": "imsim_xarm6_allegro_left",
+   "agent_base": "imsim generic",
+   "arm_joints": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6"
+   ],
+   "gripper_joints": [
+    "joint_0.0",
+    "joint_1.0",
+    "joint_2.0",
+    "joint_3.0",
+    "joint_4.0",
+    "joint_5.0",
+    "joint_6.0",
+    "joint_7.0",
+    "joint_8.0",
+    "joint_9.0",
+    "joint_10.0",
+    "joint_11.0",
+    "joint_12.0",
+    "joint_13.0",
+    "joint_14.0",
+    "joint_15.0"
+   ],
+   "passive_joints": [],
+   "flange_link": "link6",
+   "tcp_link": "palm_tcp",
+   "tcp": {
+    "name": "palm_tcp",
+    "parent": "link6",
+    "xyz": [
+     -0.045,
+     0.0,
+     0.13
+    ],
+    "rpy": [
+     1.5707963267948966,
+     -0.0,
+     -1.5707963267948966
+    ]
+   },
+   "grasp_links": [
+    "base_link",
+    "link_0.0",
+    "link_1.0",
+    "link_2.0",
+    "link_3.0",
+    "link_4.0",
+    "link_5.0",
+    "link_6.0",
+    "link_7.0",
+    "link_8.0",
+    "link_9.0",
+    "link_10.0",
+    "link_11.0",
+    "link_12.0",
+    "link_13.0",
+    "link_14.0",
+    "link_15.0",
+    "link_3.0_tip",
+    "link_7.0_tip",
+    "link_11.0_tip",
+    "link_15.0_tip"
+   ],
+   "pad_links": null,
+   "gripper_max_opening_m": 0.2,
+   "gripper_cmd_open": [],
+   "gripper_cmd_closed": [],
+   "joint_limits": {
+    "joint1": [
+     -3.14,
+     3.14
+    ],
+    "joint2": [
+     -2.059,
+     2.0944
+    ],
+    "joint3": [
+     -3.927,
+     0.19198
+    ],
+    "joint4": [
+     -3.14,
+     3.14
+    ],
+    "joint5": [
+     -1.69297,
+     3.14159265359
+    ],
+    "joint6": [
+     -3.14,
+     3.14
+    ]
+   },
+   "velocity_limits": {
+    "joint1": 3.14,
+    "joint2": 3.14,
+    "joint3": 3.14,
+    "joint4": 3.14,
+    "joint5": 3.14,
+    "joint6": 3.14
+   },
+   "home_arm_qpos": [
+    0.0,
+    0.22,
+    -1.23,
+    0.0,
+    1.01,
+    0.0
+   ],
+   "mount_yaw": 0.0,
+   "reach_m": 0.7,
+   "stiffness": 1000.0,
+   "damping": 100.0,
+   "force_limit": 100.0,
+   "gripper_stiffness": 300.0,
+   "gripper_damping": 30.0,
+   "gripper_force_limit": 10.0,
+   "gripper_lower": 0.0,
+   "gripper_upper": 0.0,
+   "gripper_mimic": {},
+   "hand": "allegro_left",
+   "drop_links": [],
+   "path_map": {
+    "../allegro/": "imitator/assets/embodiments/_src/allegro/"
+   },
+   "curobo_yml": null,
+   "collision_spheres_yml": null,
+   "source_srdf": "imitator/assets/embodiments/_src/xarm6/xarm6_allegro_left.srdf",
+   "control_modes": [
+    "pd_joint_pos",
+    "pd_joint_delta_pos",
+    "pd_ee_delta_pose",
+    "pd_ee_pose"
+   ],
+   "finger_side_links": null,
+   "notes": "'palm_tcp': 4.5 cm in front of the palm (palm normal = -x of link6, fingers along +z of link6); z = palm normal (approach), y = finger direction. gripper_cmd_* are hand synergies (HandRecord).",
+   "urdf_path": "imitator/assets/embodiments/xarm6_allegro_left/xarm6_allegro_left.urdf",
+   "srdf_path": "imitator/assets/embodiments/xarm6_allegro_left/xarm6_allegro_left.srdf",
+   "mplib_srdf_path": "imitator/assets/embodiments/xarm6_allegro_left/xarm6_allegro_left_mplib.srdf",
+   "dof_arm": 6,
+   "dof_gripper": 16,
+   "action_dim": 22
+  },
+  "xarm6_allegro_right": {
+   "name": "xarm6_allegro_right",
+   "kind": "arm_hand",
+   "source": "UFACTORY xArm6 + Wonik Allegro Hand (right), ManiSkill-XArm6 v0.1.1 xarm6_allegro_right.urdf/.srdf (Allegro meshes from ManiSkill 3.0.1 mani_skill/assets/robots/allegro); no ManiSkill agent exists for it",
+   "source_urdf": "imitator/assets/embodiments/_src/xarm6/xarm6_allegro_right.urdf",
+   "license": "Apache-2.0 (ManiSkill-XArm6); Allegro BSD-3-Clause (SimLab)",
+   "agent_uid": "imsim_xarm6_allegro_right",
+   "agent_base": "imsim generic",
+   "arm_joints": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6"
+   ],
+   "gripper_joints": [
+    "joint_0.0",
+    "joint_1.0",
+    "joint_2.0",
+    "joint_3.0",
+    "joint_4.0",
+    "joint_5.0",
+    "joint_6.0",
+    "joint_7.0",
+    "joint_8.0",
+    "joint_9.0",
+    "joint_10.0",
+    "joint_11.0",
+    "joint_12.0",
+    "joint_13.0",
+    "joint_14.0",
+    "joint_15.0"
+   ],
+   "passive_joints": [],
+   "flange_link": "link6",
+   "tcp_link": "palm_tcp",
+   "tcp": {
+    "name": "palm_tcp",
+    "parent": "link6",
+    "xyz": [
+     -0.045,
+     0.0,
+     0.13
+    ],
+    "rpy": [
+     1.5707963267948966,
+     -0.0,
+     -1.5707963267948966
+    ]
+   },
+   "grasp_links": [
+    "base_link",
+    "link_0.0",
+    "link_1.0",
+    "link_2.0",
+    "link_3.0",
+    "link_4.0",
+    "link_5.0",
+    "link_6.0",
+    "link_7.0",
+    "link_8.0",
+    "link_9.0",
+    "link_10.0",
+    "link_11.0",
+    "link_12.0",
+    "link_13.0",
+    "link_14.0",
+    "link_15.0",
+    "link_3.0_tip",
+    "link_7.0_tip",
+    "link_11.0_tip",
+    "link_15.0_tip"
+   ],
+   "pad_links": null,
+   "gripper_max_opening_m": 0.2,
+   "gripper_cmd_open": [],
+   "gripper_cmd_closed": [],
+   "joint_limits": {
+    "joint1": [
+     -3.14,
+     3.14
+    ],
+    "joint2": [
+     -2.059,
+     2.0944
+    ],
+    "joint3": [
+     -3.927,
+     0.19198
+    ],
+    "joint4": [
+     -3.14,
+     3.14
+    ],
+    "joint5": [
+     -1.69297,
+     3.14159265359
+    ],
+    "joint6": [
+     -3.14,
+     3.14
+    ]
+   },
+   "velocity_limits": {
+    "joint1": 3.14,
+    "joint2": 3.14,
+    "joint3": 3.14,
+    "joint4": 3.14,
+    "joint5": 3.14,
+    "joint6": 3.14
+   },
+   "home_arm_qpos": [
+    0.0,
+    0.22,
+    -1.23,
+    0.0,
+    1.01,
+    0.0
+   ],
+   "mount_yaw": 0.0,
+   "reach_m": 0.7,
+   "stiffness": 1000.0,
+   "damping": 100.0,
+   "force_limit": 100.0,
+   "gripper_stiffness": 300.0,
+   "gripper_damping": 30.0,
+   "gripper_force_limit": 10.0,
+   "gripper_lower": 0.0,
+   "gripper_upper": 0.0,
+   "gripper_mimic": {},
+   "hand": "allegro_right",
+   "drop_links": [],
+   "path_map": {
+    "../allegro/": "imitator/assets/embodiments/_src/allegro/"
+   },
+   "curobo_yml": null,
+   "collision_spheres_yml": null,
+   "source_srdf": "imitator/assets/embodiments/_src/xarm6/xarm6_allegro_right.srdf",
+   "control_modes": [
+    "pd_joint_pos",
+    "pd_joint_delta_pos",
+    "pd_ee_delta_pose",
+    "pd_ee_pose"
+   ],
+   "finger_side_links": null,
+   "notes": "'palm_tcp': 4.5 cm in front of the palm (palm normal = -x of link6, fingers along +z of link6); z = palm normal (approach), y = finger direction. gripper_cmd_* are hand synergies (HandRecord).",
+   "urdf_path": "imitator/assets/embodiments/xarm6_allegro_right/xarm6_allegro_right.urdf",
+   "srdf_path": "imitator/assets/embodiments/xarm6_allegro_right/xarm6_allegro_right.srdf",
+   "mplib_srdf_path": "imitator/assets/embodiments/xarm6_allegro_right/xarm6_allegro_right_mplib.srdf",
+   "dof_arm": 6,
+   "dof_gripper": 16,
+   "action_dim": 22
+  }
+ },
+ "hands": {
+  "allegro_left": {
+   "name": "allegro_left",
+   "source": "Wonik Allegro Hand v4 (left); URDF and meshes as shipped in ManiSkill 3.0.1 (mani_skill/assets/robots/allegro), mounted on xArm6 by ManiSkill-XArm6 v0.1.1 (xarm6_allegro_left.urdf)",
+   "license": "BSD-3-Clause (allegro/LICENSE, Copyright (c) 2016 SimLab); mount URDF Apache-2.0 (ManiSkill-XArm6)",
+   "side": "left",
+   "joints": [
+    "joint_0.0",
+    "joint_1.0",
+    "joint_2.0",
+    "joint_3.0",
+    "joint_4.0",
+    "joint_5.0",
+    "joint_6.0",
+    "joint_7.0",
+    "joint_8.0",
+    "joint_9.0",
+    "joint_10.0",
+    "joint_11.0",
+    "joint_12.0",
+    "joint_13.0",
+    "joint_14.0",
+    "joint_15.0"
+   ],
+   "fingertip_links": [
+    "link_15.0_tip",
+    "link_3.0_tip",
+    "link_7.0_tip",
+    "link_11.0_tip"
+   ],
+   "thumb_tip": "link_15.0_tip",
+   "synergy_open": {
+    "joint_0.0": 0.0,
+    "joint_1.0": 0.0,
+    "joint_2.0": 0.0,
+    "joint_3.0": 0.0,
+    "joint_4.0": 0.0,
+    "joint_5.0": 0.0,
+    "joint_6.0": 0.0,
+    "joint_7.0": 0.0,
+    "joint_8.0": 0.0,
+    "joint_9.0": 0.0,
+    "joint_10.0": 0.0,
+    "joint_11.0": 0.0,
+    "joint_12.0": 0.9,
+    "joint_13.0": 0.3,
+    "joint_14.0": 0.2,
+    "joint_15.0": 0.2
+   },
+   "synergy_close": {
+    "joint_0.0": 0.0,
+    "joint_1.0": 1.25,
+    "joint_2.0": 1.05,
+    "joint_3.0": 0.9,
+    "joint_4.0": 0.0,
+    "joint_5.0": 1.25,
+    "joint_6.0": 1.05,
+    "joint_7.0": 0.9,
+    "joint_8.0": 0.0,
+    "joint_9.0": 1.25,
+    "joint_10.0": 1.05,
+    "joint_11.0": 0.9,
+    "joint_12.0": 1.35,
+    "joint_13.0": 0.55,
+    "joint_14.0": 0.9,
+    "joint_15.0": 0.9
+   },
+   "notes": "16 DOF, all position-controlled; the scripted power grasp uses the fixed 1-D synergy open->close."
+  },
+  "allegro_right": {
+   "name": "allegro_right",
+   "source": "Wonik Allegro Hand v4 (right); URDF and meshes as shipped in ManiSkill 3.0.1 (mani_skill/assets/robots/allegro), mounted on xArm6 by ManiSkill-XArm6 v0.1.1 (xarm6_allegro_right.urdf)",
+   "license": "BSD-3-Clause (allegro/LICENSE, Copyright (c) 2016 SimLab); mount URDF Apache-2.0 (ManiSkill-XArm6)",
+   "side": "right",
+   "joints": [
+    "joint_0.0",
+    "joint_1.0",
+    "joint_2.0",
+    "joint_3.0",
+    "joint_4.0",
+    "joint_5.0",
+    "joint_6.0",
+    "joint_7.0",
+    "joint_8.0",
+    "joint_9.0",
+    "joint_10.0",
+    "joint_11.0",
+    "joint_12.0",
+    "joint_13.0",
+    "joint_14.0",
+    "joint_15.0"
+   ],
+   "fingertip_links": [
+    "link_15.0_tip",
+    "link_3.0_tip",
+    "link_7.0_tip",
+    "link_11.0_tip"
+   ],
+   "thumb_tip": "link_15.0_tip",
+   "synergy_open": {
+    "joint_0.0": 0.0,
+    "joint_1.0": 0.0,
+    "joint_2.0": 0.0,
+    "joint_3.0": 0.0,
+    "joint_4.0": 0.0,
+    "joint_5.0": 0.0,
+    "joint_6.0": 0.0,
+    "joint_7.0": 0.0,
+    "joint_8.0": 0.0,
+    "joint_9.0": 0.0,
+    "joint_10.0": 0.0,
+    "joint_11.0": 0.0,
+    "joint_12.0": 0.9,
+    "joint_13.0": 0.3,
+    "joint_14.0": 0.2,
+    "joint_15.0": 0.2
+   },
+   "synergy_close": {
+    "joint_0.0": 0.0,
+    "joint_1.0": 1.25,
+    "joint_2.0": 1.05,
+    "joint_3.0": 0.9,
+    "joint_4.0": 0.0,
+    "joint_5.0": 1.25,
+    "joint_6.0": 1.05,
+    "joint_7.0": 0.9,
+    "joint_8.0": 0.0,
+    "joint_9.0": 1.25,
+    "joint_10.0": 1.05,
+    "joint_11.0": 0.9,
+    "joint_12.0": 1.35,
+    "joint_13.0": 0.55,
+    "joint_14.0": 0.9,
+    "joint_15.0": 0.9
+   },
+   "notes": "16 DOF, all position-controlled; the scripted power grasp uses the fixed 1-D synergy open->close."
+  }
+ }
+}

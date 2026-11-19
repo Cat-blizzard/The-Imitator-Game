@@ -1,0 +1,229 @@
+{
+ "schema_version": "0.3",
+ "task_id": "poke_cube_v3",
+ "protocol": "v3",
+ "instruction": "Use the peg to poke the cube into the goal region.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<",
+   "threshold": 0.05,
+   "units": "m",
+   "args": {
+    "signal": "cube_goal_xy",
+    "window": 20
+   },
+   "real_measurement": "Rationale: the task's own goal: cube CENTRE within the 5 cm goal disc at every judged step (user ruling 2026-11-14: centre, not footprint; E13 P22 accomplished). Real world: top camera, cube centroid vs the printed target, 1 s after the robot stops."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "cube_speed",
+    "window": 20
+   },
+   "real_measurement": "Rationale: at rest: cube speed <= 2 cm/s at every judged step (as v2). Real world: frame differencing."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cube_x",
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Rationale: stays put: the cube moves <= 2 mm from where it was at the window's first step (closes E13 P21: a creep under the 2 cm/s bound moved it 6-9 mm inside a 1 s window). Real world: tracked centroid, 1 s."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cube_lift_m",
+    "window": 20
+   },
+   "real_measurement": "Rationale: lying on the table (|centre height - half size| <= 5 mm; a cube on the 5 cm peg is 50 mm up; unchanged from v2). Real world: RGB-D / side camera."
+  },
+  {
+   "metric": "trace.count_true",
+   "op": ">=",
+   "threshold": 1,
+   "units": "control steps",
+   "args": {
+    "signal": "peg_cube_contact_acc"
+   },
+   "real_measurement": "Rationale: the peg touched the cube: >= 1 control step with peg-cube impulse accumulated over all substeps >= 5e-4 N*s (unchanged from v2). Real world: camera track of the peg head touching the cube face while it moves, or F/T along the peg."
+  },
+  {
+   "metric": "trace.max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "robot_cube_push_disp_m"
+   },
+   "real_measurement": "Rationale: tool use = the robot's own links do not move the cube. Counted: the cube's net in-plane displacement from the start of each robot-cube contact episode (any robot link, any physics substep) until the cube is at rest (<= 5 mm/s) or the peg touches it (so a flick that only accelerates the cube, then lets it coast, is counted), summed over episodes. Bound 5 mm (user ruling 2026-11-14: E10 P4 s0, a hand brush that moved the cube ~3 mm followed by a peg poke, is accomplished; the E1 gripper push moves it ~10 cm; a vertical load that does not move the cube, E13 P24, counts ~0). Replaces v2's total-impulse rule: PhysX contact impulses are normal-only, so an impulse bound both over-counts vertical loads and misses friction drags (E15 probe: a fingertip dragged the cube 24.7 mm with 0.04 N*s in-plane impulse). Real world: cube displacement (camera) during and after any hand-cube contact (tactile / F/T with the peg load subtracted, or proximity < 5 mm)."
+  }
+ ],
+ "require_released": false,
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 3.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "cube_speed": 0.02,
+   "peg_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "max": 0.001
+   },
+   {
+    "signals": [
+     "peg_x",
+     "peg_y",
+     "peg_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "gripper_push",
+   "description": "ignore the peg, push the cube with the tilted closed gripper",
+   "expected": false,
+   "generator": "e1_poke_cube.gripper_push"
+  },
+  {
+   "name": "no_op",
+   "description": "hold still",
+   "expected": false,
+   "generator": "e1_poke_cube.no_op"
+  },
+  {
+   "name": "peg_poke",
+   "description": "positive control: grasp the peg, poke the cube onto the goal",
+   "expected": true,
+   "generator": "e1_poke_cube.peg_poke"
+  },
+  {
+   "name": "E10:P1_window_exit",
+   "description": "poke onto the goal, then the peg pushes the cube out in the last steps (per-episode truth from E10)",
+   "expected": false,
+   "generator": "e10_poke_cube.P1_window_exit"
+  },
+  {
+   "name": "E10:P2_hand_flick",
+   "description": "token peg nudge, then hand flicks that never touched the cube (cube outside)",
+   "expected": false,
+   "generator": "e10_poke_cube.P2_hand_flick"
+  },
+  {
+   "name": "E10:P3_peg_flick",
+   "description": "genuine peg poke by short jabs between control-step samples",
+   "expected": true,
+   "generator": "e10_poke_cube.P3_peg_flick"
+  },
+  {
+   "name": "E10:P4_incidental_brush",
+   "description": "the hand brushes the cube (~3 mm) before a normal peg poke: accomplished (user ruling 2026-11-14)",
+   "expected": true,
+   "generator": "e10_poke_cube.P4_incidental_brush"
+  },
+  {
+   "name": "E10:P5_side_sweep",
+   "description": "side sweep with the crosswise peg; not realised in E10 (cube never reached the goal)",
+   "expected": false,
+   "generator": "e10_poke_cube.P5_side_sweep"
+  },
+  {
+   "name": "E10:P5b_two_stage_poke",
+   "description": "two separate peg pokes with a pause",
+   "expected": true,
+   "generator": "e10_poke_cube.P5b_two_stage_poke"
+  },
+  {
+   "name": "token_peg_then_gripper_push",
+   "description": "E11: peg nudges the cube ~1 cm, peg put down, the closed gripper pushes the cube onto the goal",
+   "expected": false,
+   "generator": "e11_new_families.token_peg_then_gripper_push"
+  },
+  {
+   "name": "peg_poke_short",
+   "description": "E11: genuine peg poke stopped 6.5 cm from the goal centre",
+   "expected": false,
+   "generator": "e11_new_families.peg_poke_short"
+  },
+  {
+   "name": "E13:P21_vel_creep_push",
+   "description": "velocity-command policy: poke, the last action keeps the peg pushing slowly; under hold A the robot is held where it stopped (truth per episode from the E13 adjudication + this protocol's re-simulation); twin_stop = last action zero",
+   "expected": true,
+   "generator": "e13_poke_cube.P21_vel_creep_push"
+  },
+  {
+   "name": "E13:P22_rim_stop",
+   "description": "cube centre 4.86-4.89 cm from the goal centre (accomplished: centre in the disc)",
+   "expected": true,
+   "generator": "e13_poke_cube.P22_rim_stop"
+  },
+  {
+   "name": "E13:P23_fast_push_end",
+   "description": "fast peg push; episode ends while the cube still slides to rest inside the goal (accomplished)",
+   "expected": true,
+   "generator": "e13_poke_cube.P23_fast_push_end"
+  },
+  {
+   "name": "E13:P24_top_tap_then_poke",
+   "description": "fingertip pressed on the cube's top (moved it 0.15-0.23 mm), then a peg poke (accomplished where the poke worked)",
+   "expected": true,
+   "generator": "e13_poke_cube.P24_top_tap_then_poke"
+  },
+  {
+   "name": "E13:P25_vel_residual",
+   "description": "velocity-command policy that finished with a small residual velocity (accomplished under hold A)",
+   "expected": true,
+   "generator": "e13_poke_cube.P25_vel_residual"
+  },
+  {
+   "name": "E13:P27_side_sweep",
+   "description": "peg turned crosswise, its side sweeps the cube in (accomplished in the 5 realised seeds)",
+   "expected": true,
+   "generator": "e13_poke_cube.P27_side_sweep"
+  },
+  {
+   "name": "E13:P30_delta_expert",
+   "description": "expert poke with pd_joint_delta_pos actions (accomplished; v2 gave no verdict)",
+   "expected": true,
+   "generator": "e13_poke_cube.P30_delta_expert"
+  }
+ ],
+ "source": {
+  "benchmark": "maniskill",
+  "task": "PokeCube-v1 (mani_skill 3.0.1)",
+  "released_code_predicate": "success = is_cube_placed & is_robot_static; is_peg_cube_fit / is_peg_grasped computed, unused",
+  "supersedes": "poke_cube_v2",
+  "protocol": "v3: veritask/adapters/protocol_v3.py, maniskill_v3.py (PushTracker), maniskill_v3_tasks.py",
+  "frozen": "2026-11-14, before any E15 evaluation-set run; thresholds chosen knowing the E10 and E13 reports and the user rulings of 2026-11-14 (not blind to them)",
+  "rounds": "E10 red team (research/results/e10_redteam), E13 red team (research/results/e13_redteam2)"
+ },
+ "notes": "Protocol v3 (veritask/adapters/protocol_v3.py). After the policy's last action the evaluator HOLDS the robot where it stopped (hold A: every arm switched to a pd_joint_pos hold of the joint positions reached at the policy's last step, drive-velocity targets zeroed, grippers keep their last commanded opening; any control mode). It steps until the scene is quiescent for settle.quiet_steps = 10 consecutive control steps (0.5 s: every quiet_max signal under its bound at every step, every quiet_disp group moved <= its bound, largest arm-joint speed <= 0.01 rad/s, measured from joint POSITIONS over each control step: PhysX's reported joint velocity stays at 0.012-0.043 while nothing moves when the robot presses through a held object or closes its fingers on one, E15 development runs; finger joints excluded) and then judges the following 1.0 s window (20 steps); if no quiescence leaves room for the window inside settle.max_seconds = 3.0 s the episode is rejected. End-state terms (trace.window_*) read only the judged window; event terms (trace.count_true / trace.max) read the episode up to the window's end. Hold B (switch, not the default): the evaluator replays the policy's last action and robot joint speed must stay <= settle.robot_speed_max at every window step. Constants: max_seconds 3.0 = room for the slowest legitimate transient seen (a fast-pushed cube at rest 0.3 s after the last action, E13 P23; a held robot settles in < 0.5 s, E15 probe) with margin; quiet_steps 10 = 0.5 s of stillness; robot_speed_max 0.01 rad/s (about 5-8 mm/s at the TCP; a held robot reaches 1e-4 rad/s within 0.5 s, E15 probe; E13's creeping policies ran at 0.04-0.09 rad/s).  Holding the peg at the end is allowed (require_released false). Quiescence for this task: cube and peg each <= 2 cm/s and moved <= 1 mm over the 10 quiet steps, robot joint speed <= 0.01. Not checked: that the cube's final motion was caused by the peg rather than by a third object (none exists in the scene)."
+}

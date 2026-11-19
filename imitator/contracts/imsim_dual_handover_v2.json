@@ -1,0 +1,173 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_dual_handover_v2",
+ "protocol": "v3",
+ "instruction": "Pick up the blue block with the left arm, hand it over to the right arm in the air, and let the right arm put it in the green square; then both arms let go and move away.",
+ "outcome": [
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.0,
+   "units": "m",
+   "args": {
+    "signal": "obj_target_margin_m",
+    "window": 20
+   },
+   "real_measurement": "Block centre inside the right target square at every judged step: min(half - |dx|, half - |dy|) >= 0. Real world: top camera, block centre vs the marked square."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "obj_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "Resting on the table: lowest block corner within 5 mm of the table top at every judged step. Real world: RGB-D pose vs the table plane."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.5,
+   "units": "",
+   "args": {
+    "signal": "handover_done",
+    "carry_steps": 5,
+    "airborne_dz_m": 0.003
+   },
+   "real_measurement": "The handover happened in the air: at some point the block was carried by the left arm alone (airborne: no table contact, bottom > 3 mm above the table; only the left robot in contact) for >= 5 control steps (0.25 s), later by the right arm alone for >= 5 steps, and it did not touch the table in between. Derived from per-step contact signals by imsim.verify.handover.handover_signal (signals armL_obj_impulse_Ns, armR_obj_impulse_Ns, table_obj_impulse_Ns, obj_bottom_dz_m). Real world: wrist F/T or gripper current per arm + side camera for table contact."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the block retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the block must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "obj_x",
+    "signals": [
+     "obj_x",
+     "obj_y",
+     "obj_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the obj centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_obj_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "obj_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "obj_x",
+     "obj_y",
+     "obj_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "handover",
+   "description": "positive control: left picks, mid-air handover, right places, both open and retreat",
+   "expected": true,
+   "generator": "imsim.planning.handover.run(variant='handover')"
+  },
+  {
+   "name": "no_handover",
+   "description": "the right arm reaches over and picks the block from the left zone itself, places it in the target, opens and retreats; the left arm never moves",
+   "expected": false,
+   "generator": "imsim.planning.handover.run(variant='no_handover')"
+  },
+  {
+   "name": "both_hold",
+   "description": "handover grasp by the right arm while the left keeps holding; both arms carry the block towards the target (the largest fraction both can reach) and set it down on the table, neither opens",
+   "expected": false,
+   "generator": "imsim.planning.handover.run(variant='both_hold')"
+  },
+  {
+   "name": "drop_and_push",
+   "description": "the left arm lifts the block and drops it near the centre; the right arm pushes it along the table into the target, both grippers open at the end",
+   "expected": false,
+   "generator": "imsim.planning.handover.run(variant='drop_and_push')"
+  },
+  {
+   "name": "table_transfer",
+   "description": "the left arm puts the block down on the table near the centre, opens and leaves; the right arm picks it up from the table, places it in the target, opens and retreats (no mid-air handover)",
+   "expected": false,
+   "generator": "imsim.planning.handover.run(variant='table_transfer')"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms stay at home",
+   "expected": false,
+   "generator": "imsim.planning.handover.run(variant='no_op')"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E23 task, E29b contract revision)",
+  "task": "DualHandover-v1 (imsim/imsim/envs/dual_handover.py)",
+  "protocol": "v3 (veritask/adapters/protocol_v3.py, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "revision_of": "imsim_dual_handover_v1 (imsim/imsim/contracts/dual_handover_v1.json, frozen E23 2026-11-15)",
+  "released_code_predicate": "block centre in the target square, block bottom within 5 mm of the table, PhysX speed < 2 cm/s, both grippers measured open >= 80 % of their maximum, at the policy's last step (RoboTwin handover_block style; no handover check)",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json"
+ },
+ "notes": "v2 = v1 + the E24c fixes (v3.2). End-state terms 1-2 and the at-rest terms are v1's thresholds on the v3.2 signals (objs_speed = fastest bounding-box corner speed from positions; v1 used PhysX's reported block velocity), the handover term and the retreat aftermath are v1's, release = robot contact (all links of both robots, substep-accumulated) + all-link enclosure 2 mm as v1, new: commanded-vs-actual opening term and settle cap 5 s (v1: 3 s)."
+}

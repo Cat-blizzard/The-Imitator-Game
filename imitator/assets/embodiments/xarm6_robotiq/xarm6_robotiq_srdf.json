@@ -1,0 +1,77 @@
+{
+ "urdf": "imitator/assets/embodiments/xarm6_robotiq/xarm6_robotiq.urdf",
+ "sim_srdf": "imitator/assets/embodiments/xarm6_robotiq/xarm6_robotiq.srdf",
+ "mplib_srdf": "imitator/assets/embodiments/xarm6_robotiq/xarm6_robotiq_mplib.srdf",
+ "n_samples": 3000,
+ "n_sim_pairs": 0,
+ "n_mplib_pairs": 169,
+ "sim_pairs": [],
+ "home_collisions": [
+  [
+   "left_inner_knuckle",
+   "right_outer_knuckle"
+  ],
+  [
+   "left_inner_finger",
+   "left_outer_knuckle"
+  ],
+  [
+   "left_outer_finger",
+   "robotiq_arg2f_base_link"
+  ],
+  [
+   "left_outer_knuckle",
+   "right_inner_knuckle"
+  ],
+  [
+   "left_inner_finger",
+   "robotiq_arg2f_base_link"
+  ],
+  [
+   "right_outer_finger",
+   "robotiq_arg2f_base_link"
+  ],
+  [
+   "left_inner_knuckle",
+   "left_outer_finger"
+  ],
+  [
+   "right_inner_finger",
+   "robotiq_arg2f_base_link"
+  ],
+  [
+   "left_inner_knuckle",
+   "right_inner_knuckle"
+  ],
+  [
+   "right_inner_finger",
+   "right_outer_knuckle"
+  ],
+  [
+   "right_inner_knuckle",
+   "right_outer_finger"
+  ]
+ ],
+ "always": [
+  [
+   "left_inner_knuckle",
+   "right_outer_knuckle"
+  ],
+  [
+   "left_outer_finger",
+   "robotiq_arg2f_base_link"
+  ],
+  [
+   "left_outer_knuckle",
+   "right_inner_knuckle"
+  ],
+  [
+   "right_outer_finger",
+   "robotiq_arg2f_base_link"
+  ],
+  [
+   "left_inner_knuckle",
+   "right_inner_knuckle"
+  ]
+ ]
+}

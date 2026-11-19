@@ -1,0 +1,177 @@
+{
+ "schema_version": "0.3",
+ "task_id": "dual_towel_fold_v2",
+ "protocol": "v3",
+ "instruction": "With both arms, lift the two far corners of the towel and fold them onto the two near corners (half fold), then let go.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<",
+   "threshold": 0.08,
+   "units": "m",
+   "args": {
+    "signal": "towel_dist_L",
+    "window": 20
+   },
+   "real_measurement": "Left fold: horizontal distance between the far-left and near-left corners < 8 cm at every judged step (same threshold as towel_fold_diagonal v1/v3). Real world: top camera, marked corners, table-plane homography."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<",
+   "threshold": 0.08,
+   "units": "m",
+   "args": {
+    "signal": "towel_dist_R",
+    "window": 20
+   },
+   "real_measurement": "Right fold: far-right to near-right corner distance < 8 cm at every judged step. Real world: as above."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<",
+   "threshold": 0.7,
+   "units": "",
+   "args": {
+    "signal": "towel_footprint_ratio",
+    "window": 20
+   },
+   "real_measurement": "Footprint (convex hull of the top-down projection / area at reset) < 0.70 at every judged step (towel v1/v3 threshold; an ideal half fold gives 0.5). Real world: towel segmentation area."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "",
+   "args": {
+    "signal": "towel_frac_above_5cm",
+    "window": 20
+   },
+   "real_measurement": "<= 2 % of the towel above 5 cm at every judged step (towel v1/v3). Real world: side / depth camera."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.05,
+   "units": "m",
+   "args": {
+    "signal": "towel_lift_L"
+   },
+   "real_measurement": "Lifted (process term, new): at some step of the episode the far-left corner region (3 x 3 vertices at the corner) was >= 5 cm above the table, so a fold made by dragging the corner along the table does not pass. Real world: side camera / depth, corner marker height."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.05,
+   "units": "m",
+   "args": {
+    "signal": "towel_lift_R"
+   },
+   "real_measurement": "Lifted: the far-right corner region was >= 5 cm above the table at some step. Real world: as above."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (v3.2, E24c fix 2): every arm whose gripper is within 3 cm of any towel particle backs its TCP off 3 cm along its approach axis in 0.5 s with its last gripper command, then holds 0.5 s; the largest displacement of the towel particles that were within 5 cm of a retracting gripper must be <= 1 cm (a pinched towel is lifted with the gripper); 0 when no arm is within 3 cm (nothing retracts). Real world: same motion, depth camera on the gripper's region."
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "release": {
+  "contact_signals": [
+   "robot_cloth_impulse"
+  ],
+  "max_impulse_Ns": 0.0005,
+  "enclosure_signals": [
+   "finger_cloth_enclosure"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "cloth_speed_p95_pos": 0.1
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "towel_FL_x",
+     "towel_FL_y",
+     "towel_FL_z"
+    ],
+    "max": 0.003
+   },
+   {
+    "signals": [
+     "towel_FR_x",
+     "towel_FR_y",
+     "towel_FR_z"
+    ],
+    "max": 0.003
+   },
+   {
+    "signals": [
+     "towel_NL_x",
+     "towel_NL_y",
+     "towel_NL_z"
+    ],
+    "max": 0.003
+   },
+   {
+    "signals": [
+     "towel_NR_x",
+     "towel_NR_y",
+     "towel_NR_z"
+    ],
+    "max": 0.003
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: both arms lift the far corners, carry them over the near corners, lower, release, retreat",
+   "expected": true,
+   "generator": "imsim.planning.fold.run(behaviour='expert')"
+  },
+  {
+   "name": "no_grip",
+   "description": "same motion, grippers never close",
+   "expected": false,
+   "generator": "imsim.planning.fold.run(behaviour='no_grip')"
+  },
+  {
+   "name": "drop_midway",
+   "description": "both grippers open halfway through the carry",
+   "expected": false,
+   "generator": "imsim.planning.fold.run(behaviour='drop_midway')"
+  },
+  {
+   "name": "drag_on_ground",
+   "description": "grip and drag both far corners to the near corners without lifting",
+   "expected": false,
+   "generator": "imsim.planning.fold.run(behaviour='drag_on_ground')"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E23)",
+  "task": "DualFoldTowel-v1 (imsim/imsim/envs/dual_fold_towel.py)",
+  "derived_from": "imsim/imsim/soft/contracts/dual_towel_fold_v1.json (frozen E23 2026-11-15; unchanged): revision v2 with the E24c fixes that apply to cloth",
+  "engine": "newton-1.7.0 VBD cloth; robots SAPIEN 3.0.3 / PhysX (E20 route A, one-way bridge)",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 for cloth: position-based quiescence speed, 5 s settle cap, retreat aftermath over the towel particles (imsim/imsim/soft_eval.py)"
+ },
+ "notes": "v2 = v1 with three changes (E24c red-team fixes): (1) settle.max_seconds 3 -> 5 s; (2) quiescence speed signal cloth_speed_p95 (VBD particle velocity = position change over one 1/600 s substep) -> cloth_speed_p95_pos (95th percentile over the particles of |x(t) - x(t-1)| / control_dt, positions of consecutive control steps), same 0.1 m/s bound; (3) NEW outcome term aftermath.retreat_object_disp <= 1 cm (largest displacement of the towel particles within 5 cm of a retracting gripper while every arm within 3 cm of the towel backs off 3 cm with its last gripper command; 0 when no arm is that close; the rest of the towel is not measured because a folded towel still creeps by up to ~2.8 cm within the 1.5 s aftermath after the v1 quiescence rule is met - measured in the E29b expert pilot with no arm near). Everything else (the six v1 outcome terms, release rule over particles, quiet corner displacement 3 mm / 10 steps, robot speed, counterexamples) is unchanged. v1 notes: Signals (DualFoldTowelEnv.cloth_signals, per world): towel_dist_L/R = |FL-NL|_xy, |FR-NR|_xy; towel_footprint_ratio by the recorder (veritask scipy hull); towel_frac_above_5cm (GPU); towel_lift_L/R = highest vertex of the 3x3 patch at the far corner; robot_cloth_impulse = VBD contact force x dt over every robot collider (both arms) summed over the substeps of a control step; finger_cloth_enclosure = smallest over the two grippers of the sum of the two pads' clearances to the nearest particle between the pads (1 m when none); cloth_speed_p95; towel_<corner>_<xyz>; robot_qvel_max = largest arm joint speed of both arms. Hold A = both arms held at the joint positions reached, grippers keep their last target. No retreat aftermath (the release rule over particles is used, as in the towel v3 binding)."
+}

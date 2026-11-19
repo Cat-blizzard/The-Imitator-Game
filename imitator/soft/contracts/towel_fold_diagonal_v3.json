@@ -1,0 +1,117 @@
+{
+ "schema_version": "0.3",
+ "task_id": "towel_fold_diagonal_v3",
+ "protocol": "v3",
+ "instruction": "Fold the towel diagonally so that one corner lies on the opposite corner, then let go.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<",
+   "threshold": 0.08,
+   "units": "m",
+   "args": {
+    "signal": "towel_corner_dist",
+    "window": 20
+   },
+   "real_measurement": "Same quantity and threshold as towel_fold_diagonal_v1 (cloth.corner_distance a=0, c=624), now required at EVERY step of the judged window. Real world: top-down camera, the two marked corners, metric distance via the table-plane homography, 1 s after the robot stops."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<",
+   "threshold": 0.7,
+   "units": "",
+   "args": {
+    "signal": "towel_footprint_ratio",
+    "window": 20
+   },
+   "real_measurement": "v1's cloth.footprint_ratio (convex-hull area of the top-down projection / area at reset) at every judged step. Real world: towel segmentation area from the top camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "",
+   "args": {
+    "signal": "towel_frac_above_5cm",
+    "window": 20
+   },
+   "real_measurement": "v1's cloth.frac_above (height 5 cm) at every judged step. Real world: side / depth camera."
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "release": {
+  "contact_signals": [
+   "robot_cloth_impulse"
+  ],
+  "max_impulse_Ns": 0.0005,
+  "enclosure_signals": [
+   "finger_cloth_enclosure"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle": {
+  "hold": "A",
+  "max_seconds": 3.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "cloth_speed_p95": 0.1
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "towel_A_x",
+     "towel_A_y",
+     "towel_A_z"
+    ],
+    "max": 0.003
+   },
+   {
+    "signals": [
+     "towel_C_x",
+     "towel_C_y",
+     "towel_C_z"
+    ],
+    "max": 0.003
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "no_grip",
+   "description": "same motion, gripper never closes",
+   "expected": false,
+   "generator": "imsim.soft.expert.no_grip"
+  },
+  {
+   "name": "drop_midway",
+   "description": "releases halfway through the carry",
+   "expected": false,
+   "generator": "imsim.soft.expert.drop_midway"
+  },
+  {
+   "name": "drag_on_ground",
+   "description": "drags corner A to C without lifting",
+   "expected": false,
+   "generator": "imsim.soft.expert.drag_on_ground"
+  },
+  {
+   "name": "expert",
+   "description": "positive control: lift, carry over C, lower, release",
+   "expected": true,
+   "generator": "imsim.soft.expert.expert"
+  }
+ ],
+ "source": {
+  "benchmark": "imitator",
+  "task": "_049_fold_towel (physical version)",
+  "derived_from": "veritask/tasks/towel_fold_diagonal.json (v1 thresholds unchanged)",
+  "engine": "newton-1.7.0 VBD cloth; robot: SAPIEN 3.0.3 / PhysX (route A) or Newton MuJoCo-Warp (route B)",
+  "binding": "imsim/imsim/soft (E20, research/results/e20_soft)",
+  "binding_revision": "2 (2026-11-14 E20): corner-displacement quiescence; revision 1 = p95 speed <= 0.02 m/s"
+ },
+ "notes": "Protocol v3 binding of the v1 towel contract for the imsim soft envs. Per-step signals are written by the env (NewtonClothWorlds.signals): towel_corner_dist and towel_frac_above_5cm on the GPU, towel_footprint_ratio by the trace recorder with veritask's scipy hull; robot_cloth_impulse = sum over the control step's VBD substeps of |contact force| * dt over all particle contacts with robot collider shapes (VBD CONTACT_F observable); finger_cloth_enclosure = sum of the two pads' clearances to the nearest particle lying between the pads (particle radius subtracted), 1 m when none lies between them; cloth_speed_p95 = 95th percentile particle speed; robot_qvel_max = largest arm joint speed from joint positions over the control step. Hold A = arm held at the joint positions reached at the policy's last step, gripper keeps its last target. Release bound 5e-4 N s per control step (= v2's CONTACT_IMPULSE_NS). Quiescence (binding revision 2, E20 development): for 10 consecutive steps the two judged corners (A, C) each move <= 3 mm and the p95 particle speed is <= 0.10 m/s (a falling towel is faster), robot joint speed <= 0.01 rad/s. Revision 1 required p95 speed <= 0.02 m/s; on E20's 64-world development runs 4/16 (route A) and 2/16 (route B) expert folds never met it because VBD keeps a folded two-layer towel jittering at 0.02-0.26 m/s p95 while its corners stay put (solver artefact, not settling); both revisions are reported in E20_REPORT.md."
+}

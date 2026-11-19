@@ -1,0 +1,28 @@
+{
+ "about": "Hand-written semantic perturbation programs (stand-ins for model-proposed ones; same format AIProgramProposer.parse() accepts). Ops and argument ranges: veritask.data.engine.PRIMITIVES. Placeholders: $held, $held_arm, $active_arm, $target, $object:<i>.",
+ "programs": [
+  {
+   "name": "colleague_moves_target",
+   "description": "A person slides the target (goal region / tray / appliance) 5 cm toward the robot and turns it by 10 deg while the robot is working.",
+   "task": "*",
+   "applies_if": {},
+   "ops": [{"op": "offset_pose", "args": {"obj": "$target", "dx": -0.05, "dy": 0.0, "dz": 0.0, "dyaw_deg": 10.0, "settle": 5}}]
+  },
+  {
+   "name": "grasp_slip_with_nudge",
+   "description": "The grasp slips: the gripper opens for a moment and the falling object is nudged sideways, then the gripper closes again (on nothing).",
+   "task": "*",
+   "applies_if": {"holding": true},
+   "ops": [{"op": "set_gripper", "args": {"arm": "$held_arm", "cmd": 1.0, "steps": 5}},
+           {"op": "shove", "args": {"obj": "$held", "vx": 0.0, "vy": 0.3, "vz": 0.0, "wx": 0.0, "wy": 0.0, "wz": 1.5, "settle": 10}},
+           {"op": "set_gripper", "args": {"arm": "$held_arm", "cmd": -1.0, "steps": 6}}]
+  },
+  {
+   "name": "arm_bumped_up_and_aside",
+   "description": "Someone bumps the moving arm: its tool point is displaced 6 cm up and 5 cm sideways (grasp state unchanged).",
+   "task": "*",
+   "applies_if": {},
+   "ops": [{"op": "move_tcp_rel", "args": {"arm": "$active_arm", "dx": 0.0, "dy": 0.05, "dz": 0.06}}]
+  }
+ ]
+}

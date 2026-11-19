@@ -1,0 +1,176 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_place_sphere_v1",
+ "protocol": "v3",
+ "instruction": "Put the blue ball into the small bin, let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "signal": "sphere_bin_xy_m",
+    "window": 20
+   },
+   "real_measurement": "In the bin: horizontal distance of the ball centre to the bin centre <= 1 cm (the 4 cm ball fills the 4 cm inner square; on a wall it is >= 2 cm off). Real world: top camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "sphere_floor_dz_err_m",
+    "window": 20
+   },
+   "real_measurement": "Resting on the bin floor: | z - r - floor | <= 5 mm. Real world: RGB-D."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "sphere_bin_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Supported by the bin: ball-bin contact impulse > 0 in every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_sphere_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "The ball does not touch the table."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the ball retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the ball must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "sphere_x",
+    "signals": [
+     "sphere_x",
+     "sphere_y",
+     "sphere_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the sphere centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_sphere_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "sphere_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "sphere_x",
+     "sphere_y",
+     "sphere_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: grasp, lift, align over the bin, lower into it, open, retreat",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='expert')"
+  },
+  {
+   "name": "hold_in_bin",
+   "description": "ball lowered into the bin, gripper stays closed",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='hold_in_bin')"
+  },
+  {
+   "name": "cage",
+   "description": "ball lowered into the bin, gripper opened ~1.5 mm beyond the ball diameter",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='cage')"
+  },
+  {
+   "name": "beside",
+   "description": "ball put on the table next to the bin, released, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='beside')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "PlaceSphere-v1",
+  "released_code_predicate": "ball within 5 mm of the bin centre (xy) and at floor height +-5 mm, PhysX velocity < 1 cm/s and 0.5 rad/s, not is_grasping, one step"
+ },
+ "notes": "Ball bounding box = 4 cm cube (rotates with the ball, so rolling counts as motion)."
+}

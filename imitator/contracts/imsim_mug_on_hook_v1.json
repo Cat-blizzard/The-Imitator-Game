@@ -1,0 +1,379 @@
+{
+ "schema_version": "0.4",
+ "task_id": "imsim_mug_on_hook_v1",
+ "protocol": "v3",
+ "instruction": "Hang the mug on the hook by its handle, let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.crossings_window_min",
+   "op": ">=",
+   "threshold": 1.0,
+   "units": "crossings",
+   "args": {
+    "signal": "mug_px",
+    "ring": "mug",
+    "ring_centre": [
+     0.051000000000000004,
+     0.0,
+     0.05
+    ],
+    "ring_normal": [
+     0,
+     1,
+     0
+    ],
+    "ring_radius": 0.018,
+    "curve": [
+     [
+      0.0,
+      0.0,
+      0.2
+     ],
+     [
+      -0.01,
+      0.0,
+      0.2
+     ],
+     [
+      -0.11460044329963329,
+      0.0,
+      0.20915135298850412
+     ]
+    ],
+    "curve_pose": "rack",
+    "window": 20
+   },
+   "real_measurement": "Hung by the handle: the hook (as a curve from inside the post to its free end) passes through the flat disk spanned by the handle's core circle (radius 1.8 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+  },
+  {
+   "metric": "trace.insertion_window_min",
+   "op": ">=",
+   "threshold": 0.004,
+   "units": "m",
+   "args": {
+    "signal": "mug_px",
+    "ring": "mug",
+    "ring_centre": [
+     0.051000000000000004,
+     0.0,
+     0.05
+    ],
+    "ring_normal": [
+     0,
+     1,
+     0
+    ],
+    "ring_radius": 0.018,
+    "curve": [
+     [
+      0.0,
+      0.0,
+      0.2
+     ],
+     [
+      -0.01,
+      0.0,
+      0.2
+     ],
+     [
+      -0.11460044329963329,
+      0.0,
+      0.20915135298850412
+     ]
+    ],
+    "curve_pose": "rack",
+    "free_end": "end",
+    "window": 20
+   },
+   "real_measurement": "Insertion margin: along the hook, the crossing point is at least the handle's tube radius (4 mm) from the hook's free end (0 when not hung). Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "mug_x",
+    "signals": [
+     "mug_x",
+     "mug_y",
+     "mug_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the mug centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the mug retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the mug must move <= 1 cm. Real world: same motion, tracked pose."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_mug_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "mug_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 10.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "mug_x",
+     "mug_y",
+     "mug_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: grasp the rim opposite the handle, lift, turn the handle to the hook, slide the handle onto the hook to its middle (5 cm from the post), lower 8 mm, open, retreat",
+   "expected": true,
+   "generator": "imsim.planning.topo_tasks.mug_on_hook(variant='expert')"
+  },
+  {
+   "name": "expert_shallow",
+   "description": "positive control 2: the same, handle slid to 8 cm from the post (2.5 cm of hook beyond it): a legitimate hang away from the hook's middle",
+   "expected": true,
+   "generator": "imsim.planning.topo_tasks.mug_on_hook(variant='expert_shallow')"
+  },
+  {
+   "name": "on_tip",
+   "description": "'balanced on the hook tip': the handle slid only 6 mm past the hook's free end, released",
+   "expected": false,
+   "generator": "imsim.planning.topo_tasks.mug_on_hook(variant='on_tip')"
+  },
+  {
+   "name": "held_near",
+   "description": "the handle brought in front of the hook tip (3 cm beyond it), gripper stays closed",
+   "expected": false,
+   "generator": "imsim.planning.topo_tasks.mug_on_hook(variant='held_near')"
+  },
+  {
+   "name": "beside",
+   "description": "the handle passed beside the hook (hole 3 cm off the hook axis), released",
+   "expected": false,
+   "generator": "imsim.planning.topo_tasks.mug_on_hook(variant='beside')"
+  },
+  {
+   "name": "dropped_below",
+   "description": "the mug released 6 cm below the hook's middle",
+   "expected": false,
+   "generator": "imsim.planning.topo_tasks.mug_on_hook(variant='dropped_below')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim D2 (new task, ManiSkill 3.0.1 stock Panda)",
+  "task": "MugOnHook-v1",
+  "protocol": "v3 + imsim v3.2 signals + proof test (contract schema 0.4)",
+  "released_code_predicate": "card predicate (a), env.evaluate(): RoboTwin hanging_mug.check_success structure and thresholds: handle point within 2 cm in x and in y of the hook's midpoint, handle higher than table + 12 cm, gripper commanded open",
+  "frozen": "D2; research/results/d2_topology/contract_manifest.json"
+ },
+ "notes": "Geometry (imsim/imsim/envs/topo_tasks.py MugOnHookEnv): mug outer radius 3.5 cm, height 9 cm, wall 5 mm, 110 g, angular damping 2.5/s; round handle core radius 1.8 cm, tube 4 mm, hole radius 1.4 cm; rack post at x in [0.08, 0.14], y in [0.17, 0.23]; hook radius 5 mm, 10 cm long, 20 cm high, tilted 5 deg up, pointing -x. Crossings and margin from the pose signals mug_* / rack_*. Settle cap 10 s instead of E29b's 5 s: a hung mug is a pendulum; dev probes (seeds >= 1000) came to rest 4.5-7.3 s after the retreat.",
+ "proof_test": {
+  "robot": "clear",
+  "pre_settle_seconds": 0.5,
+  "window_seconds": 1.0,
+  "tests": [
+   {
+    "name": "shake_hook",
+    "kind": "shake",
+    "target": "rack",
+    "params": {
+     "amplitude_m": 0.02,
+     "freq_hz": 2.0,
+     "duration_seconds": 2.0,
+     "axis": [
+      -1,
+      0,
+      0
+     ],
+     "axis_frame": "target",
+     "ramp_seconds": 0.25
+    },
+    "rest_seconds": 1.5,
+    "terms": [
+     {
+      "metric": "trace.crossings_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "mug_px",
+       "ring": "mug",
+       "ring_centre": [
+        0.051000000000000004,
+        0.0,
+        0.05
+       ],
+       "ring_normal": [
+        0,
+        1,
+        0
+       ],
+       "ring_radius": 0.018,
+       "curve": [
+        [
+         0.0,
+         0.0,
+         0.2
+        ],
+        [
+         -0.01,
+         0.0,
+         0.2
+        ],
+        [
+         -0.11460044329963329,
+         0.0,
+         0.20915135298850412
+        ]
+       ],
+       "curve_pose": "rack"
+      },
+      "real_measurement": "Hung by the handle: the hook (as a curve from inside the post to its free end) passes through the flat disk spanned by the handle's core circle (radius 1.8 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.crossings_window_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "mug_px",
+       "ring": "mug",
+       "ring_centre": [
+        0.051000000000000004,
+        0.0,
+        0.05
+       ],
+       "ring_normal": [
+        0,
+        1,
+        0
+       ],
+       "ring_radius": 0.018,
+       "curve": [
+        [
+         0.0,
+         0.0,
+         0.2
+        ],
+        [
+         -0.01,
+         0.0,
+         0.2
+        ],
+        [
+         -0.11460044329963329,
+         0.0,
+         0.20915135298850412
+        ]
+       ],
+       "curve_pose": "rack",
+       "window": 20
+      },
+      "real_measurement": "Hung by the handle: the hook (as a curve from inside the post to its free end) passes through the flat disk spanned by the handle's core circle (radius 1.8 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.insertion_window_min",
+      "op": ">=",
+      "threshold": 0.004,
+      "units": "m",
+      "args": {
+       "signal": "mug_px",
+       "ring": "mug",
+       "ring_centre": [
+        0.051000000000000004,
+        0.0,
+        0.05
+       ],
+       "ring_normal": [
+        0,
+        1,
+        0
+       ],
+       "ring_radius": 0.018,
+       "curve": [
+        [
+         0.0,
+         0.0,
+         0.2
+        ],
+        [
+         -0.01,
+         0.0,
+         0.2
+        ],
+        [
+         -0.11460044329963329,
+         0.0,
+         0.20915135298850412
+        ]
+       ],
+       "curve_pose": "rack",
+       "free_end": "end",
+       "window": 20
+      },
+      "real_measurement": "Insertion margin: along the hook, the crossing point is at least the handle's tube radius (4 mm) from the hook's free end (0 when not hung). Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     }
+    ],
+    "description": "the rack (hook) shaken +-2 cm at 2 Hz for 2 s along the hook's horizontal direction (peak 3.2 m/s^2), raised-cosine ramps of 0.25 s; the mug stays hung throughout and at the end"
+   }
+  ],
+  "notes": "imsim/imsim/verify/proof_test.py"
+ }
+}

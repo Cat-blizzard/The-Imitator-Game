@@ -1,0 +1,64 @@
+{
+ "schema_version": "0.1",
+ "task_id": "place_cup_plate_v2",
+ "instruction": "Place both cups upright on the tray, then let go.",
+ "outcome": [
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": 15.0, "units": "deg", "args": {"signal": "cup1_tilt_deg", "window": 20},
+   "real_measurement": "Rationale: upright = the cup's own up axis (model local +y) within 15 deg of vertical (unchanged from v1: standing ~0-2 deg, lying ~90 deg). New in v2: the LARGEST tilt over the 20 settle steps, so a cup that is falling at the end cannot hide in a mean (E10 C3). Real world: fitted cylinder axis / fiducial from a calibrated RGB-D camera, every frame of the 1 s after the robot stops."
+  },
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": 15.0, "units": "deg", "args": {"signal": "cup2_tilt_deg", "window": 20},
+   "real_measurement": "As for cup 1 (cup 2 = 021_cup model 6, local +y up)."
+  },
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": 0.005, "units": "m", "args": {"signal": "cup1_bottom_dz_m", "window": 20},
+   "real_measurement": "Rationale: 'on the tray' means standing on the tray FLOOR: |lowest point of the cup - tray floor height under it| <= 5 mm at every settle step. The floor is dished by ~2.5 mm and contact slop is < 1 mm, so a cup on the floor reads < 2 mm; the raised rim is 26 mm above the floor (E10 C2: cups perched on the rim were accepted by v1's whole-tray bounding box), the table is 24 mm below. Real world: cup base height from a calibrated RGB-D camera relative to the tray floor plane."
+  },
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": 0.005, "units": "m", "args": {"signal": "cup2_bottom_dz_m", "window": 20},
+   "real_measurement": "As for cup 1."
+  },
+  {
+   "metric": "trace.window_min", "op": ">=", "threshold": 0.9, "units": "fraction of base area", "args": {"signal": "cup1_base_in_floor_frac", "window": 20},
+   "real_measurement": "Rationale: at every settle step >= 90% of the cup's base footprint (convex hull of the collision vertices within 5 mm of the cup's bottom; handle excluded) lies over the tray's inner floor area (tray top surface within 3 mm of the floor reference height, connected to the tray centre; rim and its inner slope excluded). 90% tolerates a base that touches the foot of the rim slope; a cup straddling the rim or hanging over the edge is far below. Real world: top camera, cup base outline vs the tray's inner floor polygon."
+  },
+  {
+   "metric": "trace.window_min", "op": ">=", "threshold": 0.9, "units": "fraction of base area", "args": {"signal": "cup2_base_in_floor_frac", "window": 20},
+   "real_measurement": "As for cup 1."
+  },
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": 0.02, "units": "m/s", "args": {"signal": "cup_max_speed", "window": 20},
+   "real_measurement": "Rationale: settled = the faster of the two cups moves at <= 2 cm/s at every settle step (v1 used the same number on a 1 s mean; a resting cup is < 1 mm/s, a tipping or sliding cup >= 10 cm/s). Real world: frame differencing of the tracked cup poses."
+  },
+  {
+   "metric": "trace.window_min", "op": ">", "threshold": 0.005, "units": "m", "args": {"signal": "fingers_cups_gap_m", "window": 20},
+   "real_measurement": "Rationale: 'then let go' = at every settle step the smallest distance between any finger of either gripper and either cup (over all substeps) is > 5 mm, the protocol's release gap (contact-solver slop is < 0.5 mm; fingers still closed around a cup at ~0 N read ~0 mm, E10 C1). Together with 'no robot-cup contact impulse in the settle phase' this is the released flag (require_released); the gap is also listed here so that its threshold is part of this file. Real world: finger-to-cup clearance from a calibrated camera / forward kinematics plus zero tactile signal."
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "counterexamples": [
+  {"name": "place_then_knock_over", "description": "official placement, then each cup is swept over (E1)", "expected": false, "generator": "e1_cup_plate.place_then_knock_over"},
+  {"name": "no_op", "description": "both arms hold still", "expected": false, "generator": "e1_cup_plate.no_op"},
+  {"name": "expert", "description": "positive control: official _036 solution", "expected": true, "generator": "imitator.solutions._036_place_cup_plate"},
+  {"name": "place_upright_reimpl", "description": "positive control: re-implemented official placement", "expected": true, "generator": "e1_cup_plate.place_upright_reimpl"},
+  {"name": "E10:C1_never_let_go", "description": "red team: set both cups down but never open; relax the grip until is_grasping() is false and keep the fingers closed around the cups", "expected": false, "generator": "e10_place_cup_plate.C1_never_let_go"},
+  {"name": "E10:C2_rim_perch", "description": "red team: stand each cup on the tray's raised rim, base partly hanging over the table", "expected": false, "generator": "e10_place_cup_plate.C2_rim_perch"},
+  {"name": "E10:C3_late_knock", "description": "red team: expert placement, then the gripper sweeps cup 1's top in the last 3 control steps", "expected": false, "generator": "e10_place_cup_plate.C3_late_knock"},
+  {"name": "E10:C4_late_finish", "description": "red team: expert placement, episode ends 8 control steps after the second release with the arm still above the cup (correct but late)", "expected": true, "generator": "e10_place_cup_plate.C4_late_finish"},
+  {"name": "E10:C5_high_release", "description": "red team: both cups released 4 cm above the tray floor (a small drop)", "expected": true, "generator": "e10_place_cup_plate.C5_high_release"},
+  {"name": "place_then_lift_away", "description": "new in E11: expert placement of both cups, then the left arm grasps cup 1 again, lifts it 10 cm above the tray and holds it there (success undone)", "expected": false, "generator": "e11_new_families.place_then_lift_away"},
+  {"name": "one_cup_only", "description": "new in E11: cup 1 is placed correctly, cup 2 is never moved (half of the task)", "expected": false, "generator": "e11_new_families.one_cup_only"},
+  {"name": "place_offcentre_valid", "description": "new in E11, positive control for the floor-area term: both cups set down upright near two corners of the tray floor (the two ends of its near long edge), base fully on the floor, 1 cm from the foot of the rim on both sides", "expected": true, "generator": "e11_new_families.place_offcentre_valid"}
+ ],
+ "source": {
+  "benchmark": "imitator", "task": "_036_place_cup_plate (TwoRobotPlaceCupPlate-v1, L0)",
+  "released_code_predicate": "success = both cups' xy within 0.15 m of the tray centre; is_cup_*_upright (local z vs world -x/+x) computed, unused",
+  "supersedes": "place_cup_plate_v1",
+  "protocol": "v2: veritask/adapters/protocol_v2.py (semantics), adapters/maniskill_v2.py (recorder), adapters/maniskill_v2_tasks.py (signals, tray floor map, cup base footprint)",
+  "frozen": "2026-11-12, before any E11 evaluation-set run; thresholds were chosen knowing the E10 report (not blind to it)",
+  "e10_result": "research/results/e10_redteam/E10_REPORT.md"
+ },
+ "notes": "Protocol v2. The evaluator runs a 1.0 s settle phase after the policy's last action (robot holds its last command; 20 control steps at 20 Hz); every term reads only that phase, so a correct placement that finishes late is not penalised (E10 C4) and anything done in the last steps is judged by its consequences (E10 C3). released = at every settle step: zero robot-cup contact impulse (all links of both arms vs both cups, accumulated over all substeps) AND finger-cup gap > 5 mm (fingers of both grippers; the gap is measured to the fingers only, because the wide hand of the arm placing one cup legitimately hovers a few mm above the other cup). v1's cup-tray contact-force condition is dropped: a released cup at rest at floor height is supported by the floor. Tray floor area and cup base footprint are computed from the collision meshes at reset (adapters/maniskill_v2_tasks.py: TrayFloor, CupBase; 2 mm grid). Cup up axis = model local +y for both 021_cup models (as v1). Not checked: which cup stands where on the floor, cup yaw, whether a cup is upside down (tilt would read ~180 deg and be rejected)."
+}

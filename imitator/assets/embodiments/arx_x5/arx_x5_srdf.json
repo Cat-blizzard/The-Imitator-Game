@@ -1,0 +1,11 @@
+{
+ "urdf": "imitator/assets/embodiments/arx_x5/arx_x5.urdf",
+ "sim_srdf": "imitator/assets/embodiments/arx_x5/arx_x5.srdf",
+ "mplib_srdf": "imitator/assets/embodiments/arx_x5/arx_x5_mplib.srdf",
+ "n_samples": 3000,
+ "n_sim_pairs": 0,
+ "n_mplib_pairs": 27,
+ "sim_pairs": [],
+ "home_collisions": [],
+ "always": []
+}

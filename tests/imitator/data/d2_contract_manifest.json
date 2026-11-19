@@ -1,0 +1,20 @@
+{
+ "imsim_ring_on_peg_v1": {
+  "path": "imsim/imsim/contracts/imsim_ring_on_peg_v1.json",
+  "sha256": "99708ea77b469c20a4d917550ad91e302811cc663c355f90d31da8d5b0e3375d",
+  "frozen_at": "2026-11-16 21:54",
+  "note": "before any counterexample was judged"
+ },
+ "imsim_mug_on_hook_v1": {
+  "path": "imsim/imsim/contracts/imsim_mug_on_hook_v1.json",
+  "sha256": "4a6e935376b44319e77cef3bac740094faae8431c5bc129637d880f9d82b4d74",
+  "frozen_at": "2026-11-16 21:54",
+  "note": "before any counterexample was judged"
+ },
+ "imsim_place_sphere_wn_v1": {
+  "path": "imsim/imsim/contracts/imsim_place_sphere_wn_v1.json",
+  "sha256": "9de032ebabd87f5e286a88ae8d57842027f56ff36275ff6431a32541cafc894c",
+  "frozen_at": "2026-11-16 21:54",
+  "note": "before any counterexample was judged"
+ }
+}

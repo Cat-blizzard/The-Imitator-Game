@@ -1,0 +1,230 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_stack_cube_v1",
+ "protocol": "v3",
+ "instruction": "Put the red cube on the green cube, let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m",
+   "args": {
+    "signal": "ab_xy_m",
+    "window": 20
+   },
+   "real_measurement": "A over B: horizontal distance of the two cube centres <= 2 cm (A's centre above B's top face) at every judged step. Real world: top camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "ab_dz_err_m",
+    "window": 20
+   },
+   "real_measurement": "A rests on B: | z(A) - z(B) - 4 cm | <= 5 mm at every judged step. Real world: RGB-D."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "cubeA_cubeB_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Supported by B: A-B contact impulse > 0 in every judged step. Real world: inferred from the poses + side camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_cubeA_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "A does not touch the table in the judged window. Real world: side camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cubeB_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "B on the table: lowest bounding-box corner within 5 mm of the table top at every judged step. Real world: RGB-D pose vs table plane."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 10.0,
+   "units": "deg",
+   "args": {
+    "signal": "cubeA_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "A lies flat on a face: the smallest angle of A's axes to vertical <= 10 deg. Real world: pose estimate."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of either cube retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; either cube must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cubeA_x",
+    "signals": [
+     "cubeA_x",
+     "cubeA_y",
+     "cubeA_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the cubeA centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cubeB_x",
+    "signals": [
+     "cubeB_x",
+     "cubeB_y",
+     "cubeB_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the cubeB centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_cubeA_impulse_Ns",
+   "robot_cubeB_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "cubeA_enclosure_m",
+   "cubeB_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cubeA_x",
+     "cubeA_y",
+     "cubeA_z"
+    ],
+    "max": 0.001
+   },
+   {
+    "signals": [
+     "cubeB_x",
+     "cubeB_y",
+     "cubeB_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: grasp A, lift, align over B, lower onto B, open, retreat 10 cm up",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.stack_cube(variant='expert')"
+  },
+  {
+   "name": "hold_on_top",
+   "description": "A put on B, gripper stays closed on A",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.stack_cube(variant='hold_on_top')"
+  },
+  {
+   "name": "cage",
+   "description": "A put on B, gripper opened only ~1.5 mm beyond the cube width (no contact, still around A)",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.stack_cube(variant='cage')"
+  },
+  {
+   "name": "press_on_top",
+   "description": "A released on B, then the closed gripper presses down on A's top face",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.stack_cube(variant='press_on_top')"
+  },
+  {
+   "name": "beside",
+   "description": "A put on the table touching B, released, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.stack_cube(variant='beside')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "StackCube-v1",
+  "released_code_predicate": "A within (|half_xy| + 5 mm) of B horizontally, |dz - 4 cm| <= 5 mm, A's PhysX velocity < 1 cm/s and 0.5 rad/s, not is_grasping(A) (finger forces >= 0.5 N at < 85 deg), one step"
+ },
+ "notes": "Release over both cubes (contact + all-link enclosure), commanded vs actual opening, retreat over both cubes."
+}

@@ -1,0 +1,136 @@
+{
+ "schema_version": "0.3",
+ "task_id": "dual_cloth_cover_box_v1",
+ "protocol": "v3",
+ "instruction": "With both arms, lift the two far corners of the towel and lay its far half over the box so that the box is covered, then let go and move away.",
+ "outcome": [
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.9,
+   "units": "",
+   "args": {
+    "signal": "box_cover_frac",
+    "window": 20
+   },
+   "real_measurement": "Covered: >= 90 % of 9 x 9 sample points on the box's top face (3 mm inset) have a towel particle above the top face (>= 2 mm) within 1.2 cm horizontally, at every judged step. Real world: top camera, box top visible area vs towel segmentation."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "",
+   "args": {
+    "signal": "towel_frac_above_8cm",
+    "window": 20
+   },
+   "real_measurement": "Lying down: <= 2 % of the towel more than 8 cm above the table at every judged step (the box top is 2.85 cm up; a held-up or bunched towel is higher). Real world: depth camera."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.05,
+   "units": "m",
+   "args": {
+    "signal": "towel_lift_L"
+   },
+   "real_measurement": "Lifted (process): the far-left corner patch (3 x 3 vertices) was >= 5 cm above the table at some step (a towel dragged over the box does not count). Real world: side camera."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.05,
+   "units": "m",
+   "args": {
+    "signal": "towel_lift_R"
+   },
+   "real_measurement": "Lifted: the far-right corner patch was >= 5 cm above the table at some step."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (v3.2, E24c fix 2): every arm whose gripper is within 3 cm of any towel particle backs its TCP off 3 cm along its approach axis in 0.5 s with its last gripper command, then holds 0.5 s; the largest displacement of the towel particles that were within 5 cm of a retracting gripper must be <= 1 cm (a pinched towel is lifted with the gripper); 0 when no arm is within 3 cm (nothing retracts). Real world: same motion, depth camera on the gripper's region."
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "release": {
+  "contact_signals": [
+   "robot_cloth_impulse"
+  ],
+  "max_impulse_Ns": 0.0005,
+  "enclosure_signals": [
+   "finger_cloth_enclosure"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "cloth_speed_p95_pos": 0.1
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "towel_cx",
+     "towel_cy",
+     "towel_cz"
+    ],
+    "max": 0.002
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "expected": true,
+   "generator": "imsim.planning.fold.run(behaviour='expert')",
+   "description": "positive control: both arms grasp 2.5 cm inside the far corners, lift them 12 cm, carry them over the box, lower them 3 cm beyond its near face, wait 0.5 s, open, pause 0.3 s, back off 4 cm along the approach axis, rise"
+  },
+  {
+   "name": "short_fold",
+   "expected": false,
+   "generator": "imsim.planning.fold.run(behaviour='short_fold')",
+   "description": "same motion, the corners are released above the fold line (towel centre), short of the box: the far half folds onto itself and the box stays uncovered (near miss)"
+  },
+  {
+   "name": "drag_on_ground",
+   "expected": false,
+   "generator": "imsim.planning.fold.run(behaviour='drag_on_ground')",
+   "description": "grip the far corners and drag them along the table to the release points without lifting"
+  },
+  {
+   "name": "hold_cloth",
+   "expected": false,
+   "generator": "imsim.planning.fold.run(behaviour='hold_cloth')",
+   "description": "the expert's motion, but the grippers never open: the towel is held over the box at the end"
+  },
+  {
+   "name": "no_grip",
+   "expected": false,
+   "generator": "imsim.planning.fold.run(behaviour='no_grip')",
+   "description": "the expert's motion with the grippers never closing"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E29b)",
+  "task": "DualClothCoverBox-v1 (imsim/imsim/envs/dual_cloth_cover.py)",
+  "engine": "newton-1.7.0 VBD cloth; robots SAPIEN 3.0.3 / PhysX (route A, one-way bridge); box kinematic in both",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 for cloth (position-based quiescence speed, 5 s cap, retreat aftermath over the towel particles, imsim/imsim/soft_eval.py)",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json"
+ },
+ "notes": "Signals (DualClothCoverBoxEnv.cloth_signals): box_cover_frac, towel_frac_above_8cm, towel_lift_L/R (as the dual fold), robot_cloth_impulse = VBD contact impulse over the two arms' colliders only (the box collider excluded), finger_cloth_enclosure (smallest over both grippers), cloth_speed_p95_pos (positions of consecutive control steps), corners towel_<FL|FR|NL|NR>_<xyz>, centroid towel_c<x|y|z> (quiescence), robot_qvel_max. The box is kinematic (one-way coupling): the task judges the towel's final geometry relative to a fixed object."
+}

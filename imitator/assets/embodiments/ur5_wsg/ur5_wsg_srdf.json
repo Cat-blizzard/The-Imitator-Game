@@ -1,0 +1,11 @@
+{
+ "urdf": "imitator/assets/embodiments/ur5_wsg/ur5_wsg.urdf",
+ "sim_srdf": "imitator/assets/embodiments/ur5_wsg/ur5_wsg.srdf",
+ "mplib_srdf": "imitator/assets/embodiments/ur5_wsg/ur5_wsg_mplib.srdf",
+ "n_samples": 3000,
+ "n_sim_pairs": 0,
+ "n_mplib_pairs": 99,
+ "sim_pairs": [],
+ "home_collisions": [],
+ "always": []
+}

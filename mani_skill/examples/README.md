@@ -51,7 +51,7 @@ demos/{env_id}/motionplanning/{trajectory_name}.json   # env args, seeds, result
 demos/{env_id}/motionplanning/videos/                  # optional MP4s
 ```
 
-The H5/JSON pair feeds `examples/baselines/lerobot_dataset/h5_to_lerobot.py`
+The H5/JSON pair feeds `imitator/dataset/h5_to_lerobot.py`
 to become LeRobot training data (see `mani_skill/README.md`).
 
 ### Adding a solution for a new task

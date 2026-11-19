@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "veritask/contract.schema.json",
+  "title": "veritask task contract",
+  "description": "Declarative physical outcome contract. Mirrors veritask.spec.contract.validate_dict (which additionally checks metric names against the local registry and duplicate measurement keys).",
+  "type": "object",
+  "required": [
+    "task_id",
+    "instruction",
+    "outcome"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": [
+        "0.1",
+        "0.2",
+        "0.3",
+        "0.4"
+      ],
+      "default": "0.4"
+    },
+    "protocol": {
+      "enum": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "default": "v1",
+      "description": "evaluation protocol; v2 = evaluator-run settle phase, end-state terms hold at every settle step; v3 = evaluator hold (A/B), quiescence then a judged window, release by contact + enclosure"
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "v2/v3 release rule",
+      "properties": {
+        "contact_signals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "gap_signals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "gap_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_impulse_Ns": {
+          "type": "number",
+          "minimum": 0
+        },
+        "enclosure_signals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enclosure_margin_m": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "settle": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "v3 settle block",
+      "properties": {
+        "hold": {
+          "enum": [
+            "A",
+            "B"
+          ]
+        },
+        "max_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "window_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "quiet_steps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "quiet_max": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "quiet_disp": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "signals",
+              "max"
+            ],
+            "properties": {
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "max": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "robot_speed_signal": {
+          "type": "string"
+        },
+        "robot_speed_max": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instruction": {
+      "type": "string"
+    },
+    "outcome": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "metric",
+          "op",
+          "threshold"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "metric": {
+            "type": "string",
+            "description": "name in veritask.outcomes.metrics.REGISTRY, e.g. cloth.corner_distance, trace.final"
+          },
+          "op": {
+            "enum": [
+              "<",
+              "<=",
+              ">",
+              ">="
+            ]
+          },
+          "threshold": {
+            "type": "number"
+          },
+          "units": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object",
+            "description": "metric arguments; trace.* metrics require 'signal'"
+          },
+          "real_measurement": {
+            "type": "string",
+            "description": "how the same quantity is measured on real hardware"
+          }
+        },
+        "if": {
+          "properties": {
+            "metric": {
+              "pattern": "^trace\\."
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "args": {
+              "required": [
+                "signal"
+              ]
+            }
+          },
+          "required": [
+            "args"
+          ]
+        }
+      }
+    },
+    "require_released": {
+      "type": "boolean",
+      "default": true
+    },
+    "settle_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1.0
+    },
+    "counterexamples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expected": {
+            "type": "boolean",
+            "default": false,
+            "description": "false = the verifier must reject this behaviour; true = positive control"
+          },
+          "generator": {
+            "type": "string",
+            "description": "adapter-specific behaviour id"
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "proof_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "schema 0.4 (card D2): optional evaluator-run proof test after the judged window and the retreat. The robot is moved out of the workspace; every test starts from the same post-retreat state, applies one standard disturbance to a scene object (not through the robot) and is judged on its own traces (end-state terms: last window_seconds; event terms: disturbance + rest). Evaluated by veritask.adapters.protocol_v3.evaluate_proof_tests.",
+      "required": [
+        "tests"
+      ],
+      "properties": {
+        "robot": {
+          "enum": [
+            "clear"
+          ],
+          "default": "clear"
+        },
+        "pre_settle_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.5
+        },
+        "window_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1.0
+        },
+        "notes": {
+          "type": "string"
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "kind",
+              "target",
+              "terms"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[^:]+$"
+              },
+              "kind": {
+                "enum": [
+                  "lift_tilt",
+                  "shake",
+                  "push",
+                  "pull",
+                  "table_shake"
+                ],
+                "description": "lift_tilt: params lift_m, tilt_deg, lift_seconds, tilt_seconds, hold_seconds; shake: amplitude_m, freq_hz, duration_seconds; push: delta_v_mps (calibrated); pull: force_N, duration_seconds; table_shake: accel_mps2, freq_hz, duration_seconds"
+              },
+              "target": {
+                "type": "string",
+                "description": "scene object the evaluator drives or pushes"
+              },
+              "params": {
+                "type": "object"
+              },
+              "rest_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "default": 1.0
+              },
+              "description": {
+                "type": "string"
+              },
+              "terms": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "metric",
+                    "op",
+                    "threshold"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "metric": {
+                      "type": "string",
+                      "description": "name in veritask.outcomes.metrics.REGISTRY, e.g. cloth.corner_distance, trace.final"
+                    },
+                    "op": {
+                      "enum": [
+                        "<",
+                        "<=",
+                        ">",
+                        ">="
+                      ]
+                    },
+                    "threshold": {
+                      "type": "number"
+                    },
+                    "units": {
+                      "type": "string"
+                    },
+                    "args": {
+                      "type": "object",
+                      "description": "metric arguments; trace.* metrics require 'signal'"
+                    },
+                    "real_measurement": {
+                      "type": "string",
+                      "description": "how the same quantity is measured on real hardware"
+                    }
+                  },
+                  "if": {
+                    "properties": {
+                      "metric": {
+                        "pattern": "^trace\\."
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "args": {
+                        "required": [
+                          "signal"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "args"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

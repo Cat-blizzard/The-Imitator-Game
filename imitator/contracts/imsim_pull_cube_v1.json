@@ -1,0 +1,170 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_pull_cube_v1",
+ "protocol": "v3",
+ "instruction": "Pull the cube along the table towards the robot into the goal disc, then move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<",
+   "threshold": 0.1,
+   "units": "m",
+   "args": {
+    "signal": "goal_dist_xy_m",
+    "window": 20
+   },
+   "real_measurement": "In the goal disc: horizontal distance of the cube centre to the goal centre < 10 cm at every judged step (ManiSkill's goal_radius). Real world: top camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cube_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "On the table: lowest bounding-box corner within 5 mm of the table top at every judged step. Real world: RGB-D pose vs table plane."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 10.0,
+   "units": "deg",
+   "args": {
+    "signal": "cube_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "Lies flat on a face (smallest axis angle to vertical <= 10 deg)."
+  },
+  {
+   "metric": "trace.max",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "signal": "cube_bottom_dz_m"
+   },
+   "real_measurement": "Pulled, not carried (process): the cube's lowest point never rose more than 1 cm above the table during the episode. Real world: side camera."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the cube retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the cube must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cube_x",
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the cube centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_cube_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "cube_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: ManiSkill's solution (pull with the closed gripper in a straight line), then back off and up",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.pull_cube(variant='expert')"
+  },
+  {
+   "name": "carry",
+   "description": "pick the cube up, place it at the goal centre, release, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube(variant='carry')"
+  },
+  {
+   "name": "hold_above",
+   "description": "pick the cube and hold it 5 cm above the goal centre",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube(variant='hold_above')"
+  },
+  {
+   "name": "pull_and_press",
+   "description": "the expert's pull and back-off, then the closed fingertips press down on the cube's top face",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube(variant='pull_and_press')"
+  },
+  {
+   "name": "short",
+   "description": "pull stops with the cube centre ~3 cm outside the goal disc, back off",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube(variant='short')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "PullCube-v1",
+  "released_code_predicate": "cube centre within goal_radius of the goal (xy only, no height check), one step"
+ },
+ "notes": "Release by contact + enclosure (the push is non-prehensile; the robot must not touch the cube at the end); no commanded-opening term (nothing is grasped)."
+}

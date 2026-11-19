@@ -1,0 +1,148 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_dual_lift_box_v1",
+ "protocol": "v3",
+ "instruction": "Lift the long box with both arms, one hand at each end, keep it level, and hold it still at least 5 cm above the table.",
+ "outcome": [
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.05,
+   "units": "m",
+   "args": {
+    "signal": "box_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "Lifted: the box's lowest corner >= 5 cm above the table at every judged step. Real world: RGB-D / side camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 5.0,
+   "units": "deg",
+   "args": {
+    "signal": "box_long_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "Level: the box's long axis within 5 deg of horizontal at every judged step. Real world: pose estimate of the box."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "arm0_box_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Held by the LEFT arm: contact impulse between the box and the left robot > 0 in every judged step (substep-accumulated). Real world: wrist F/T or gripper current."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "arm1_box_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Held by the RIGHT arm: contact impulse between the box and the right robot > 0 in every judged step. Real world: as above."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "box_x",
+    "signals": [
+     "box_x",
+     "box_y",
+     "box_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the box centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": false,
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "box_x",
+     "box_y",
+     "box_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: each arm grasps its end, both close, both TCPs rise 6-8 cm together, hold",
+   "expected": true,
+   "generator": "imsim.planning.dual_lift_box.run(variant='expert')"
+  },
+  {
+   "name": "single_arm_center",
+   "description": "the left arm alone grasps the box at its centre and lifts it level; the right arm stays home",
+   "expected": false,
+   "generator": "imsim.planning.dual_lift_box.run(variant='single_arm_center')"
+  },
+  {
+   "name": "one_end_lift",
+   "description": "the left arm alone grasps its end and lifts it 6-8 cm; the right arm stays home (the box either pivots, the other end staying on the table, or is held cantilevered by the one grasp)",
+   "expected": false,
+   "generator": "imsim.planning.dual_lift_box.run(variant='one_end_lift')"
+  },
+  {
+   "name": "low_lift",
+   "description": "both arms grasp and lift only 2 cm",
+   "expected": false,
+   "generator": "imsim.planning.dual_lift_box.run(variant='low_lift')"
+  },
+  {
+   "name": "drop_at_end",
+   "description": "both arms lift as the expert; the policy's last action opens both grippers (the box falls after the policy ends)",
+   "expected": false,
+   "generator": "imsim.planning.dual_lift_box.run(variant='drop_at_end')"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms stay at home",
+   "expected": false,
+   "generator": "imsim.planning.dual_lift_box.run(variant='no_op')"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E29b)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "DualLiftBox-v1 (imsim/imsim/envs/dual_lift_box.py)",
+  "released_code_predicate": "box centre >= 5 cm above its reset height and long axis < 10 deg from horizontal at the evaluated step (RoboTwin lift_pot style; no check of who holds the box, of rest, or of what happens next)"
+ },
+ "notes": "No release: the goal state is the box held by both arms. Settle (hold A) holds both arms where they stopped with their last gripper commands; quiescence uses position-based speeds (E24c: PhysX's reported velocity of a squeezed object is not zero while it does not move). The per-arm contact terms state 'with both arms'."
+}

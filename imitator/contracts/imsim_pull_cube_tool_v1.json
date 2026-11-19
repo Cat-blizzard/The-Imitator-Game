@@ -1,0 +1,218 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_pull_cube_tool_v1",
+ "protocol": "v3",
+ "instruction": "Use the L-shaped tool to pull the cube towards the robot, then let go of the tool and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.6,
+   "units": "m",
+   "args": {
+    "signal": "cube_base_dist_m",
+    "window": 20
+   },
+   "real_measurement": "Pulled in (E27 term, unchanged): the cube's horizontal distance to the robot base <= 0.6 m at every judged step (ManiSkill's threshold). Real world: tracked cube pose and the base position."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 10.0,
+   "units": "deg",
+   "args": {
+    "signal": "cube_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "Rests flat (E27 term, unchanged): smallest angle of the cube's axes to vertical <= 10 deg at every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cube_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "On the table: lowest bounding-box corner within 5 mm of the table top at every judged step. Real world: RGB-D pose vs table plane."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "tool_cube_impulse_Ns"
+   },
+   "real_measurement": "Moved by the tool (process, new): the L-shaped tool touched the cube at some step of the episode. Real world: side camera / tool-cube contact."
+  },
+  {
+   "metric": "trace.max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "robot_cube_impulse_cum_Ns"
+   },
+   "real_measurement": "Not by hand (process, new): the robot itself never touched the cube (substep-accumulated robot-cube impulse over the whole episode = 0). Real world: wrist / gripper camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the tool or the cube retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the tool or the cube must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cube_x",
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the cube centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "tool_x",
+    "signals": [
+     "tool_x",
+     "tool_y",
+     "tool_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the tool centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_tool_impulse_Ns",
+   "robot_cube_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "tool_enclosure_m",
+   "cube_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "max": 0.001
+   },
+   {
+    "signals": [
+     "tool_x",
+     "tool_y",
+     "tool_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: E27's port of ManiSkill's solution (grasp the handle, lift, hook behind the cube, pull 35 cm), then open and retreat 8 cm up",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.pull_cube_tool(variant='expert')"
+  },
+  {
+   "name": "hold_tool",
+   "description": "the pull, gripper stays closed on the tool",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube_tool(variant='hold_tool')"
+  },
+  {
+   "name": "cage_tool",
+   "description": "the pull, gripper opened only ~1.5 mm beyond the handle width",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube_tool(variant='cage_tool')"
+  },
+  {
+   "name": "pull_short",
+   "description": "the pull stops with the cube ~0.65 m from the robot base, released, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube_tool(variant='pull_short')"
+  },
+  {
+   "name": "pull_by_gripper",
+   "description": "the tool is not used: the closed gripper reaches behind the cube and drags it to 0.5 m from the base",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pull_cube_tool(variant='pull_by_gripper')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "PullCubeTool-v1",
+  "released_code_predicate": "cube within 0.6 m (xy) of the robot base, one step (no release, no settling, no check that the tool was used)",
+  "reference": "E27 frozen protocol-v2 contract research/results/e27_unbundle/contracts/pull_cube_tool_v2.json (sha256 426d9a0d441ef2c3093c37f1764a367a047d6cd2fa89db2f3670c2dcafb92840, prereg.json): its end-state geometry terms and thresholds are kept unchanged here; it does not run unchanged in imsim's verify layer (protocol v3: check_contract_v3 rejects it -- no release block with contact + enclosure signals, its release rule lives in E27's v2 binding; no settle block; no counterexample list), so its release (5 mm finger gap), 1 s replay settle and TCP-distance 'retreated' term are replaced by the v3.2 machinery: release by contact + all-link enclosure, commanded-vs-actual opening, retreat aftermath (consequence test), hold A + quiescence + 1 s window in a 5 s cap, position-based speeds."
+ },
+ "notes": "Tool bounding box from its collision shapes (handle + hook). Release, commanded opening and retreat over the tool and the cube; the two process terms state the task's tool use."
+}

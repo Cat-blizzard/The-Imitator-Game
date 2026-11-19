@@ -1,0 +1,31 @@
+{
+ "task_id": "poke_cube_v1",
+ "instruction": "Use the peg to poke the cube into the goal region.",
+ "outcome": [
+  {
+   "metric": "trace.final", "op": "<", "threshold": 0.05, "units": "m", "args": {"signal": "cube_goal_xy", "window": 10},
+   "real_measurement": "Rationale: the task's own goal radius (goal_radius = 0.05 m), cube centre xy to goal centre xy, averaged over the last 0.5 s. Real world: top camera, cube centroid vs the printed target via table-plane homography."
+  },
+  {
+   "metric": "trace.count_true", "op": "<=", "threshold": 0, "units": "control steps", "args": {"signal": "robot_cube_contact"},
+   "real_measurement": "Rationale: the instruction is tool use, so no robot link (fingers, hand, arm) may touch the cube: robot-cube pairwise contact force > 0.05 N in zero control steps. Real world: fingertip tactile pads + wrist F/T with the peg's own load subtracted, gated by camera proximity of the hand to the cube; or a contact microphone / IMU in the cube attributing the impact to the peg via the peg-tip track."
+  },
+  {
+   "metric": "trace.count_true", "op": ">=", "threshold": 1, "units": "control steps", "args": {"signal": "peg_cube_contact"},
+   "real_measurement": "Rationale: the cube must be moved by the peg: peg-cube contact force > 0.05 N in at least one control step. Real world: camera track of the peg head touching the cube face (distance < 5 mm) while the cube moves, or F/T force along the peg axis when the peg is grasped."
+  }
+ ],
+ "require_released": false,
+ "settle_seconds": 0.5,
+ "counterexamples": [
+  {"name": "gripper_push", "description": "ignore the peg, push the cube with the tilted closed gripper", "expected": false, "generator": "e1_poke_cube.gripper_push"},
+  {"name": "no_op", "description": "hold still", "expected": false, "generator": "e1_poke_cube.no_op"},
+  {"name": "peg_poke", "description": "positive control: grasp the peg, poke the cube onto the goal", "expected": true, "generator": "e1_poke_cube.peg_poke"}
+ ],
+ "source": {
+  "benchmark": "maniskill", "task": "PokeCube-v1 (mani_skill 3.0.1)",
+  "released_code_predicate": "success = is_cube_placed & is_robot_static; is_peg_cube_fit / is_peg_grasped computed, unused",
+  "e1_result": "research/results/e1/poke_cube_20seeds.json"
+ },
+ "notes": "Holding the peg at the end is allowed (require_released false). Contacts are taken from the last PhysX substep of each 20 Hz control step."
+}

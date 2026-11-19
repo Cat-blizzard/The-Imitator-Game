@@ -1,0 +1,223 @@
+{
+ "DualFoldTowel-v1@dual_piper": {
+  "params": {
+   "up": 0.10090894100155434,
+   "low_rel": 0.006595974298559233,
+   "retreat": 0.12367491994408569,
+   "d_close": 0.5075358485347077,
+   "d_lift": 1.0459962905222042,
+   "d_carry": 1.201539521117291,
+   "d_lower": 1.6197568221490801,
+   "d_wait": 1.1406018852180695,
+   "d_open": 0.8645745296991949,
+   "d_post": 0.7570693973473901,
+   "back": 0.04208244117998496,
+   "inset_grasp": 0.02611808120711777,
+   "inset_release": 0.0297728410910771,
+   "grasp_dz": -0.00019179811939661366
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/DualFoldTowel-v1__dual_piper/best.json (g1c1); objective 0.781 vs defaults 0.750",
+  "validation": {
+   "nominal_defaults": 0.83,
+   "nominal_tuned": 0.96,
+   "pooled_defaults": 0.6725,
+   "pooled_tuned": 0.7375,
+   "mcnemar_p_one_sided": 0.003337
+  },
+  "date": "2026-11-17 12:57"
+ },
+ "PullCubeTool-v1@panda": {
+  "params": {
+   "vel": 0.49060277094174365,
+   "grasp_x": 0.03811117468991545,
+   "reach_dz": 0.06325737820177502,
+   "lift_dz": 0.14575267696187005,
+   "approach_dz": 0.10136244737980332,
+   "hook_behind": 0.05357459399289621,
+   "hook_side": 0.07142841745521272,
+   "tool_z": 0.027556835407775853,
+   "pull_m": 0.3523814512342784,
+   "radial": 0.0674636312768443,
+   "line": 0.26949904925326684,
+   "post_wait": 6,
+   "pre_wait": 6,
+   "hook_wait": 3
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/PullCubeTool-v1__panda/best.json (g1c6); objective 0.586 vs defaults 0.438",
+  "validation": {
+   "nominal_defaults": 0.91,
+   "nominal_tuned": 0.95,
+   "pooled_defaults": 0.4975,
+   "pooled_tuned": 0.5475,
+   "mcnemar_p_one_sided": 0.017621
+  },
+  "date": "2026-11-17 12:57"
+ },
+ "PushCube-v1@panda": {
+  "params": {
+   "vel": 0.9089432297372589,
+   "start_back": 0.0754379174317643,
+   "push_dz": -0.006273176435432435,
+   "push_end": 0.10190977896812084,
+   "push_segs": 3,
+   "back_m": 0.018286069552382635,
+   "up_m": 0.11627819793943658
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/PushCube-v1__panda/best.json (g2c9); objective 0.805 vs defaults 0.656",
+  "validation": {
+   "nominal_defaults": 1.0,
+   "nominal_tuned": 0.98,
+   "pooled_defaults": 0.6525,
+   "pooled_tuned": 0.765,
+   "mcnemar_p_one_sided": 0.0
+  },
+  "date": "2026-11-17 12:57"
+ },
+ "StackCube-v1@panda": {
+  "params": {
+   "vel": 0.9417686504436241,
+   "reach_dz": 0.06953894549207454,
+   "pre_wait": 8,
+   "grasp_depth": 0.025907834056454464,
+   "close_steps": 5,
+   "lift_dz": 0.15,
+   "align_dz": 0.06522818974546414,
+   "align_wait": 2,
+   "place_dz": 0.00386874344236765,
+   "place_wait": 0,
+   "up_m": 0.12698726149061268
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/StackCube-v1__panda/best.json (g1c3); objective 0.641 vs defaults 0.547",
+  "validation": {
+   "nominal_defaults": 1.0,
+   "nominal_tuned": 1.0,
+   "pooled_defaults": 0.5525,
+   "pooled_tuned": 0.62,
+   "mcnemar_p_one_sided": 0.000178
+  },
+  "date": "2026-11-17 12:57"
+ },
+ "_doc": "A2 tuned expert parameters ('<space>@<embodiment>'); adopted sets replace the frozen defaults for that embodiment (imsim/planning/params.py); see research/results/a2_expert_tuning/A2_REPORT.md",
+ "DualDrawer-v1@dual_piper": {
+  "params": {
+   "pull_m": 0.10893571300432248,
+   "pull_speed": 0.05247571125230542,
+   "knob_close": 0.9573604166793759,
+   "handle_close": 0.987011465598645,
+   "close_steps": 10,
+   "tip_margin": 0.00478471858256669,
+   "pre_scale": 0.9394937140005768,
+   "post_wait": 4,
+   "release_steps": 27,
+   "back_m": 0.06248099430322972
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/DualDrawer-v1__dual_piper/best.json (g2c5); objective 0.500 vs defaults 0.430",
+  "validation": {
+   "nominal_defaults": 0.91,
+   "nominal_tuned": 0.98,
+   "pooled_defaults": 0.4525,
+   "pooled_tuned": 0.4925,
+   "mcnemar_p_one_sided": 0.000428
+  },
+  "date": "2026-11-17 12:57"
+ },
+ "PlugCharger-v1@panda": {
+  "params": {
+   "vel": 0.5023570233616222,
+   "grasp_tilt_deg": 14.537876344225223,
+   "reach_dz": 0.06895345212573736,
+   "refine_tol": 0.00030336515081477397,
+   "refine_wait": 8,
+   "insert_vel": 0.4803252717948131,
+   "insert_step": 0.0012511843770831414,
+   "insert_wait": 0,
+   "stall_m": 0.0013354309185096677,
+   "spiral_r": 0.0010296346537231728,
+   "post_wait": 9,
+   "release_steps": 11,
+   "back_m": 0.06489246403269058
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/PlugCharger-v1__panda/best.json (g0c11); objective 1.000 vs defaults 0.969",
+  "validation": {
+   "nominal_defaults": 0.87,
+   "nominal_tuned": 0.99,
+   "pooled_defaults": 0.43,
+   "pooled_tuned": 0.495,
+   "mcnemar_p_one_sided": 0.0
+  },
+  "date": "2026-11-17 12:57"
+ },
+ "DualCubePlace-v1:gripper@dual_ur5_wsg": {
+  "params": {
+   "vel": 0.9442393370972105,
+   "pre_wait": 7,
+   "h_scale": 1.3434043598363745,
+   "place_dz": 0.0010991301214702909,
+   "place_wait": 10,
+   "corr_max": 0.07023066442259086,
+   "reaim": 0.09815009505354767,
+   "release_steps": 15,
+   "retreat_scale": 1.3334179798362822,
+   "grasp_dz": 0.0
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/DualCubePlace-v1__dual_ur5_wsg/best.json (g2c11); objective 1.000 vs defaults 0.953",
+  "validation": {
+   "nominal_defaults": 1.0,
+   "nominal_tuned": 1.0,
+   "pooled_defaults": 0.93,
+   "pooled_tuned": 0.9925,
+   "mcnemar_p_one_sided": 0.0
+  },
+  "date": "2026-11-17 12:56"
+ },
+ "DualCubePlace-v1:hand@dual_xarm6_allegro": {
+  "params": {
+   "vel": 0.9144652745846958,
+   "pre_wait": 5,
+   "h_scale": 0.900828503521861,
+   "close_steps": 34,
+   "place_dz": 0.004827518986452209,
+   "place_wait": 3,
+   "corr_max": 0.06469995045565732,
+   "reaim": 0.7011509458134149,
+   "release_steps": 22,
+   "retreat_scale": 0.7284879752293081,
+   "hand_along": 0.0030260655484428065,
+   "hand_below": -0.0003729757245744588,
+   "close_cmd": 0.9038100927017053
+  },
+  "adopted": true,
+  "rule_adopt": true,
+  "rule_l1_rerun": true,
+  "source": "A2 tune/DualCubePlace-v1__dual_xarm6_allegro/best.json (g1c5); objective 0.828 vs defaults 0.578",
+  "validation": {
+   "nominal_defaults": 0.76,
+   "nominal_tuned": 0.98,
+   "pooled_defaults": 0.6225,
+   "pooled_tuned": 0.75,
+   "mcnemar_p_one_sided": 4e-06
+  },
+  "date": "2026-11-17 12:56"
+ }
+}

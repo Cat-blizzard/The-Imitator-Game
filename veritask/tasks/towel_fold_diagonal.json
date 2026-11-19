@@ -1,0 +1,23 @@
+{
+ "task_id": "towel_fold_diagonal_v1",
+ "instruction": "Fold the towel diagonally so that one corner lies on the opposite corner, then let go.",
+ "outcome": [
+  {"metric": "cloth.corner_distance", "op": "<", "threshold": 0.08, "units": "m",
+   "args": {"a": 0, "c": 624},
+   "real_measurement": "top-down camera: detect the two marked corners, metric distance via table-plane homography"},
+  {"metric": "cloth.footprint_ratio", "op": "<", "threshold": 0.70, "units": "",
+   "real_measurement": "top-down camera: towel segmentation area / area before the episode"},
+  {"metric": "cloth.frac_above", "op": "<=", "threshold": 0.02, "units": "", "args": {"height": 0.05},
+   "real_measurement": "side/depth camera: towel pixels higher than 5 cm above the table"}
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "counterexamples": [
+  {"name": "no_grip", "description": "same motion, gripper never closes", "expected": false, "generator": "towel.no_grip"},
+  {"name": "drop_midway", "description": "releases halfway through the carry", "expected": false, "generator": "towel.drop_midway"},
+  {"name": "drag_on_ground", "description": "drags corner A to C without lifting", "expected": false, "generator": "towel.drag"},
+  {"name": "expert", "description": "positive control: lift, carry over C, lower, release", "expected": true, "generator": "towel.expert"}
+ ],
+ "source": {"benchmark": "imitator", "task": "_049_fold_towel (physical version)", "engine_reference": ["newton-1.7 VBD", "mujoco-4.0 flex", "superdex-1.0.1 shell"]},
+ "notes": "v2 thresholds; v1 (5 cm, all vertices < 5 cm) rejected the expert in ~60% of parallel worlds (see research/results/towel_*_w64_full.json). Cross-engine expert dAC: 1.8 / 7.05 / 7.2 cm."
+}

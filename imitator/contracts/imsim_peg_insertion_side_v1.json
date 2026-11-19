@@ -1,0 +1,172 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_peg_insertion_side_v1",
+ "protocol": "v3",
+ "instruction": "Pick up the peg and insert its orange end into the hole of the box, then let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": -0.015,
+   "units": "m",
+   "args": {
+    "signal": "peg_head_depth_m",
+    "window": 20
+   },
+   "real_measurement": "Inserted (E27 term, unchanged): the peg head's coordinate along the hole axis, measured from the box centre, is >= -1.5 cm at every judged step (ManiSkill's insertion depth). Real world: tracked peg and box poses."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "m",
+   "args": {
+    "signal": "peg_head_radial_excess_m",
+    "window": 20
+   },
+   "real_measurement": "In the hole, not beside it (E27 term, unchanged): the head's lateral offset from the hole axis (max of the two cross axes) does not exceed the hole radius at every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 10.0,
+   "units": "deg",
+   "args": {
+    "signal": "peg_axis_angle_deg",
+    "window": 20
+   },
+   "real_measurement": "Aligned (E27 term, unchanged): angle between the peg axis and the hole axis <= 10 deg at every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the peg retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the peg must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "peg_x",
+    "signals": [
+     "peg_x",
+     "peg_y",
+     "peg_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the peg centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_peg_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "peg_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "peg_x",
+     "peg_y",
+     "peg_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: E27's port of ManiSkill's solution (grasp near the tail, align, refine with the no-grasp guard, slow insertion to 3 cm past the box centre), then open and retreat 8 cm up",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.peg_insertion_side(variant='expert')"
+  },
+  {
+   "name": "hold_inserted",
+   "description": "inserted, gripper stays closed",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.peg_insertion_side(variant='hold_inserted')"
+  },
+  {
+   "name": "cage_inserted",
+   "description": "inserted, gripper opened only ~1.5 mm beyond the grasped width",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.peg_insertion_side(variant='cage_inserted')"
+  },
+  {
+   "name": "partial_insert",
+   "description": "insertion stopped with the head 4 cm before the box centre, released, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.peg_insertion_side(variant='partial_insert')"
+  },
+  {
+   "name": "release_at_entrance",
+   "description": "released at the refined pre-insertion pose (head 1 cm outside the hole), retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.peg_insertion_side(variant='release_at_entrance')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "PegInsertionSide-v1 (robot panda_wristcam)",
+  "released_code_predicate": "peg head >= -1.5 cm from the box centre along the hole axis and inside the hole radius, one step (no release, no alignment, no settling)",
+  "reference": "E27 frozen protocol-v2 contract research/results/e27_unbundle/contracts/peg_insertion_side_v2.json (sha256 aaf5a43d1433f9ed77b7a230f4435aa5bb2b725821b0949f34eede985b9afc19, prereg.json): its end-state geometry terms and thresholds are kept unchanged here; it does not run unchanged in imsim's verify layer (protocol v3: check_contract_v3 rejects it -- no release block with contact + enclosure signals, its release rule lives in E27's v2 binding; no settle block; no counterexample list), so its release (5 mm finger gap), 1 s replay settle and TCP-distance 'retreated' term are replaced by the v3.2 machinery: release by contact + all-link enclosure, commanded-vs-actual opening, retreat aftermath (consequence test), hold A + quiescence + 1 s window in a 5 s cap, position-based speeds."
+ },
+ "notes": "Peg bounding box from u.peg_half_sizes at every step (re-randomised at each reconfiguration). The box is kinematic."
+}

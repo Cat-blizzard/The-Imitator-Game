@@ -1,0 +1,105 @@
+{
+ "schema": "imsim.embodiment_calibration/1",
+ "name": "f1_setup_ur5_wsg",
+ "created": "2026-11-17 02:53:36",
+ "source": "card F1 (research/results/f1_embodiment_cards); research/scripts/f1_calibrate.py, f1_report.py",
+ "usage": "imsim.make(task, embodiment, sim='cpu', embodiment_calibration='f1_setup_ur5_wsg')",
+ "note": "SETUP-SPECIFIC: improves the held-out episodes of its own log but did NOT transfer to the second log of this robot type (or is post-hoc); use only for that setup",
+ "arms": {
+  "ur5_wsg": {
+   "level": 0,
+   "variant": "pd",
+   "arm": {
+    "joints": [
+     "shoulder_pan_joint",
+     "shoulder_lift_joint",
+     "elbow_joint",
+     "wrist_1_joint",
+     "wrist_2_joint",
+     "wrist_3_joint"
+    ],
+    "stiffness": [
+     4675.083960690616,
+     4413.563860639849,
+     7848.549738267743,
+     5096.704034543347,
+     7409.508743482701,
+     4675.083960690616
+    ],
+    "damping": [
+     1046.4126793222676,
+     1658.452331962857,
+     3162.277660168379,
+     1046.4126793222676,
+     3162.277660168379,
+     1046.4126793222676
+    ],
+    "force_limit": [
+     150.0,
+     150.0,
+     150.0,
+     28.0,
+     28.0,
+     28.0
+    ],
+    "action_delay_s": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "prefilter_tau_s": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "gravity": false
+   },
+   "l2_test_passed": false,
+   "source_robot": "UR5e logs (proxy for the UR5 CB3 model)",
+   "fit": {
+    "dataset": "Arururu12/UR5e_Gello_Cube_bin_v3",
+    "license": "apache-2.0",
+    "fps": 10.0,
+    "sim_freq": 100.0,
+    "train_segments": 54,
+    "train_frames": 3009
+   },
+   "heldout": {
+    "rmse_default_rad": [
+     0.07210527572203437,
+     0.06253458963666267,
+     0.11781920319779403,
+     0.040296175874983346,
+     0.040452734791531414,
+     0.06745478845182938
+    ],
+    "rmse_calibrated_rad": [
+     0.07040905877711204,
+     0.06317988451878577,
+     0.11570804067900586,
+     0.03842044993915776,
+     0.03852016010536666,
+     0.06533643827453978
+    ],
+    "mean_default": 0.06677712794580587,
+    "mean_calibrated": 0.06526233871566131,
+    "n_segments": 66,
+    "n_frames": 3571
+   },
+   "transfer": {
+    "tlpss__ur5e-pick-red-cube-joints:arm": {
+     "default": 0.012208907209811585,
+     "calibrated": 0.010263335270445402
+    }
+   },
+   "notes": "gripper not calibrated (level 3 needs a real robot); fitted on free-space motion only",
+   "posthoc": false
+  }
+ }
+}

@@ -1,0 +1,48 @@
+{
+ "schema_version": "0.1",
+ "task_id": "press_juicer_v2",
+ "instruction": "Press the juicer's knob down until it reaches its pressed position, then let go.",
+ "outcome": [
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": -0.218, "units": "rad",
+   "args": {"signal": "knob_qpos", "window": 20},
+   "real_measurement": "Rationale: -0.218 rad is the env's own press target (qmin + 0.25 (qmax - qmin), model 103105; unchanged from v1). New in v2: the knob must be at or beyond it at EVERY step of the 1 s settle phase (worst value over the 20 settle steps), i.e. it must be LEFT pressed, not merely have passed through (E10 J1: pressed, turned back, released was accepted by v1's trace.min). Real world: joint encoder if the appliance is instrumented, otherwise an AprilTag on the knob tracked by a fixed camera for 1 s after the robot stops."
+  },
+  {
+   "metric": "trace.count_true", "op": ">=", "threshold": 1, "units": "control steps",
+   "args": {"signal": "robot_knob_contact_acc"},
+   "real_measurement": "Rationale: the knob must have been moved by the robot: in at least one control step the robot-knob contact impulse ACCUMULATED over all physics substeps of that step is >= 5e-4 N*s (= v1's 0.05 N force floor acting for one 10 ms substep). v1 sampled only the last substep and missed a real jab (E10 J4). Real world: fingertip tactile pads or wrist F/T, integrated over 50 ms, while the fingertip is within 1 cm of the knob."
+  },
+  {
+   "metric": "trace.window_min", "op": ">", "threshold": 0.005, "units": "m",
+   "args": {"signal": "fingers_knob_gap_m", "window": 20},
+   "real_measurement": "Rationale: 'then let go' = at every settle step the smallest finger-knob distance (over all substeps) is > 5 mm; 5 mm is the protocol's release gap (well above contact-solver slop of < 0.5 mm, small enough that an opened or withdrawn gripper passes). Together with 'no robot-knob contact impulse in the settle phase' this is the released flag (require_released); the gap is also listed here so that its threshold is part of this file. Real world: finger-to-knob clearance from a calibrated camera / forward kinematics plus zero tactile signal."
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "counterexamples": [
+  {"name": "hover_front_10cm", "description": "TCP 10 cm in front of the knob, no contact", "expected": false, "generator": "e1_press_juicer.hover_front_10cm"},
+  {"name": "hover_above_4cm", "description": "TCP 4 cm above the knob top, no contact", "expected": false, "generator": "e1_press_juicer.hover_above_4cm"},
+  {"name": "touch_and_leave", "description": "come within 0.14 m of the knob, return to start", "expected": false, "generator": "e1_press_juicer.touch_and_leave"},
+  {"name": "no_op", "description": "both arms hold still", "expected": false, "generator": "e1_press_juicer.no_op"},
+  {"name": "press_knob", "description": "positive control: tilted closed gripper pushes the knob edge 1.5 cm down, backs off", "expected": true, "generator": "e1_press_juicer.press_knob"},
+  {"name": "expert", "description": "official motion-planning solution (_050); E1 showed it never moves the knob", "expected": false, "generator": "imitator.solutions._050_press_juicer"},
+  {"name": "E10:J1_press_then_undo", "description": "red team: press with the left arm, turn the dial back with the right arm, let go (knob not left pressed)", "expected": false, "generator": "e10_press_juicer.J1_press_then_undo"},
+  {"name": "E10:J7_press_and_hold", "description": "red team: press, ease off, leave the fingertip resting on (or hovering within the release gap of) the dial: never let go. Per-episode truth from the E10 adjudication (one seed hovered 0.9 mm above the dial with 0 N and was adjudicated 'released, borderline')", "expected": false, "generator": "e10_press_juicer.J7_press_and_hold"},
+  {"name": "E10:J2_twist_release", "description": "red team: grasp the dial and twist it to the pressed angle, open, retreat: same end state as a press, counted as accomplished when the dial ends pressed (outcomes, not motions)", "expected": true, "generator": "e10_press_juicer.J2_twist_release"},
+  {"name": "E10:J3_clamp_hold", "description": "red team (declared, not executed): press, then keep the gripper closed around the dial at ~0 N", "expected": false, "generator": "e10_press_juicer.J3_clamp_hold"},
+  {"name": "E10:J4_fast_jab", "description": "red team: one fast jab on the dial edge; a real press when it leaves the dial at or beyond the target (per-episode truth from the E10 adjudication; jabs that do not turn the dial are failures)", "expected": true, "generator": "e10_press_juicer.J4_fast_jab"},
+  {"name": "E10:J5_right_arm_press", "description": "red team: right arm pushes the dial edge; in this scene that turns the dial the wrong way (ends >= 0 rad)", "expected": false, "generator": "e10_press_juicer.J5_right_arm_press"},
+  {"name": "E10:J9_gentle_press", "description": "red team: the same press driven slowly (80-step joint ramp), back off", "expected": true, "generator": "e10_press_juicer.J9_gentle_press"}
+ ],
+ "source": {
+  "benchmark": "imitator", "task": "_050_press_juicer (TwoRobotPressJuicer-v1, L0)",
+  "released_code_predicate": "success = juicer_ever_pressed = OR_t(||left TCP - knob mesh centre|| <= 0.14 m); pressed_enough (qpos <= target) computed, unused",
+  "supersedes": "press_juicer_v1",
+  "protocol": "v2: veritask/adapters/protocol_v2.py (semantics), adapters/maniskill_v2.py (recorder), adapters/maniskill_v2_tasks.py (signals)",
+  "frozen": "2026-11-12, before any E11 evaluation-set run; thresholds were chosen knowing the E10 report (not blind to it)",
+  "e10_result": "research/results/e10_redteam/E10_REPORT.md"
+ },
+ "notes": "Protocol v2. The evaluator runs a 1.0 s settle phase after the policy's last action (robot holds its last command; 20 control steps at 20 Hz); end-state terms (trace.window_*) read only that phase, event terms (trace.count_true) the whole episode. settle 1.0 s (v1 declared 0.5 s, never run): one protocol constant for the three rigid tasks, long enough for the dial to show any spring-back or drift. released = at every settle step: zero robot-knob contact impulse (all links of both arms, accumulated over all substeps) AND finger-knob gap > 5 mm. Knob without a return spring (decision): this contract is written for a LATCHING knob, i.e. one that stays where it is left (the simulated dial has joint stiffness 0, damping 0, friction 0.05; the binding checks stiffness == 0 at reset and stores it in the trace meta). For such a knob 'pressed' is a persistent state, so success = the knob is still at or beyond the pressed position after the robot has let go. A knob WITH a return spring (momentary push button) would spring back on release and could never satisfy this file; it needs a different contract (event form: knob <= target at some step while in robot contact, then released, plus the appliance's own latched state). The route is not constrained: pressing, jabbing or twisting the dial are all accepted if the dial ends pressed and released (E10 J2 interpretation). Not required: which arm, how long the press took."
+}

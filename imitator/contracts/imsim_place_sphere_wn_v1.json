@@ -1,0 +1,266 @@
+{
+ "schema_version": "0.4",
+ "task_id": "imsim_place_sphere_wn_v1",
+ "protocol": "v3",
+ "instruction": "Put the blue ball into the small bin, let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.winding_window_min",
+   "op": ">",
+   "threshold": 0.5,
+   "units": "winding number",
+   "args": {
+    "signal": "sphere_px",
+    "mesh": {
+     "kind": "open_box",
+     "half_x": 0.02,
+     "half_y": 0.02,
+     "z0": 0.0025,
+     "z1": 0.0125,
+     "n": 8
+    },
+    "container": "bin",
+    "object": "sphere",
+    "points": [
+     [
+      0.0,
+      0.0,
+      -0.018
+     ]
+    ],
+    "points_frame": "world",
+    "window": 20
+   },
+   "real_measurement": "In the bin: the generalized winding number of the bin's open inner surface (floor + 4 walls up to the rim) at the ball's support point (lowest point, 2 mm inside the ball) is > 0.5, i.e. more than half of the directions from that point are blocked by the bin. The ball's CENTRE is the wrong query point here: a 4 cm ball resting on the floor of this 1 cm deep bin has its centre 1 cm above the rim (winding number ~0.30). Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "sphere_bin_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Supported by the bin: ball-bin contact impulse > 0 in every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_sphere_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "The ball does not touch the table."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the ball retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the ball must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "sphere_x",
+    "signals": [
+     "sphere_x",
+     "sphere_y",
+     "sphere_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the sphere centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_sphere_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "sphere_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "sphere_x",
+     "sphere_y",
+     "sphere_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: grasp, lift, align over the bin, lower into it, open, retreat",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='expert')"
+  },
+  {
+   "name": "hold_in_bin",
+   "description": "ball lowered into the bin, gripper stays closed",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='hold_in_bin')"
+  },
+  {
+   "name": "cage",
+   "description": "ball lowered into the bin, gripper opened ~1.5 mm beyond the ball diameter",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='cage')"
+  },
+  {
+   "name": "beside",
+   "description": "ball put on the table next to the bin, released, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.place_sphere(variant='beside')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "D2; research/results/d2_topology/contract_manifest.json",
+  "task": "PlaceSphere-v1",
+  "released_code_predicate": "ball within 5 mm of the bin centre (xy) and at floor height +-5 mm, PhysX velocity < 1 cm/s and 0.5 rad/s, not is_grasping, one step",
+  "variant_of": "imsim_place_sphere_v1 (sha256 a7476ff5eb59748703dcfcc58dcbfce29077b276c8cf0c7739d1bf32e18cf520)"
+ },
+ "notes": "D2 winding-number variant of imsim_place_sphere_v1: its two distance terms (ball-bin xy <= 1 cm, ball at floor height +-5 mm) are replaced by one winding-number term; every other term, the release block and the settle block are copied unchanged. Adds a lift-and-tilt proof test. Needs the pose signals sphere_* and bin_* (recorder imsim.verify.topo_tasks.place_sphere_wn; for E29b trace files they are added from a reset with the episode's seed, the bin being kinematic and never moved). Ball bounding box = 4 cm cube (rotates with the ball, so rolling counts as motion).",
+ "proof_test": {
+  "robot": "clear",
+  "pre_settle_seconds": 0.5,
+  "window_seconds": 1.0,
+  "tests": [
+   {
+    "name": "lift_tilt_bin",
+    "kind": "lift_tilt",
+    "target": "bin",
+    "params": {
+     "lift_m": 0.1,
+     "tilt_deg": 20.0,
+     "lift_seconds": 1.0,
+     "tilt_seconds": 0.5,
+     "hold_seconds": 1.0,
+     "tilt_toward": "obj"
+    },
+    "rest_seconds": 1.0,
+    "terms": [
+     {
+      "metric": "trace.winding_min",
+      "op": ">",
+      "threshold": 0.5,
+      "units": "winding number",
+      "args": {
+       "signal": "sphere_px",
+       "mesh": {
+        "kind": "open_box",
+        "half_x": 0.02,
+        "half_y": 0.02,
+        "z0": 0.0025,
+        "z1": 0.0125,
+        "n": 8
+       },
+       "container": "bin",
+       "object": "sphere",
+       "points": [
+        [
+         0.0,
+         0.0,
+         -0.018
+        ]
+       ],
+       "points_frame": "world"
+      },
+      "real_measurement": "In the bin: the generalized winding number of the bin's open inner surface (floor + 4 walls up to the rim) at the ball's support point (lowest point, 2 mm inside the ball) is > 0.5, i.e. more than half of the directions from that point are blocked by the bin. The ball's CENTRE is the wrong query point here: a 4 cm ball resting on the floor of this 1 cm deep bin has its centre 1 cm above the rim (winding number ~0.30). Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.winding_window_min",
+      "op": ">",
+      "threshold": 0.5,
+      "units": "winding number",
+      "args": {
+       "signal": "sphere_px",
+       "mesh": {
+        "kind": "open_box",
+        "half_x": 0.02,
+        "half_y": 0.02,
+        "z0": 0.0025,
+        "z1": 0.0125,
+        "n": 8
+       },
+       "container": "bin",
+       "object": "sphere",
+       "points": [
+        [
+         0.0,
+         0.0,
+         -0.018
+        ]
+       ],
+       "points_frame": "world",
+       "window": 20
+      },
+      "real_measurement": "In the bin: the generalized winding number of the bin's open inner surface (floor + 4 walls up to the rim) at the ball's support point (lowest point, 2 mm inside the ball) is > 0.5, i.e. more than half of the directions from that point are blocked by the bin. The ball's CENTRE is the wrong query point here: a 4 cm ball resting on the floor of this 1 cm deep bin has its centre 1 cm above the rim (winding number ~0.30). Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     }
+    ],
+    "description": "the bin is lifted 10 cm (min-jerk, 1 s), tilted 20 deg (0.5 s) with the ball's side down, held 1 s and then 1 s more; the ball stays inside throughout and at the end"
+   }
+  ],
+  "notes": "imsim/imsim/verify/proof_test.py"
+ }
+}

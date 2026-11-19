@@ -1,0 +1,56 @@
+{
+ "schema_version": "0.1",
+ "task_id": "poke_cube_v2",
+ "instruction": "Use the peg to poke the cube into the goal region.",
+ "outcome": [
+  {
+   "metric": "trace.window_max", "op": "<", "threshold": 0.05, "units": "m",
+   "args": {"signal": "cube_goal_xy", "window": 20},
+   "real_measurement": "Rationale: the task's own goal radius (0.05 m; unchanged from v1), cube centre xy to goal centre xy. New in v2: the LARGEST distance over the 20 settle steps must be inside, so a cube pushed out at the end cannot hide in a mean (E10 P1). Real world: top camera, cube centroid vs the printed target via table-plane homography, every frame of the 1 s after the robot stops."
+  },
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": 0.02, "units": "m/s",
+   "args": {"signal": "cube_speed", "window": 20},
+   "real_measurement": "Rationale: at rest = cube linear speed <= 2 cm/s at every settle step (same number v1 used for the cups; solver jitter of a resting cube is < 1 mm/s, a cube still being pushed or sliding moves at >= 5 cm/s). Real world: frame differencing of the tracked cube centroid."
+  },
+  {
+   "metric": "trace.window_max", "op": "<=", "threshold": 0.005, "units": "m",
+   "args": {"signal": "cube_lift_m", "window": 20},
+   "real_measurement": "Rationale: 'into the goal region' means lying on the table inside it, not resting on the peg or held up: |cube centre height - cube half size| <= 5 mm at every settle step (5 mm = the height gained by a 4 cm cube tilted ~17 deg; a cube on top of the 5 cm thick peg is 50 mm up). Closes the xy-only hole listed (not executed) in E10. Real world: cube height from a calibrated RGB-D camera or a side camera."
+  },
+  {
+   "metric": "trace.count_true", "op": ">=", "threshold": 1, "units": "control steps",
+   "args": {"signal": "peg_cube_contact_acc"},
+   "real_measurement": "Rationale: the cube must have been touched by the peg: in at least one control step the peg-cube contact impulse ACCUMULATED over all physics substeps is >= 5e-4 N*s (= v1's 0.05 N floor for one 10 ms substep). v1 sampled the last substep only and rejected real peg jabs (E10 P3). Real world: camera track of the peg head touching the cube face (< 5 mm) while the cube starts to move, or force along the peg axis from wrist F/T."
+  },
+  {
+   "metric": "trace.max", "op": "<=", "threshold": 0.005, "units": "N*s",
+   "args": {"signal": "robot_cube_impulse_cum_Ns"},
+   "real_measurement": "Rationale: tool use = the robot's own links do not push the cube. Rule kept from v1 (zero robot-cube contact) with a stated tolerance for incidental touches: the robot-cube contact impulse summed over ALL substeps of the whole episode (policy + settle) must be <= 5e-3 N*s. 5e-3 N*s = m sqrt(2 mu g d) for the cube (m = 0.064 kg, mu = 0.3) and d = 1 mm: the largest momentum transfer that cannot slide the cube by more than about 1 mm; it is 10x the single-step contact floor and is used up by ~30 ms of pushing at the force needed to slide the cube (0.19 N). A sustained touch or any push is far above it (pushing the cube 1 cm at 5 cm/s is ~4e-2 N*s). Real world: fingertip tactile pads / wrist F/T with the peg load subtracted, gated by camera proximity of the hand to the cube; fallback: cube displacement while the hand is within 5 mm of it must be < 1 mm."
+  }
+ ],
+ "require_released": false,
+ "settle_seconds": 1.0,
+ "counterexamples": [
+  {"name": "gripper_push", "description": "ignore the peg, push the cube with the tilted closed gripper", "expected": false, "generator": "e1_poke_cube.gripper_push"},
+  {"name": "no_op", "description": "hold still", "expected": false, "generator": "e1_poke_cube.no_op"},
+  {"name": "peg_poke", "description": "positive control: grasp the peg, poke the cube onto the goal", "expected": true, "generator": "e1_poke_cube.peg_poke"},
+  {"name": "E10:P1_window_exit", "description": "red team: peg poke onto the goal, then the peg pushes the cube out of the goal in the last steps (per-episode truth from the E10 adjudication: in one seed the push-out failed)", "expected": false, "generator": "e10_poke_cube.P1_window_exit"},
+  {"name": "E10:P2_hand_flick", "description": "red team: token peg nudge, then the bare gripper flicks the cube toward the goal (in E10 the flicks never touched the cube; the cube stayed outside)", "expected": false, "generator": "e10_poke_cube.P2_hand_flick"},
+  {"name": "E10:P3_peg_flick", "description": "red team: genuine peg poke by short jabs whose contact falls between the control-step samples", "expected": true, "generator": "e10_poke_cube.P3_peg_flick"},
+  {"name": "E10:P4_incidental_brush", "description": "red team: the closed hand brushes the cube before a normal peg poke. Rejected when the brush exceeds the stated robot-cube impulse tolerance (E10 seed 0: 17 sampled contact steps, cube moved 3 mm; adjudicated borderline / undecided); seeds whose brush missed the cube are plain pokes and must be accepted", "expected": false, "generator": "e10_poke_cube.P4_incidental_brush"},
+  {"name": "E10:P5_side_sweep", "description": "red team: sweep the cube in with the side of the crosswise peg; valid tool use if realised (in E10 no plan reached the pose and the cube never entered the goal: those episodes are failures)", "expected": true, "generator": "e10_poke_cube.P5_side_sweep"},
+  {"name": "E10:P5b_two_stage_poke", "description": "red team: two separate peg pokes with a pause", "expected": true, "generator": "e10_poke_cube.P5b_two_stage_poke"},
+  {"name": "token_peg_then_gripper_push", "description": "new in E11: the held peg nudges the cube ~1 cm (real peg contact), the peg is put down, then the tilted closed gripper pushes the cube onto the goal (the hand does the work)", "expected": false, "generator": "e11_new_families.token_peg_then_gripper_push"},
+  {"name": "peg_poke_short", "description": "new in E11: genuine peg poke that stops early, cube centre left 6.5 cm from the goal centre (1.5 cm outside the goal radius)", "expected": false, "generator": "e11_new_families.peg_poke_short"}
+ ],
+ "source": {
+  "benchmark": "maniskill", "task": "PokeCube-v1 (mani_skill 3.0.1)",
+  "released_code_predicate": "success = is_cube_placed & is_robot_static; is_peg_cube_fit / is_peg_grasped computed, unused",
+  "supersedes": "poke_cube_v1",
+  "protocol": "v2: veritask/adapters/protocol_v2.py (semantics), adapters/maniskill_v2.py (recorder), adapters/maniskill_v2_tasks.py (signals)",
+  "frozen": "2026-11-12, before any E11 evaluation-set run; thresholds were chosen knowing the E10 report (not blind to it)",
+  "e10_result": "research/results/e10_redteam/E10_REPORT.md"
+ },
+ "notes": "Protocol v2. The evaluator runs a 1.0 s settle phase after the policy's last action (robot holds its last command; 20 control steps at 20 Hz); end-state terms (trace.window_*) read only that phase, event terms (trace.count_true, trace.max) the whole episode. settle 1.0 s (v1 declared 0.5 s, never run): a cube sliding at 0.3 m/s on mu = 0.3 stops in ~0.1 s, so 1 s is ample. Holding the peg at the end is allowed (require_released false); the peg may still touch the cube. Robot-cube tolerance (decision, made knowing E10 P4): we keep 'no robot-cube contact' and forgive only touches whose total impulse is below what could move the cube ~1 mm. Under this rule the E10 P4 seed-0 brush (hand on the cube for 17 control steps, cube moved 3 mm) is expected to be rejected, as v1 did; the adjudicator left that episode undecided, so it does not count for or against the contract. Alternatives considered and not adopted: a displacement tolerance of 2 mm (would also reject it) or 5 mm (would accept it). Not checked: that the cube's motion happened while the peg was touching it (a token peg touch plus motion caused by a third object would pass; the scene has no third object)."
+}

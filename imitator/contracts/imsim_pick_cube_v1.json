@@ -1,0 +1,152 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_pick_cube_v1",
+ "protocol": "v3",
+ "instruction": "Pick up the cube and hold it still at the green goal point.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.025,
+   "units": "m",
+   "args": {
+    "signal": "cube_goal_dist_m",
+    "window": 20
+   },
+   "real_measurement": "At the goal: cube centre within 2.5 cm of the goal point at every judged step (ManiSkill's goal_thresh). Real world: tracked cube pose vs the goal point."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "robot_cube_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Held by the robot: robot-cube contact impulse > 0 in every judged step (substep-accumulated; something must carry the cube's weight). Real world: gripper current / F-T."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cube_held_enclosure_m",
+    "window": 20
+   },
+   "real_measurement": "Held between the fingers: enclosure clearance <= 2 mm at every judged step (the cube is not perched on a finger). Real world: in-hand camera / gripper width vs cube."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_cube_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Not resting on the table: no table-cube contact in the judged window. Real world: side camera / depth."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.05,
+   "units": "m",
+   "args": {
+    "signal": "cube_bottom_dz_m"
+   },
+   "real_measurement": "Picked up (process): the cube's lowest point was >= 5 cm above the table at some step of the episode, so pushing it to a low goal does not count. Real world: side camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cube_x",
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the cube centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": false,
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: grasp, lift 10 cm, carry the cube centre to the goal, hold still",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.pick_cube(variant='expert')"
+  },
+  {
+   "name": "drop_at_goal",
+   "description": "carry to the goal; the policy's last action is the gripper-open command (the cube falls after the policy ends)",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pick_cube(variant='drop_at_goal')"
+  },
+  {
+   "name": "place_under_goal",
+   "description": "put the cube on the table under the goal, release, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pick_cube(variant='place_under_goal')"
+  },
+  {
+   "name": "near_miss",
+   "description": "hold the cube still 4 cm (horizontally) from the goal",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.pick_cube(variant='near_miss')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "PickCube-v1 (imsim id PickCube-v1, env ImsimPickCube-v1)",
+  "released_code_predicate": "|cube - goal| <= 2.5 cm and robot joint speeds <= 0.2 rad/s at the evaluated step (no grasp, no settle)"
+ },
+ "notes": "No release (the goal is held in the air): require_released false; the held terms say who carries the cube. Settle (hold A) holds the arm and keeps the gripper's last (closing) command."
+}

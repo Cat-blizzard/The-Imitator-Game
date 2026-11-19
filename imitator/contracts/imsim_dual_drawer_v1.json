@@ -1,0 +1,212 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_dual_drawer_v1",
+ "protocol": "v3",
+ "instruction": "Hold the cabinet still with the left arm and pull the drawer open with the right arm; then let go with both arms and move away.",
+ "outcome": [
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.08,
+   "units": "m",
+   "args": {
+    "signal": "drawer_open_m",
+    "window": 20
+   },
+   "real_measurement": "Open: drawer joint position >= 8 cm (of 12 cm) at every judged step. Real world: tracked handle position relative to the cabinet."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "signal": "cabinet_disp_m",
+    "window": 20
+   },
+   "real_measurement": "Cabinet in place: the cabinet origin within 1 cm (horizontally) of where it stood at the start, at every judged step. Real world: tracked cabinet pose."
+  },
+  {
+   "metric": "trace.max",
+   "op": "<=",
+   "threshold": 0.015,
+   "units": "m",
+   "args": {
+    "signal": "cabinet_disp_m"
+   },
+   "real_measurement": "Stabilised (process): the cabinet never moved more than 1.5 cm from its start during the episode (a dragged-and-pushed-back cabinet fails). Real world: tracked cabinet pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cabinet_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "Standing on the table: the cabinet body's lowest corner within 5 mm of the table."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 5.0,
+   "units": "deg",
+   "args": {
+    "signal": "knob_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "Upright: the cabinet's z axis within 5 deg of vertical."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the drawer handle or the cabinet knob retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the drawer handle or the cabinet knob must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "handle_x",
+    "signals": [
+     "handle_x",
+     "handle_y",
+     "handle_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the handle centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "knob_x",
+    "signals": [
+     "knob_x",
+     "knob_y",
+     "knob_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the knob centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_handle_impulse_Ns",
+   "robot_knob_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "handle_enclosure_m",
+   "knob_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "handle_x",
+     "handle_y",
+     "handle_z"
+    ],
+    "max": 0.001
+   },
+   {
+    "signals": [
+     "knob_x",
+     "knob_y",
+     "knob_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: left holds the knob on the cabinet's side wall, right then grasps the handle and pulls the drawer 10 cm at 4 cm/s, right opens and retreats, left opens and retreats",
+   "expected": true,
+   "generator": "imsim.planning.dual_drawer.run(variant='expert')"
+  },
+  {
+   "name": "pull_without_stabilising",
+   "description": "the left arm stays at home; the right arm does the expert's grasp, pull, release and retreat (the cabinet is dragged along)",
+   "expected": false,
+   "generator": "imsim.planning.dual_drawer.run(variant='pull_without_stabilising')"
+  },
+  {
+   "name": "open_small",
+   "description": "as the expert, but the pull is 3 cm",
+   "expected": false,
+   "generator": "imsim.planning.dual_drawer.run(variant='open_small')"
+  },
+  {
+   "name": "hold_handle",
+   "description": "as the expert, but the right arm never lets go of the handle",
+   "expected": false,
+   "generator": "imsim.planning.dual_drawer.run(variant='hold_handle')"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms stay at home",
+   "expected": false,
+   "generator": "imsim.planning.dual_drawer.run(variant='no_op')"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E29b)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "DualDrawer-v1 (imsim/imsim/envs/dual_drawer.py)",
+  "released_code_predicate": "env info['success']: drawer joint position >= 8 cm at the evaluated step (no release, no settle, no check that the cabinet stayed in place)"
+ },
+ "notes": "Objects: handle = the drawer link's handle box, knob = the cabinet link's side-knob box (their contact pairs cover the whole drawer / cabinet link). Release over both links (contact + all-link enclosure of the handle / knob boxes); retreat over both; quiescence over both."
+}

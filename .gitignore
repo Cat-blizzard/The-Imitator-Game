@@ -103,3 +103,6 @@ eval_recordings/*
 .eggs/*
 cache/*
 results/*
+# imitator 2.0 outputs
+/results
+.pytest_cache

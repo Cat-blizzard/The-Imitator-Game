@@ -1247,9 +1247,11 @@ class BaseEnv(gym.Env):
                     self.scene.px.gpu_apply_articulation_target_position()
                     self.scene.px.gpu_apply_articulation_target_velocity()
                 else:
-                    if self.agent.controller.sets_target_qpos:
+                    # imitator2.0 fix: the fork's controllers do not define sets_target_qpos / sets_target_qvel (added in
+                    # ManiSkill 3.0.1), so single-agent GPU simulation crashed here; default to applying both targets.
+                    if getattr(self.agent.controller, "sets_target_qpos", True):
                         self.scene.px.gpu_apply_articulation_target_position()
-                    if self.agent.controller.sets_target_qvel:
+                    if getattr(self.agent.controller, "sets_target_qvel", True):
                         self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):

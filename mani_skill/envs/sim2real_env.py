@@ -181,9 +181,9 @@ class Sim2RealEnv(gym.Env):
                     f"Control dt {self.control_dt} was not reached, actual dt was {dt}"
                 )
         self.last_control_time = time.perf_counter()
-        if self.agent.controller.sets_target_qpos:
+        if getattr(self.agent.controller, "sets_target_qpos", True):
             self.agent.set_target_qpos(sim_articulation.drive_targets)
-        if self.agent.controller.sets_target_qvel:
+        if getattr(self.agent.controller, "sets_target_qvel", True):
             self.agent.set_target_qvel(sim_articulation.drive_velocities)
 
     def step(self, action):

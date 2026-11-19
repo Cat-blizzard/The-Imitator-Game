@@ -1,0 +1,165 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_plug_charger_v1",
+ "protocol": "v3",
+ "instruction": "Plug the charger into the receptacle, let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "charger_goal_dist_m",
+    "window": 20
+   },
+   "real_measurement": "Plugged: charger within 5 mm of the plugged pose computed from the receptacle's CURRENT pose at every judged step (ManiSkill's 5e-3). Real world: pose estimate / electrical contact."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 11.46,
+   "units": "deg",
+   "args": {
+    "signal": "charger_goal_angle_deg",
+    "window": 20
+   },
+   "real_measurement": "Aligned: rotation from the plugged orientation <= 0.2 rad at every judged step (ManiSkill's threshold)."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_charger_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Held by the receptacle, not lying on the table: no table-charger contact in the judged window."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the charger retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the charger must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "charger_x",
+    "signals": [
+     "charger_x",
+     "charger_y",
+     "charger_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the charger centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_charger_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "charger_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "charger_x",
+     "charger_y",
+     "charger_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: ManiSkill's solution with E27's pre-insertion refinement and a slow insertion, then open, back off along the insertion axis and up",
+   "expected": true,
+   "generator": "imsim.planning.panda_ms.plug_charger(variant='expert')"
+  },
+  {
+   "name": "hold_plugged",
+   "description": "inserted, gripper stays closed",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.plug_charger(variant='hold_plugged')"
+  },
+  {
+   "name": "release_short",
+   "description": "insertion stopped 1.5 cm short of the plugged pose, released, retreat",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.plug_charger(variant='release_short')"
+  },
+  {
+   "name": "cage_plugged",
+   "description": "inserted, gripper opened only ~1.5 mm beyond the grasped width (still around the base; with the tilted grasp a finger may still touch it)",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.plug_charger(variant='cage_plugged')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "ManiSkill 3.0.1 (stock Panda)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "PlugCharger-v1",
+  "released_code_predicate": "charger within 5 mm and 0.2 rad of the goal pose stored at reset, one step (no release, no settle)"
+ },
+ "notes": "Charger bounding box from its collision shapes (base + two prongs). 0.5 mm clearance per side in the receptacle."
+}

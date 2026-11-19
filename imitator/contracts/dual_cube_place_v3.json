@@ -1,0 +1,47 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_dual_cube_place_v3",
+ "protocol": "v3",
+ "instruction": "Put the cube in the green square and let go (either arm, any embodiment).",
+ "outcome": [
+  {"metric": "trace.window_min", "op": ">=", "threshold": 0.0, "units": "m",
+   "args": {"signal": "cube_target_margin_m", "window": 20},
+   "real_measurement": "Cube centre inside the target square at every judged step: min(half - |dx|, half - |dy|) >= 0 (target frame axis-aligned). Real world: top camera, cube centre vs the marked square."},
+  {"metric": "trace.window_max", "op": "<=", "threshold": 0.005, "units": "m",
+   "args": {"signal": "cube_bottom_dz_m", "window": 20},
+   "real_measurement": "Resting on the table: lowest point of the cube within 5 mm of the table top at every judged step (a held or perched cube is higher). Real world: RGB-D cube pose vs the table plane."},
+  {"metric": "trace.window_max", "op": "<=", "threshold": 0.02, "units": "m/s",
+   "args": {"signal": "cube_speed", "window": 20},
+   "real_measurement": "Settled: cube speed <= 2 cm/s at every judged step. Real world: frame differencing of the tracked pose."},
+  {"metric": "trace.window_disp", "op": "<=", "threshold": 0.002, "units": "m",
+   "args": {"signal": "cube_x", "signals": ["cube_x", "cube_y", "cube_z"], "window": 20},
+   "real_measurement": "Stays put: cube centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."}
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": ["robot_cube_impulse_Ns"],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": ["cube_enclosure_clearance_m"],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A", "max_seconds": 3.0, "window_seconds": 1.0, "quiet_steps": 10,
+  "quiet_max": {"cube_speed": 0.02},
+  "quiet_disp": [{"signals": ["cube_x", "cube_y", "cube_z"], "max": 0.001}],
+  "robot_speed_signal": "robot_qvel_max", "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {"name": "scripted_place", "description": "positive control: mplib pick-and-place, gripper/hand opened, arm retreats", "expected": true, "generator": "imsim.planning.scripted.pick_place(variant='release')"},
+  {"name": "hold_without_release", "description": "cube carried into the square and set down, gripper/hand stays closed on it", "expected": false, "generator": "imsim.planning.scripted.pick_place(variant='hold')"},
+  {"name": "cage_no_contact", "description": "cube set down, gripper opened only ~1 mm beyond the cube width: no contact but still enclosed", "expected": false, "generator": "imsim.planning.scripted.pick_place(variant='cage')"},
+  {"name": "no_op", "description": "both arms stay at home", "expected": false, "generator": "imsim.planning.scripted.no_op"}
+ ],
+ "source": {
+  "benchmark": "imsim (E19 embodiment smoke task)",
+  "task": "ImsimDualTabletop-v1 (imsim/imsim/envs/dual_tabletop.py)",
+  "protocol": "v3: veritask/adapters/protocol_v3.py (frozen by E15), recorder veritask/adapters/maniskill_v3.TraceRecorderV3 with imsim signals (imsim/imsim/verify/smoke.py)",
+  "frozen": "2026-11-14, written before any E19 pick-and-place run; constants copied from place_cup_plate_v3 (settle, release margin) without tuning"
+ },
+ "notes": "Embodiment-agnostic: robot_cube_impulse_Ns sums the substep-accumulated contact impulse between the cube and EVERY collision link of BOTH robots (arms, grippers, hands); cube_enclosure_clearance_m is computed from each embodiment's own finger geometry (registry): parallel grippers = sum of the two pads' clearances to the cube when part of the cube lies between the pads (inter-pad slab from the pads' collision vertices), hands = thumb clearance + nearest other finger clearance when the cube centre lies inside the convex hull of the hand's collision vertices; 1 m when not enclosed. The robot speed signal excludes gripper / hand joints (agent.gripper_joint_names). Hold A, quiescence and window exactly as in protocol v3."
+}

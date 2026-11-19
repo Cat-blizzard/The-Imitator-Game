@@ -1,0 +1,11 @@
+{
+ "urdf": "imitator/assets/embodiments/xarm6_allegro_right/xarm6_allegro_right.urdf",
+ "sim_srdf": "imitator/assets/embodiments/xarm6_allegro_right/xarm6_allegro_right.srdf",
+ "mplib_srdf": "imitator/assets/embodiments/xarm6_allegro_right/xarm6_allegro_right_mplib.srdf",
+ "n_samples": 3000,
+ "n_sim_pairs": 0,
+ "n_mplib_pairs": 312,
+ "sim_pairs": [],
+ "home_collisions": [],
+ "always": []
+}

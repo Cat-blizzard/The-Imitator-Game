@@ -1,0 +1,852 @@
+{
+ "schema_version": "0.4",
+ "task_id": "imsim_ring_on_peg_v1",
+ "protocol": "v3",
+ "instruction": "Put the ring over the peg, let go and move the hand away.",
+ "outcome": [
+  {
+   "metric": "trace.crossings_window_min",
+   "op": ">=",
+   "threshold": 1.0,
+   "units": "crossings",
+   "args": {
+    "signal": "ring_px",
+    "ring": "ring",
+    "ring_centre": [
+     0,
+     0,
+     0
+    ],
+    "ring_normal": [
+     0,
+     0,
+     1
+    ],
+    "ring_radius": 0.045,
+    "curve": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0.06
+     ]
+    ],
+    "curve_pose": "peg",
+    "window": 20
+   },
+   "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+  },
+  {
+   "metric": "trace.insertion_window_min",
+   "op": ">=",
+   "threshold": 0.0075,
+   "units": "m",
+   "args": {
+    "signal": "ring_px",
+    "ring": "ring",
+    "ring_centre": [
+     0,
+     0,
+     0
+    ],
+    "ring_normal": [
+     0,
+     0,
+     1
+    ],
+    "ring_radius": 0.045,
+    "curve": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0.06
+     ]
+    ],
+    "curve_pose": "peg",
+    "free_end": "end",
+    "window": 20
+   },
+   "real_measurement": "Insertion margin: along the peg axis, the crossing point is at least the ring's tube radius (7.5 mm) below the peg's free top end (0 when not threaded), i.e. the whole ring cross-section is around the peg. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "ring_x",
+    "signals": [
+     "ring_x",
+     "ring_y",
+     "ring_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the ring centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the ring retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the ring must move <= 1 cm. Real world: same motion, tracked pose."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_ring_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "ring_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "ring_x",
+     "ring_y",
+     "ring_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: grasp the ring's tube, lift, centre it over the peg, lower until the peg is 2 cm inside the ring, open (the ring drops down the peg), retreat",
+   "expected": true,
+   "generator": "imsim.planning.topo_tasks.ring_on_peg(variant='expert')"
+  },
+  {
+   "name": "on_top",
+   "description": "the ring's far side put on the peg's top face and released: the ring ends leaning on the peg top (or slides off beside it)",
+   "expected": false,
+   "generator": "imsim.planning.topo_tasks.ring_on_peg(variant='on_top')"
+  },
+  {
+   "name": "beside",
+   "description": "the ring put flat on the table touching the peg, released, retreat",
+   "expected": false,
+   "generator": "imsim.planning.topo_tasks.ring_on_peg(variant='beside')"
+  },
+  {
+   "name": "held",
+   "description": "the ring lowered around the peg to 3 cm height and kept in the closed gripper",
+   "expected": false,
+   "generator": "imsim.planning.topo_tasks.ring_on_peg(variant='held')"
+  },
+  {
+   "name": "no_op",
+   "description": "the arm stays at its start pose",
+   "expected": false,
+   "generator": "imsim.planning.panda_ms.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim D2 (new task, ManiSkill 3.0.1 stock Panda)",
+  "task": "RingOnPeg-v1",
+  "protocol": "v3 + imsim v3.2 signals + proof test (contract schema 0.4)",
+  "released_code_predicate": "card predicate (a), env.evaluate(): robosuite 1.4.0 NutAssembly on_peg + _check_success, verbatim thresholds: |dx|, |dy| < 3 cm (ring centre vs peg), ring centre z < table + 5 cm, |tcp - ring centre| > 4.24 cm",
+  "frozen": "D2; research/results/d2_topology/contract_manifest.json"
+ },
+ "notes": "Geometry (imsim/imsim/envs/topo_tasks.py RingOnPegEnv): ring core radius 4.5 cm, tube radius 7.5 mm (16 capsules, 39 g); peg radius 1.5 cm, 6 cm tall, kinematic, on the table. The crossing and margin terms are computed from the pose signals ring_* / peg_* (veritask outcomes/topology.py), so the verdict is recomputable from the trace file. Release enclosure: the Panda all-link rule per ring capsule.",
+ "proof_test": {
+  "robot": "clear",
+  "pre_settle_seconds": 0.5,
+  "window_seconds": 1.0,
+  "tests": [
+   {
+    "name": "push_px",
+    "kind": "push",
+    "target": "ring",
+    "params": {
+     "delta_v_mps": 0.25,
+     "direction": [
+      1,
+      0,
+      0
+     ],
+     "coast_seconds": 0.5,
+     "calibration": "research/results/d2_topology/push_calibration.json"
+    },
+    "rest_seconds": 1.5,
+    "terms": [
+     {
+      "metric": "trace.crossings_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg"
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.crossings_window_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "window": 20
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.insertion_window_min",
+      "op": ">=",
+      "threshold": 0.0075,
+      "units": "m",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "free_end": "end",
+       "window": 20
+      },
+      "real_measurement": "Insertion margin: along the peg axis, the crossing point is at least the ring's tube radius (7.5 mm) below the peg's free top end (0 when not threaded), i.e. the whole ring cross-section is around the peg. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     }
+    ],
+    "description": "calibrated tap on the ring along [1, 0, 0]: velocity change 0.25 m/s at its centre of mass (the tap that slides a resting 4 cm cube < 1 cm); still threaded throughout and at the end"
+   },
+   {
+    "name": "push_nx",
+    "kind": "push",
+    "target": "ring",
+    "params": {
+     "delta_v_mps": 0.25,
+     "direction": [
+      -1,
+      0,
+      0
+     ],
+     "coast_seconds": 0.5,
+     "calibration": "research/results/d2_topology/push_calibration.json"
+    },
+    "rest_seconds": 1.5,
+    "terms": [
+     {
+      "metric": "trace.crossings_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg"
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.crossings_window_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "window": 20
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.insertion_window_min",
+      "op": ">=",
+      "threshold": 0.0075,
+      "units": "m",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "free_end": "end",
+       "window": 20
+      },
+      "real_measurement": "Insertion margin: along the peg axis, the crossing point is at least the ring's tube radius (7.5 mm) below the peg's free top end (0 when not threaded), i.e. the whole ring cross-section is around the peg. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     }
+    ],
+    "description": "calibrated tap on the ring along [-1, 0, 0]: velocity change 0.25 m/s at its centre of mass (the tap that slides a resting 4 cm cube < 1 cm); still threaded throughout and at the end"
+   },
+   {
+    "name": "push_py",
+    "kind": "push",
+    "target": "ring",
+    "params": {
+     "delta_v_mps": 0.25,
+     "direction": [
+      0,
+      1,
+      0
+     ],
+     "coast_seconds": 0.5,
+     "calibration": "research/results/d2_topology/push_calibration.json"
+    },
+    "rest_seconds": 1.5,
+    "terms": [
+     {
+      "metric": "trace.crossings_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg"
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.crossings_window_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "window": 20
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.insertion_window_min",
+      "op": ">=",
+      "threshold": 0.0075,
+      "units": "m",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "free_end": "end",
+       "window": 20
+      },
+      "real_measurement": "Insertion margin: along the peg axis, the crossing point is at least the ring's tube radius (7.5 mm) below the peg's free top end (0 when not threaded), i.e. the whole ring cross-section is around the peg. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     }
+    ],
+    "description": "calibrated tap on the ring along [0, 1, 0]: velocity change 0.25 m/s at its centre of mass (the tap that slides a resting 4 cm cube < 1 cm); still threaded throughout and at the end"
+   },
+   {
+    "name": "push_ny",
+    "kind": "push",
+    "target": "ring",
+    "params": {
+     "delta_v_mps": 0.25,
+     "direction": [
+      0,
+      -1,
+      0
+     ],
+     "coast_seconds": 0.5,
+     "calibration": "research/results/d2_topology/push_calibration.json"
+    },
+    "rest_seconds": 1.5,
+    "terms": [
+     {
+      "metric": "trace.crossings_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg"
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.crossings_window_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "window": 20
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.insertion_window_min",
+      "op": ">=",
+      "threshold": 0.0075,
+      "units": "m",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "free_end": "end",
+       "window": 20
+      },
+      "real_measurement": "Insertion margin: along the peg axis, the crossing point is at least the ring's tube radius (7.5 mm) below the peg's free top end (0 when not threaded), i.e. the whole ring cross-section is around the peg. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     }
+    ],
+    "description": "calibrated tap on the ring along [0, -1, 0]: velocity change 0.25 m/s at its centre of mass (the tap that slides a resting 4 cm cube < 1 cm); still threaded throughout and at the end"
+   },
+   {
+    "name": "table_shake",
+    "kind": "table_shake",
+    "target": "table",
+    "params": {
+     "accel_mps2": 0.3,
+     "freq_hz": 2.0,
+     "duration_seconds": 2.0,
+     "axis": [
+      1,
+      0,
+      0
+     ],
+     "fixtures": [
+      "peg"
+     ],
+     "ramp_seconds": 0.25
+    },
+    "rest_seconds": 1.0,
+    "terms": [
+     {
+      "metric": "trace.crossings_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg"
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.crossings_window_min",
+      "op": ">=",
+      "threshold": 1.0,
+      "units": "crossings",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "window": 20
+      },
+      "real_measurement": "Threaded: the peg's axis (foot -> top, 6 cm) passes through the flat disk spanned by the ring's core circle (radius 4.5 cm): |net signed crossings| >= 1. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     },
+     {
+      "metric": "trace.insertion_window_min",
+      "op": ">=",
+      "threshold": 0.0075,
+      "units": "m",
+      "args": {
+       "signal": "ring_px",
+       "ring": "ring",
+       "ring_centre": [
+        0,
+        0,
+        0
+       ],
+       "ring_normal": [
+        0,
+        0,
+        1
+       ],
+       "ring_radius": 0.045,
+       "curve": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         0,
+         0.06
+        ]
+       ],
+       "curve_pose": "peg",
+       "free_end": "end",
+       "window": 20
+      },
+      "real_measurement": "Insertion margin: along the peg axis, the crossing point is at least the ring's tube radius (7.5 mm) below the peg's free top end (0 when not threaded), i.e. the whole ring cross-section is around the peg. Real world: 6-DoF poses of both objects from a calibrated camera (fiducials or model-based tracking) at the control rate; the same computation on the tracked poses."
+     }
+    ],
+    "description": "lateral table shake 0.3 m/s^2 peak at 2 Hz for 2 s (the peg moves with the table)"
+   }
+  ],
+  "notes": "imsim/imsim/verify/proof_test.py; push calibration research/results/d2_topology/push_calibration.json"
+ }
+}

@@ -1,0 +1,137 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_dual_cube_place_v3.1",
+ "protocol": "v3",
+ "instruction": "Put the cube in the green square and let go (either arm, any embodiment).",
+ "outcome": [
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.0,
+   "units": "m",
+   "args": {
+    "signal": "cube_target_margin_m",
+    "window": 20
+   },
+   "real_measurement": "Cube centre inside the target square at every judged step: min(half - |dx|, half - |dy|) >= 0 (target frame axis-aligned). Real world: top camera, cube centre vs the marked square."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cube_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "Resting on the table: lowest point of the cube within 5 mm of the table top at every judged step (a held or perched cube is higher). Real world: RGB-D cube pose vs the table plane."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "cube_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: cube speed <= 2 cm/s at every judged step. Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cube_x",
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: cube centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window: every arm whose gripper / hand is within 3 cm of the cube retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the cube centre must move <= 1 cm during this aftermath. Real world: same motion on the robot, tracked cube pose (top camera / RGB-D)."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_cube_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "cube_enclosure_all_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 3.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "cube_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cube_x",
+     "cube_y",
+     "cube_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "scripted_place",
+   "description": "positive control: mplib pick-and-place, gripper/hand opened, arm retreats",
+   "expected": true,
+   "generator": "imsim.planning.scripted.pick_place(variant='release')"
+  },
+  {
+   "name": "hold_without_release",
+   "description": "cube carried into the square and set down, gripper/hand stays closed on it",
+   "expected": false,
+   "generator": "imsim.planning.scripted.pick_place(variant='hold')"
+  },
+  {
+   "name": "cage_no_contact",
+   "description": "cube set down, gripper opened only ~1 mm beyond the cube width: no contact but still enclosed",
+   "expected": false,
+   "generator": "imsim.planning.scripted.pick_place(variant='cage')"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms stay at home",
+   "expected": false,
+   "generator": "imsim.planning.scripted.no_op"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E19 embodiment smoke task)",
+  "task": "ImsimDualTabletop-v1 / imsim task DualCubePlace-v1",
+  "derived_from": "imsim/imsim/contracts/dual_cube_place_v3.json (frozen 2026-11-14 18:49, sha256 ad15c3bd..., unchanged)",
+  "protocol": "v3 (veritask/adapters/protocol_v3.py, unchanged) + imsim v3.1 additions (imsim/imsim/verify/v31.py): enclosure over all gripper / hand links, evaluator-run retreat aftermath",
+  "frozen": "E23, 2026-11-15, written and hashed before any v3.1 evaluation run; the two changes are the fixes proposed in E19_REPORT.md section 5; all other constants copied from v3 without tuning"
+ },
+ "notes": "v3.1 = v3 with two changes. (1) Release: the enclosure signal is cube_enclosure_all_m (imsim.verify.v31.EnclosureAll) = min of v3's finger-side rule and an all-link rule: every collision-hull point of every gripper link (all links below the flange plus grasp_links; hands: every hand link incl. the palm) is split at the cube centre along the closing axis; points inside the cube's lateral shadow (+2 mm) on both sides = enclosed, clearance = sum of the two sides' box distances; hands: centre inside the hull of all hand links, clearance = thumb + min(finger, palm). Same 2 mm margin as v3. (2) Consequence term aftermath.retreat_object_disp: after the judged window the evaluator retracts every arm near the cube (gripper within near_m) by retreat_m along -z of its TCP (approach axis) over retreat_s, last gripper command unchanged, holds hold_s, and measures the largest cube-centre displacement; the judged traces are restored afterwards (aftermath saved as 'aft:' keys). A missing aftermath (retreat not plannable) makes the verdict unknown. Everything else (signals, settle with hold A, quiescence, window, outcome terms 1-4) is identical to v3."
+}

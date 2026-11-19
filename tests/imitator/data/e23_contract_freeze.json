@@ -1,0 +1,27 @@
+{
+ "contracts": [
+  {
+   "contract": "imitator/contracts/dual_cube_place_v3.1.json",
+   "sha256": "fbc76760b882c1b894c4962b23d240a7f8269cbbf7de7e2e9a86354670132474",
+   "frozen_at": "2026-11-15T00:09:22",
+   "note": "frozen before any v3.1 evaluation run (no episode has been judged with it)"
+  },
+  {
+   "contract": "imitator/contracts/dual_handover_v1.json",
+   "sha256": "550abfabd758517c91b6c342af8963ee27369cc16709f5f67b85eb20f262d079",
+   "frozen_at": "2026-11-15T00:13:13",
+   "note": "frozen before any DualHandover-v1 episode was run"
+  },
+  {
+   "contract": "imitator/soft/contracts/dual_towel_fold_v1.json",
+   "sha256": "c71be835e8807c99bbf7902e3760c9e991ae84918a11799af21c872285accdfc",
+   "frozen_at": "2026-11-15T00:34:58",
+   "note": "frozen before any DualFoldTowel-v1 episode was run"
+  }
+ ],
+ "unchanged_reference": {
+  "contract": "imitator/contracts/dual_cube_place_v3.json",
+  "sha256": "ad15c3bd9bb92aba52d24a9b12d93441ed1558ae0a6c1801ef6a4600a52def0a",
+  "expected_sha256_from_e19": "ad15c3bd9bb92aba52d24a9b12d93441ed1558ae0a6c1801ef6a4600a52def0a"
+ }
+}

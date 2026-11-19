@@ -1,0 +1,212 @@
+{
+ "schema_version": "0.3",
+ "task_id": "press_juicer_v3",
+ "protocol": "v3",
+ "instruction": "Press the juicer's knob down until it reaches its pressed position, then let go.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": -0.218,
+   "units": "rad",
+   "args": {
+    "signal": "knob_qpos",
+    "window": 20
+   },
+   "real_measurement": "Rationale: the env's own press target (qmin + 0.25 (qmax - qmin) = -0.218 rad, model 103105; as v1 / v2): the dial must be at or beyond it at EVERY step of the judged window, i.e. left pressed after the robot has stopped (latching dial: joint stiffness 0, checked by the binding). Real world: joint encoder or an AprilTag on the dial tracked for 1 s after the robot stops."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "rad",
+   "args": {
+    "signal": "knob_qpos",
+    "signals": [
+     "knob_qpos"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Rationale: the dial is at rest in the judged window: it moves by at most 0.01 rad (0.6 deg, ~0.25 mm at the 2.4 cm rim) from the window's first step; a dial still being turned moves far more. Real world: same tracking, 1 s."
+  },
+  {
+   "metric": "trace.count_true",
+   "op": ">=",
+   "threshold": 1,
+   "units": "control steps",
+   "args": {
+    "signal": "robot_knob_contact_acc"
+   },
+   "real_measurement": "Rationale: the dial was moved by the robot: >= 1 control step with robot-knob contact impulse accumulated over all physics substeps >= 5e-4 N*s (v1's 0.05 N floor for one 10 ms substep; unchanged from v2). Real world: fingertip tactile / wrist F/T integrated over 50 ms while the fingertip is within 1 cm of the dial."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_knob_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "knob_enclosure_clearance_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 3.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "knob_qvel_abs": 0.05
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "knob_qpos"
+    ],
+    "max": 0.005
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "hover_front_10cm",
+   "description": "TCP 10 cm in front of the knob, no contact",
+   "expected": false,
+   "generator": "e1_press_juicer.hover_front_10cm"
+  },
+  {
+   "name": "hover_above_4cm",
+   "description": "TCP 4 cm above the knob top, no contact",
+   "expected": false,
+   "generator": "e1_press_juicer.hover_above_4cm"
+  },
+  {
+   "name": "touch_and_leave",
+   "description": "come within 0.14 m of the knob, return to start",
+   "expected": false,
+   "generator": "e1_press_juicer.touch_and_leave"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms hold still",
+   "expected": false,
+   "generator": "e1_press_juicer.no_op"
+  },
+  {
+   "name": "press_knob",
+   "description": "positive control: tilted closed gripper pushes the knob edge 1.5 cm down, backs off",
+   "expected": true,
+   "generator": "e1_press_juicer.press_knob"
+  },
+  {
+   "name": "expert",
+   "description": "official motion-planning solution (_050); never moves the knob",
+   "expected": false,
+   "generator": "imitator.solutions._050_press_juicer"
+  },
+  {
+   "name": "E10:J1_press_then_undo",
+   "description": "press, turn the dial back with the other arm, let go",
+   "expected": false,
+   "generator": "e10_press_juicer.J1_press_then_undo"
+  },
+  {
+   "name": "E10:J7_press_and_hold",
+   "description": "press, ease off, leave the fingertip on the dial (seeds 0, 1: contact = not released) or 0.9 mm above it with 0 N (seed 2: released, user ruling 2026-11-14); truth per episode from the E10 adjudication",
+   "expected": false,
+   "generator": "e10_press_juicer.J7_press_and_hold"
+  },
+  {
+   "name": "E10:J2_twist_release",
+   "description": "grasp and twist the dial to the pressed angle, open, retreat (accomplished when the dial ends pressed)",
+   "expected": true,
+   "generator": "e10_press_juicer.J2_twist_release"
+  },
+  {
+   "name": "E10:J3_clamp_hold",
+   "description": "declared, not executed: keep the gripper closed around the dial at ~0 N (enclosed = not released)",
+   "expected": false,
+   "generator": "e10_press_juicer.J3_clamp_hold"
+  },
+  {
+   "name": "E10:J4_fast_jab",
+   "description": "one fast jab; accomplished when it leaves the dial pressed (per-episode truth from E10)",
+   "expected": true,
+   "generator": "e10_press_juicer.J4_fast_jab"
+  },
+  {
+   "name": "E10:J5_right_arm_press",
+   "description": "right-arm push turns the dial the wrong way",
+   "expected": false,
+   "generator": "e10_press_juicer.J5_right_arm_press"
+  },
+  {
+   "name": "E10:J9_gentle_press",
+   "description": "slow 80-step press, back off",
+   "expected": true,
+   "generator": "e10_press_juicer.J9_gentle_press"
+  },
+  {
+   "name": "E13:J21_vel_creep_undo",
+   "description": "velocity-command policy: press, then the last action is a slow descent of the other hand toward the dial; under hold A the hand is held where it stopped (truth per episode from the E13 adjudication + this protocol's re-simulation); twin_stop = last action zero (accomplished)",
+   "expected": true,
+   "generator": "e13_press_juicer.J21_vel_creep_undo"
+  },
+  {
+   "name": "E13:J23_end_right_after_backoff",
+   "description": "press; the episode ends 1 step after the back-off command (accomplished)",
+   "expected": true,
+   "generator": "e13_press_juicer.J23_end_right_after_backoff"
+  },
+  {
+   "name": "E13:J24_twist_open_stay",
+   "description": "twist, open, stay around the dial: physically failed (dial not pressed, or a finger left on it)",
+   "expected": false,
+   "generator": "e13_press_juicer.J24_twist_open_stay"
+  },
+  {
+   "name": "E13:J25_release_then_return_near",
+   "description": "press, let go, arm home, the closed hand returns to 3 mm above the dial without touching (accomplished: proximity is not 'not released')",
+   "expected": true,
+   "generator": "e13_press_juicer.J25_release_then_return_near"
+  },
+  {
+   "name": "E13:J26_late_undo_command",
+   "description": "pd_joint_pos: press; the last action is one far joint target that would push the dial back (adjudicated not accomplished under v2's replay hold; under hold A the robot is held after that one step)",
+   "expected": false,
+   "generator": "e13_press_juicer.J26_late_undo_command"
+  },
+  {
+   "name": "E13:J27_vel_backoff_residual",
+   "description": "velocity-command policy; episode ends mid-retreat (accomplished)",
+   "expected": true,
+   "generator": "e13_press_juicer.J27_vel_backoff_residual"
+  },
+  {
+   "name": "E13:J28_right_arm_press",
+   "description": "right arm operates the dial (twist / linear): dial never left pressed",
+   "expected": false,
+   "generator": "e13_press_juicer.J28_right_arm_press"
+  },
+  {
+   "name": "E13:J30_delta_expert",
+   "description": "the press with pd_joint_delta_pos actions (accomplished; v2 gave no verdict)",
+   "expected": true,
+   "generator": "e13_press_juicer.J30_delta_expert"
+  }
+ ],
+ "source": {
+  "benchmark": "imitator",
+  "task": "_050_press_juicer (TwoRobotPressJuicer-v1, L0)",
+  "released_code_predicate": "success = juicer_ever_pressed = OR_t(||left TCP - knob mesh centre|| <= 0.14 m); pressed_enough computed, unused",
+  "supersedes": "press_juicer_v2",
+  "protocol": "v3: veritask/adapters/protocol_v3.py (semantics), maniskill_v3.py (recorder, hold, enclosure), maniskill_v3_tasks.py (signals)",
+  "frozen": "2026-11-14, before any E15 evaluation-set run; thresholds chosen knowing the E10 and E13 reports and the user rulings of 2026-11-14 (not blind to them)",
+  "rounds": "E10 red team (research/results/e10_redteam), E13 red team (research/results/e13_redteam2)"
+ },
+ "notes": "Protocol v3 (veritask/adapters/protocol_v3.py). After the policy's last action the evaluator HOLDS the robot where it stopped (hold A: every arm switched to a pd_joint_pos hold of the joint positions reached at the policy's last step, drive-velocity targets zeroed, grippers keep their last commanded opening; any control mode). It steps until the scene is quiescent for settle.quiet_steps = 10 consecutive control steps (0.5 s: every quiet_max signal under its bound at every step, every quiet_disp group moved <= its bound, largest arm-joint speed <= 0.01 rad/s, measured from joint POSITIONS over each control step: PhysX's reported joint velocity stays at 0.012-0.043 while nothing moves when the robot presses through a held object or closes its fingers on one, E15 development runs; finger joints excluded) and then judges the following 1.0 s window (20 steps); if no quiescence leaves room for the window inside settle.max_seconds = 3.0 s the episode is rejected. End-state terms (trace.window_*) read only the judged window; event terms (trace.count_true / trace.max) read the episode up to the window's end. Hold B (switch, not the default): the evaluator replays the policy's last action and robot joint speed must stay <= settle.robot_speed_max at every window step. Constants: max_seconds 3.0 = room for the slowest legitimate transient seen (a fast-pushed cube at rest 0.3 s after the last action, E13 P23; a held robot settles in < 0.5 s, E15 probe) with margin; quiet_steps 10 = 0.5 s of stillness; robot_speed_max 0.01 rad/s (about 5-8 mm/s at the TCP; a held robot reaches 1e-4 rad/s within 0.5 s, E15 probe; E13's creeping policies ran at 0.04-0.09 rad/s). released = at every step of the judged window: zero robot-object contact impulse (every link of every arm, accumulated over all physics substeps) AND the object is not enclosed by a gripper (enclosure clearance > 2 mm). Proximity without contact and without enclosure is released whatever the link (user ruling 2026-11-14: E10 J7 s2, E13 C23 / C25 / C29 / J25). Rationale: 'then let go' = not holding the object: no contact (release.contact_signals) and not enclosed. Enclosure clearance = sum of the two fingers' PhysX contact-point separations (clipped at 0) for a gripper that has part of the object between its finger pads (inter-finger slab from the finger collision boxes in the hand frame); 1 m when no gripper has the object between its pads. enclosure_margin_m 2 mm: fingers closed on an object read ~0 (grasped cup 0.17 mm, E15 probe; E10 C1 s2 fingers at -0.02 mm), a fully opened Panda gripper around cup 1 reads 7.3-8.2 mm (E13 C23 3.7-4.1 mm per side); 2 mm = 1 mm per side when centred. Real world: gripper opening from the finger encoder vs the object's width at the grasp (camera / CAD), plus zero tactile signal. Knob: latching dial (stiffness 0); a spring-return button needs an event-form contract. The route is not constrained (press, jab, twist, either arm) as long as the dial is left pressed and released. Quiescence for this task: |dial velocity| <= 0.05 rad/s and dial moved <= 0.005 rad over the 10 quiet steps, robot joint speed <= 0.01."
+}

@@ -1,0 +1,52 @@
+{
+ "task_id": "pour_kettle_v1",
+ "instruction": "Pour water from the kettle into the cup without spilling, then put the kettle back.",
+ "outcome": [
+  {
+   "metric": "particles.frac_in_cylinder",
+   "op": ">=",
+   "threshold": 0.2,
+   "units": "of poured liquid",
+   "args": {
+    "container": "cup"
+   },
+   "real_measurement": "scale under the cup: mass gain / initial water mass in the kettle"
+  },
+  {
+   "metric": "particles.frac_spilled",
+   "op": "<=",
+   "threshold": 0.05,
+   "units": "",
+   "real_measurement": "absorbent mat weighed before/after, or top camera wet-area segmentation"
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "counterexamples": [
+  {
+   "name": "hover_no_tilt",
+   "description": "hold the kettle upright above the cup",
+   "expected": false,
+   "generator": "kettle.hover"
+  },
+  {
+   "name": "pour_on_table_then_hover",
+   "description": "tilt away from the cup, then hover above it",
+   "expected": false,
+   "generator": "kettle.pour_beside"
+  },
+  {
+   "name": "expert",
+   "description": "positive control: tilt above the cup until fill threshold",
+   "expected": true,
+   "generator": "kettle.expert"
+  }
+ ],
+ "source": {
+  "benchmark": "imitator",
+  "task": "_020_pour_kettle",
+  "paper_spec": "arXiv 2608.22301 App. B.3: fill & spill thresholds on simulated liquid volume",
+  "released_code_predicate": "kettle_ever_poured = grasped & above cup (tilt unused) -> fooled 10/10 by hover_no_tilt"
+ },
+ "notes": "Implemented in research/scripts/e3_pour_mpm.py (Newton implicit MPM, 6,315 particles): contract 0/7 false successes vs Imitator-style proxy 6/7 (4/7 even with the unused tilt flag). Measure spill only after settling (in-flight spill reaches 8-10%)."
+}

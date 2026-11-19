@@ -6,7 +6,14 @@
 
 The Imitator Game is a hierarchical benchmark for robot imitation from human manipulation videos. A human first demonstrates the manipulation skills in front of a camera (the Demonstrator scene); robots then attempt to imitate those skills from video observation alone in the Imitator scene (the Imitator scenes). Evaluation is conducted with blind A/B comparisons in the Imitator Arena or simulation automated metrics to judge which model imitates the human better.
 
-This repo contains the simulation framework (powered by [ManiSkill](https://www.maniskill.ai/) and [SAPIEN](https://sapien.ucsd.edu/)), the IG-10K data collection and preprocessing tooling, and the policy baselines ([ACT](https://arxiv.org/abs/2304.13705), [Diffusion Policy](https://arxiv.org/abs/2303.04137v5), [VQ-BeT](https://arxiv.org/abs/2403.03181), [UniSkill](https://arxiv.org/abs/2505.08787), [XSkill](https://arxiv.org/abs/2307.09955), [GR00T](https://arxiv.org/abs/2503.14734), [RDT](https://arxiv.org/abs/2410.07864), [π0.5](https://arxiv.org/abs/2504.16054), [OpenVLA](https://arxiv.org/abs/2406.09246)) including their training and evaluation recipes.
+> **Branch `imitator2.0` (in progress).** Imitator 2.0 extends the benchmark with more embodiments, more tasks,
+> physically verified success criteria, a data engine, soft bodies and agent-facing tooling, and will add a
+> real-to-sim-to-human pipeline. This branch contains the benchmark code only: the 1.0 policy baselines
+> (ACT, Diffusion Policy, VQ-BeT, UniSkill, XSkill, GR00T, RDT, π0.5, OpenVLA-OFT, HyperICL) stay on `main`, and any
+> policy is evaluated through one interface (`imitator/eval/policy.py`). See [Imitator 2.0](#imitator-20) below and
+> [`docs/imitator2/MIGRATION.md`](docs/imitator2/MIGRATION.md).
+
+This repo contains the simulation framework (powered by [ManiSkill](https://www.maniskill.ai/) and [SAPIEN](https://sapien.ucsd.edu/)), the IG-10K data collection and preprocessing tooling, the evaluation protocol, and the Imitator 2.0 platform layer (`imitator/`, `veritask/`).
 
 ## Community & contributions
 
@@ -21,7 +28,7 @@ participate and contribute to the community. Contributions will be acknowledged 
 Everyone can contribute to this project by submitting **tasks / models / embodiments** that support the Imitator-Game **data-collection / training / evaluation** framework. Please follow the design templates and contribute via pull request: 
 
 - Contribute new Imitator tasks (L0–L3) designed with the task template under [mani_skill/envs/tasks/_template/](mani_skill/envs/tasks/_template/) (together with the motion-planning solutions);
-- contribute new imitation-learning models built on the baseline template under [examples/baselines/_template/](examples/baselines/_template/) (together with evaluation interface);
+- contribute new imitation-learning models through the evaluation interface in [examples/policy_template/](examples/policy_template/) (model code lives in your own repository);
 - contribute new robots with robot template under [mani_skill/agents/robots/_template/](mani_skill/agents/robots/_template/).
 
 ### Pairing data service
@@ -56,7 +63,7 @@ keep the common interfaces intact. We will also actively update both the simulat
 
 ## Installation
 
-Installation only requires a few [uv](https://docs.astral.sh/uv/getting-started/installation/) installs plus a Vulkan setup for rendering:
+Installation only requires a few [uv](https://docs.astral.sh/uv/getting-started/installation/) installs plus a Vulkan setup for rendering (extras: `--extra dataset` for IG-10K / evaluation, `--extra soft` for cloth tasks):
 
 ```bash
 uv sync --active
@@ -88,7 +95,7 @@ External GLB assets (Sketchfab, Hunyuan-generated meshes, [Objaverse](https://ob
 
 ## IG-10K Dataset
 
-The dataset is in `LeRobot-0.5.0` format. See [`examples/baselines/lerobot_dataset/README.md`](examples\baselines\lerobot_dataset\README.md) for the dataset layout, observation features (RGB/depth cameras, MANO hand pose, segmentation masks), and the imitative level handling of the paired human/robot data.
+The dataset is in `LeRobot-0.5.0` format. See [`imitator/dataset/README.md`](imitator/dataset/README.md) for the dataset layout, observation features (RGB/depth cameras, MANO hand pose, segmentation masks), and the imitative level handling of the paired human/robot data.
 
 ```bash
 # Hugging Face
@@ -108,7 +115,7 @@ The-Imitator-Game/
 
 ### Collect new data in simulation
 
-See [`scripts/collect_data.py`](scripts/collect_data.py) for collecting simulation motion-planning demonstrations in ManiSkill hdf5-format, and [examples/baselines/lerobot_dataset/h5_to_lerobot.py](examples/baselines/lerobot_dataset/h5_to_lerobot.py ) for converting `.h5` trajectories to `LeRobot-0.5.0` format. An example script for data collection: 
+See [`scripts/collect_data.py`](scripts/collect_data.py) for collecting simulation motion-planning demonstrations in ManiSkill hdf5-format, and [`imitator/dataset/h5_to_lerobot.py`](imitator/dataset/h5_to_lerobot.py) (`python -m imitator.dataset.h5_to_lerobot`, see `scripts/convert_h5_lerobot.sh`) for converting `.h5` trajectories to `LeRobot-0.5.0` format. An example script for data collection: 
 
 ```bash
 python -m mani_skill.examples.motionplanning.dual.two_robot_run --shader "rt-fast" -n 50 -e "Task name" --save-video
@@ -116,27 +123,64 @@ python -m mani_skill.examples.motionplanning.dual.two_robot_run --shader "rt-fas
 
 ## Benchmark
 
-Each baseline has its own README.md with training and evaluation commands under [examples/baselines/](examples/baselines/). An example script for model training and evaluation: 
+Policies are evaluated with the Imitator protocol (L0–L3, human-video and/or language conditioning, success rate and
+TSS / nDTW against the paired human trajectory). A policy implements three methods (`prepare_for_eval`, `get_action`,
+`clear_cache`, see [`imitator/eval/policy.py`](imitator/eval/policy.py)) and is passed as `module:factory`:
 
 ```bash
-# Training
-python -m examples.baselines.model.train_model_imitator \
-  --human-root demos/demo_data \
-  --sim-root demos/imitator_data \
-  --human-dataset-file path/to/human_train_config.json \
-  --sim-dataset-file path/to/sim_train_config.json \
-  --task-mapping-file examples/baselines/lerobot_dataset/task_mapping.json
-
-# Evaluation
-python -m examples.baselines.model.eval_model_imitator \
-  --eval-config path/to/eval_config.txt \
-  --checkpoint path/to/final_model.pt \
-  --human-root demos/demo_data \
-  --sim-root demos/imitator_data \
-  --human-config path/to/human_eval_config.json \
-  --sim-config path/to/sim_eval_config.json \
-  --task-mapping examples/baselines/lerobot_dataset/task_mapping.json
+pip install -e ".[dataset]"
+python -m imitator.eval.run \
+  --policy examples.policy_template.policy:make_policy \
+  --eval-config imitator/eval/lists/eval_all.txt \
+  --input-mode video_only \
+  --human-root demos/demo_data --sim-root demos/imitator_data \
+  --human-config path/to/human_eval_config.json --sim-config path/to/sim_eval_config.json \
+  --task-mapping imitator/dataset/task_mapping.json \
+  --output-dir results/my_policy
 ```
+
+Results are written incrementally (JSON + CSV); environments that already have enough episodes are skipped.
+
+## Imitator 2.0
+
+### Repository layout
+
+```text
+mani_skill/          Imitator fork of ManiSkill 3 (simulation, 1.0 tasks L0–L3, motion-planning solutions)
+imitator/            2.0 platform layer
+  eval/              evaluation protocol: policy interface, rollout loop, env factory, metrics, eval lists
+  dataset/           IG-10K LeRobot conversion and loaders, task mapping, task descriptions, mask generation
+  embodiments/       dual-arm embodiments (ARX X5, AgileX PiPER, UR5 + WSG-50, xArm6 + Robotiq / Allegro) + calibration
+  envs/ planning/    contract-judged tasks and their scripted experts / counterexamples
+  verify/ contracts/ success contracts and the evaluator-run protocol (release, settle, retreat)
+  data/              data engine: certified datasets, perturbations (DART, directed DART, physical uncertainty), cards
+  soft/ render/      Newton (VBD) cloth bridge, Newton ray-cast camera
+  sensors/           tactile pads
+veritask/            success contracts, metamorphic tests, static checks, credibility cards, VLM-judge harness
+examples/            policy template
+scripts/             data collection and conversion
+tests/               tests for imitator and veritask
+docs/imitator2/      PLATFORM.md, VERITASK.md, MIGRATION.md, ROADMAP.md
+```
+
+### Quick start (platform layer)
+
+```python
+import imitator
+imitator.list_tasks(); imitator.list_embodiments()
+env = imitator.make("DualHandover-v1", embodiment="dual_piper", sim="cpu", obs="state")
+res = imitator.evaluate("DualCubePlace-v1", "dual_ur5_wsg", "expert", seeds=range(4))   # contract verdicts + evidence
+ds = imitator.generate("DualCubePlace-v1", "dual_ur5_wsg", seeds=range(50), perturb="dart", workers=8)
+```
+
+```bash
+python -m imitator list
+python -m imitator eval DualStack-v1 -e dual_arx_x5 -s expert --seeds 0-7 --card
+python -m pytest -q tests            # fast tests (IMSIM_SLOW=1 adds scripted episodes, GPU and cloth)
+```
+
+Soft-body tasks need `pip install -e ".[soft]"` and a CUDA GPU. Details: [`docs/imitator2/PLATFORM.md`](docs/imitator2/PLATFORM.md),
+[`docs/imitator2/VERITASK.md`](docs/imitator2/VERITASK.md); plan: [`docs/imitator2/ROADMAP.md`](docs/imitator2/ROADMAP.md).
 
 ## Technical Support
 

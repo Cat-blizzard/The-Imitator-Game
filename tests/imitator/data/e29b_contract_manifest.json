@@ -1,0 +1,116 @@
+{
+ "imsim_pick_cube_v1": {
+  "path": "imsim/imsim/contracts/imsim_pick_cube_v1.json",
+  "sha256": "688579ab0a9c41ec8de6b647ba6f7982417dc1405c8262a175db5495e8394cd9",
+  "frozen_at": "2026-11-16 03:39",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilots 5/5 on the draft"
+ },
+ "imsim_stack_cube_v1": {
+  "path": "imsim/imsim/contracts/imsim_stack_cube_v1.json",
+  "sha256": "cd2e9397f8cd6d281a830240489c9be1dd19c10d9c69bce7bac97d0aee579a1f",
+  "frozen_at": "2026-11-16 03:39",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilots 5/5 on the draft"
+ },
+ "imsim_push_cube_v1": {
+  "path": "imsim/imsim/contracts/imsim_push_cube_v1.json",
+  "sha256": "3ec66218ac12cc47da87421eada8cc212af461d21309855a5baf19d6072e09fe",
+  "frozen_at": "2026-11-16 03:39",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilots 5/5 on the draft"
+ },
+ "imsim_pull_cube_v1": {
+  "path": "imsim/imsim/contracts/imsim_pull_cube_v1.json",
+  "sha256": "4612f5bbc721f87c176cf3d15904001fe1f17611a6fba58407cf1e808f75985f",
+  "frozen_at": "2026-11-16 03:39",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilots 5/5 on the draft"
+ },
+ "imsim_place_sphere_v1": {
+  "path": "imsim/imsim/contracts/imsim_place_sphere_v1.json",
+  "sha256": "a7476ff5eb59748703dcfcc58dcbfce29077b276c8cf0c7739d1bf32e18cf520",
+  "frozen_at": "2026-11-16 03:39",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilots 5/5 on the draft"
+ },
+ "imsim_lift_peg_upright_v1": {
+  "path": "imsim/imsim/contracts/imsim_lift_peg_upright_v1.json",
+  "sha256": "8a255c79dd3b9529afb60e0d6d9896deab5cacd5566a5e198e43dbcd303fa5f6",
+  "frozen_at": "2026-11-16 03:39",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilots 5/5 on the draft"
+ },
+ "imsim_stack_pyramid_v1": {
+  "path": "imsim/imsim/contracts/imsim_stack_pyramid_v1.json",
+  "sha256": "50da988eba4aa1f4d57c622e50e35407823f725c7e9e0feeeb559f4ef5575ac7",
+  "frozen_at": "2026-11-16 04:13",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilot 3: 10/10 on the draft"
+ },
+ "imsim_dual_handover_v2": {
+  "path": "imsim/imsim/contracts/imsim_dual_handover_v2.json",
+  "sha256": "3a4f4cfafef8833ace53d8335dcd906b47eab2fa633b30d3e8ab336fc458e1b6",
+  "frozen_at": "2026-11-16 04:42",
+  "note": "DualHandover-v1 default contract (E29b fork A); frozen before any counterexample was judged (counterexamples only dry-run, expert piloted on the draft: UR5 4/4, ARX 4/4, PiPER 10/10, Robotiq 8/8)",
+  "revision_of": "imsim_dual_handover_v1",
+  "why": "E24c fixes (position-based speeds, commanded-vs-actual opening term, 5 s settle cap) on the v3.2 recorder; new designed counterexample table_transfer; v1 thresholds, handover term, release rule and retreat kept"
+ },
+ "imsim_dual_lift_box_v1": {
+  "path": "imsim/imsim/contracts/imsim_dual_lift_box_v1.json",
+  "sha256": "88c827958f942b43d9472be084b80f7746282a7f98f4e07800812e1c32835d86",
+  "frozen_at": "2026-11-16 04:46",
+  "note": "B1, before any counterexample was judged (counterexamples only dry-run: diagnostics, no verdicts); expert pilots on the draft as logged in STATUS"
+ },
+ "imsim_dual_stack_v1": {
+  "path": "imsim/imsim/contracts/imsim_dual_stack_v1.json",
+  "sha256": "94c2327beebc81882343be125ba4c492c916c82919892b2cab1522b91009a947",
+  "frozen_at": "2026-11-16 04:55",
+  "note": "B1, before any counterexample was judged (counterexamples only dry-run: diagnostics, no verdicts); expert pilots on the draft as logged in STATUS"
+ },
+ "dual_towel_fold_v2": {
+  "path": "imsim/imsim/soft/contracts/dual_towel_fold_v2.json",
+  "sha256": "e9b889920741cd30017c4127d0bb440375f14652bc61f5de1c9dcbce63f97e18",
+  "frozen_at": "2026-11-16 05:11",
+  "note": "fork C, before any DualFoldTowel-v1 counterexample was judged under v2 (counterexamples only dry-run: physical diagnostics, no verdicts)",
+  "revision_of": "dual_towel_fold_v1",
+  "why": "E24c fixes for cloth: settle cap 3 -> 5 s (6 of 8 E23 expert rejections were not_quiescent at the 3 s cap); quiescence speed from particle positions over the control step (cloth_speed_p95_pos) instead of VBD particle velocity (a 1/600 s substep difference); new retreat aftermath term over the particles within 5 cm of a retracting gripper (<= 1 cm). Outcome terms / thresholds / release / counterexamples unchanged."
+ },
+ "imsim_plug_charger_v1": {
+  "path": "imsim/imsim/contracts/imsim_plug_charger_v1.json",
+  "sha256": "37aae7fcbc75445dc186b830807c929f4e4e90b15468dd875afcc75e2aefa9a6",
+  "frozen_at": "2026-11-16 05:19",
+  "note": "E29b Panda task, before any judged counterexample episode; expert pilot 18/20 on the draft (seeds 20-39)"
+ },
+ "dual_cloth_cover_box_v1": {
+  "path": "imsim/imsim/soft/contracts/dual_cloth_cover_box_v1.json",
+  "sha256": "20798bd324e6ab88f1033e8cce05041de0865c3ccaf65028823adf5d5e4aed45",
+  "frozen_at": "2026-11-16 06:07",
+  "note": "fork C, new task; before any counterexample was judged (counterexamples only dry-run without verdicts); expert piloted on the draft"
+ },
+ "imsim_dual_peg_in_hole_v1": {
+  "path": "imsim/imsim/contracts/imsim_dual_peg_in_hole_v1.json",
+  "sha256": "8fa4ee179b4b44589c84c6c97c146c5db4845e6bfa80da0a77b198521438d91b",
+  "frozen_at": "2026-11-16 06:13",
+  "note": "fork B2; written before any counterexample was judged (counterexamples only dry-run without verdict); expert piloted on drafts"
+ },
+ "imsim_dual_drawer_v1": {
+  "path": "imsim/imsim/contracts/imsim_dual_drawer_v1.json",
+  "sha256": "080128eb2b647127aa68ca64e2cc1a09b80aa7233503def40564fcda6828972e",
+  "frozen_at": "2026-11-16 06:13",
+  "note": "fork B2; written before any counterexample was judged (counterexamples only dry-run without verdict); expert piloted on drafts"
+ },
+ "dual_cloth_cover_box_v2": {
+  "path": "imsim/imsim/soft/contracts/dual_cloth_cover_box_v2.json",
+  "sha256": "4be12347e6e589e7d5cecda94bb9e583df66c59edd1ffb7f532d8a8bd1acf7b4",
+  "frozen_at": "2026-11-16 07:21",
+  "note": "revision before its own evaluation",
+  "revision_of": "dual_cloth_cover_box_v1",
+  "why": "v1 (coverage >= 0.90) accepted the designed counterexample short_fold in 4/60 worlds (ARX X5 2/20, PiPER 2/20; coverage 0.90-0.94). Coverage threshold -> 0.99 (all 81 top-face points); nothing else changed. Post hoc (set after seeing v1's counterexample values)."
+ },
+ "imsim_peg_insertion_side_v1": {
+  "path": "imsim/imsim/contracts/imsim_peg_insertion_side_v1.json",
+  "sha256": "fd95c72382798c523ceb781bed47d947f8e09ad5836d3ee59eef817c1327482c",
+  "frozen_at": "2026-11-16 12:04",
+  "note": "E29b (after E27 finished), before any judged counterexample episode; expert pilots 10/10 on seeds 100-109; counterexamples dry-run only (seeds 100-101: hold/cage bench-accepted, partial/entrance/short rejected, pull_by_gripper bench-accepted)"
+ },
+ "imsim_pull_cube_tool_v1": {
+  "path": "imsim/imsim/contracts/imsim_pull_cube_tool_v1.json",
+  "sha256": "f16c6fab9f9ffb4983abe6f06448821bf3857e051ec1411a2603bf9a7ae790dd",
+  "frozen_at": "2026-11-16 12:04",
+  "note": "E29b (after E27 finished), before any judged counterexample episode; expert pilots 10/10 on seeds 100-109; counterexamples dry-run only (seeds 100-101: hold/cage bench-accepted, partial/entrance/short rejected, pull_by_gripper bench-accepted)"
+ }
+}

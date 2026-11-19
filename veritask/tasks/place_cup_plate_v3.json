@@ -1,0 +1,296 @@
+{
+ "schema_version": "0.3",
+ "task_id": "place_cup_plate_v3",
+ "protocol": "v3",
+ "instruction": "Place both cups upright on the tray, then let go.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 15.0,
+   "units": "deg",
+   "args": {
+    "signal": "cup1_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "Rationale: upright = model up axis (local +y) within 15 deg of vertical at every judged step (unchanged from v1/v2: standing 0-2 deg, lying ~90 deg). Real world: fitted cylinder axis from a calibrated RGB-D camera, 1 s after the robot stops."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 15.0,
+   "units": "deg",
+   "args": {
+    "signal": "cup2_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "As for cup 1."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cup1_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "Rationale: on the tray FLOOR: lowest point of the cup within 5 mm of the floor height under it (unchanged from v2; floor dished ~2.5 mm; rim 26 mm higher; a cup standing on the other cup is ~70-110 mm higher: not on the tray, user ruling 2026-11-14 / E13 C27). Real world: cup base height vs the tray floor plane from RGB-D."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cup2_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "As for cup 1."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.9,
+   "units": "fraction of base area",
+   "args": {
+    "signal": "cup1_base_in_floor_frac",
+    "window": 20
+   },
+   "real_measurement": "Rationale: >= 90% of the cup's base footprint over the tray's inner floor area at every judged step (unchanged from v2). Real world: top camera, base outline vs the inner floor polygon."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.9,
+   "units": "fraction of base area",
+   "args": {
+    "signal": "cup2_base_in_floor_frac",
+    "window": 20
+   },
+   "real_measurement": "As for cup 1."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "cup_max_speed",
+    "window": 20
+   },
+   "real_measurement": "Rationale: at rest: the faster cup <= 2 cm/s at every judged step (as v2). Real world: frame differencing of the tracked cup poses."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cup1_x",
+    "signals": [
+     "cup1_x",
+     "cup1_y",
+     "cup1_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Rationale: stays put: cup 1's origin moves <= 2 mm from where it was at the window's first step (a creep under the 2 cm/s speed bound could move 2 cm in 1 s, E13 P21; solver jitter moves < 0.1 mm net). Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cup2_x",
+    "signals": [
+     "cup2_x",
+     "cup2_y",
+     "cup2_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "As for cup 1."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_cups_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "cups_enclosure_clearance_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 3.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "cup_max_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cup1_x",
+     "cup1_y",
+     "cup1_z"
+    ],
+    "max": 0.001
+   },
+   {
+    "signals": [
+     "cup2_x",
+     "cup2_y",
+     "cup2_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "place_then_knock_over",
+   "description": "official placement, then each cup is swept over (E1)",
+   "expected": false,
+   "generator": "e1_cup_plate.place_then_knock_over"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms hold still",
+   "expected": false,
+   "generator": "e1_cup_plate.no_op"
+  },
+  {
+   "name": "expert",
+   "description": "positive control: official _036 solution",
+   "expected": true,
+   "generator": "imitator.solutions._036_place_cup_plate"
+  },
+  {
+   "name": "place_upright_reimpl",
+   "description": "positive control: re-implemented official placement",
+   "expected": true,
+   "generator": "e1_cup_plate.place_upright_reimpl"
+  },
+  {
+   "name": "E10:C1_never_let_go",
+   "description": "set both cups down, keep the fingers closed around them at sub-0.5 N (enclosed = not released)",
+   "expected": false,
+   "generator": "e10_place_cup_plate.C1_never_let_go"
+  },
+  {
+   "name": "E10:C2_rim_perch",
+   "description": "cups standing on the tray's raised rim",
+   "expected": false,
+   "generator": "e10_place_cup_plate.C2_rim_perch"
+  },
+  {
+   "name": "E10:C3_late_knock",
+   "description": "expert placement, then the gripper sweeps cup 1's top in the last 3 steps",
+   "expected": false,
+   "generator": "e10_place_cup_plate.C3_late_knock"
+  },
+  {
+   "name": "E10:C4_late_finish",
+   "description": "expert placement, episode ends 8 steps after the second release (accomplished)",
+   "expected": true,
+   "generator": "e10_place_cup_plate.C4_late_finish"
+  },
+  {
+   "name": "E10:C5_high_release",
+   "description": "cups released 4 cm above the floor (accomplished)",
+   "expected": true,
+   "generator": "e10_place_cup_plate.C5_high_release"
+  },
+  {
+   "name": "place_then_lift_away",
+   "description": "E11: both cups placed, then cup 1 re-grasped and held 10 cm up",
+   "expected": false,
+   "generator": "e11_new_families.place_then_lift_away"
+  },
+  {
+   "name": "one_cup_only",
+   "description": "E11: cup 1 placed, cup 2 never moved",
+   "expected": false,
+   "generator": "e11_new_families.one_cup_only"
+  },
+  {
+   "name": "place_offcentre_valid",
+   "description": "E11 positive control: both cups near corners of the floor, 1 cm from the rim",
+   "expected": true,
+   "generator": "e11_new_families.place_offcentre_valid"
+  },
+  {
+   "name": "E13:C21_vel_creep_knock",
+   "description": "velocity-command policy: placement, the last action is a slow approach of the closed hand toward cup 1; under hold A the hand is held where it stopped (truth per episode from the E13 adjudication + this protocol's re-simulation); twin_stop = last action zero (accomplished)",
+   "expected": true,
+   "generator": "e13_place_cup_plate.C21_vel_creep_knock"
+  },
+  {
+   "name": "E13:C23_cup1_last_open_stay",
+   "description": "cup 1 placed last, the left gripper fully open around it for 0.7 s / 2.3 s, no contact (accomplished: not enclosed)",
+   "expected": true,
+   "generator": "e13_place_cup_plate.C23_cup1_last_open_stay"
+  },
+  {
+   "name": "E13:C24_edge_slope",
+   "description": "cups set down overlapping the rim slope; tall cup 1 fell over",
+   "expected": false,
+   "generator": "e13_place_cup_plate.C24_edge_slope"
+  },
+  {
+   "name": "E13:C25_release_then_return_near",
+   "description": "placement, arms home, the closed hand returns to 3 mm beside cup 1 without touching (accomplished)",
+   "expected": true,
+   "generator": "e13_place_cup_plate.C25_release_then_return_near"
+  },
+  {
+   "name": "E13:C26_late_knock_command",
+   "description": "pd_joint_pos: the last action is one far joint target through cup 1 (adjudicated not accomplished under v2's replay hold; under hold A the robot is held after that one step)",
+   "expected": false,
+   "generator": "e13_place_cup_plate.C26_late_knock_command"
+  },
+  {
+   "name": "E13:C27_stacked",
+   "description": "cup 2 set down on top of cup 1: not on the tray (user ruling 2026-11-14)",
+   "expected": false,
+   "generator": "e13_place_cup_plate.C27_stacked"
+  },
+  {
+   "name": "E13:C28_end_right_after_open",
+   "description": "episode ends 1 or 3 steps after the right gripper's open command (accomplished)",
+   "expected": true,
+   "generator": "e13_place_cup_plate.C28_end_right_after_open"
+  },
+  {
+   "name": "E13:C29_return_near_hand_body",
+   "description": "as C25 but the hand body is 1-2 mm above cup 1's rim (accomplished)",
+   "expected": true,
+   "generator": "e13_place_cup_plate.C29_return_near_hand_body"
+  },
+  {
+   "name": "E13:C30_delta_expert",
+   "description": "official placement with pd_joint_delta_pos actions (accomplished; v2 gave no verdict)",
+   "expected": true,
+   "generator": "e13_place_cup_plate.C30_delta_expert"
+  }
+ ],
+ "source": {
+  "benchmark": "imitator",
+  "task": "_036_place_cup_plate (TwoRobotPlaceCupPlate-v1, L0)",
+  "released_code_predicate": "success = both cups' xy within 0.15 m of the tray centre; upright flags computed, unused",
+  "supersedes": "place_cup_plate_v2",
+  "protocol": "v3: veritask/adapters/protocol_v3.py, maniskill_v3.py, maniskill_v3_tasks.py (tray floor map / cup base footprint unchanged from v2)",
+  "frozen": "2026-11-14, before any E15 evaluation-set run; thresholds chosen knowing the E10 and E13 reports and the user rulings of 2026-11-14 (not blind to them)",
+  "rounds": "E10 red team (research/results/e10_redteam), E13 red team (research/results/e13_redteam2)"
+ },
+ "notes": "Protocol v3 (veritask/adapters/protocol_v3.py). After the policy's last action the evaluator HOLDS the robot where it stopped (hold A: every arm switched to a pd_joint_pos hold of the joint positions reached at the policy's last step, drive-velocity targets zeroed, grippers keep their last commanded opening; any control mode). It steps until the scene is quiescent for settle.quiet_steps = 10 consecutive control steps (0.5 s: every quiet_max signal under its bound at every step, every quiet_disp group moved <= its bound, largest arm-joint speed <= 0.01 rad/s, measured from joint POSITIONS over each control step: PhysX's reported joint velocity stays at 0.012-0.043 while nothing moves when the robot presses through a held object or closes its fingers on one, E15 development runs; finger joints excluded) and then judges the following 1.0 s window (20 steps); if no quiescence leaves room for the window inside settle.max_seconds = 3.0 s the episode is rejected. End-state terms (trace.window_*) read only the judged window; event terms (trace.count_true / trace.max) read the episode up to the window's end. Hold B (switch, not the default): the evaluator replays the policy's last action and robot joint speed must stay <= settle.robot_speed_max at every window step. Constants: max_seconds 3.0 = room for the slowest legitimate transient seen (a fast-pushed cube at rest 0.3 s after the last action, E13 P23; a held robot settles in < 0.5 s, E15 probe) with margin; quiet_steps 10 = 0.5 s of stillness; robot_speed_max 0.01 rad/s (about 5-8 mm/s at the TCP; a held robot reaches 1e-4 rad/s within 0.5 s, E15 probe; E13's creeping policies ran at 0.04-0.09 rad/s). released = at every step of the judged window: zero robot-object contact impulse (every link of every arm, accumulated over all physics substeps) AND the object is not enclosed by a gripper (enclosure clearance > 2 mm). Proximity without contact and without enclosure is released whatever the link (user ruling 2026-11-14: E10 J7 s2, E13 C23 / C25 / C29 / J25). Rationale: 'then let go' = not holding the object: no contact (release.contact_signals) and not enclosed. Enclosure clearance = sum of the two fingers' PhysX contact-point separations (clipped at 0) for a gripper that has part of the object between its finger pads (inter-finger slab from the finger collision boxes in the hand frame); 1 m when no gripper has the object between its pads. enclosure_margin_m 2 mm: fingers closed on an object read ~0 (grasped cup 0.17 mm, E15 probe; E10 C1 s2 fingers at -0.02 mm), a fully opened Panda gripper around cup 1 reads 7.3-8.2 mm (E13 C23 3.7-4.1 mm per side); 2 mm = 1 mm per side when centred. Real world: gripper opening from the finger encoder vs the object's width at the grasp (camera / CAD), plus zero tactile signal. Quiescence for this task: the faster cup <= 2 cm/s and each cup's origin moved <= 1 mm over the 10 quiet steps, robot joint speed <= 0.01. Not checked: which cup stands where, cup yaw."
+}

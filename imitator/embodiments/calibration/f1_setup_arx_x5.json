@@ -1,0 +1,105 @@
+{
+ "schema": "imsim.embodiment_calibration/1",
+ "name": "f1_setup_arx_x5",
+ "created": "2026-11-17 02:53:36",
+ "source": "card F1 (research/results/f1_embodiment_cards); research/scripts/f1_calibrate.py, f1_report.py",
+ "usage": "imsim.make(task, embodiment, sim='cpu', embodiment_calibration='f1_setup_arx_x5')",
+ "note": "SETUP-SPECIFIC: improves the held-out episodes of its own log but did NOT transfer to the second log of this robot type (or is post-hoc); use only for that setup",
+ "arms": {
+  "arx_x5": {
+   "level": 1,
+   "variant": "pd_lpf_grav",
+   "arm": {
+    "joints": [
+     "joint1",
+     "joint2",
+     "joint3",
+     "joint4",
+     "joint5",
+     "joint6"
+    ],
+    "stiffness": [
+     69027.62955892074,
+     51.69273355999714,
+     46.0711972800452,
+     31.622776601683796,
+     1000.0,
+     109401.42017966107
+    ],
+    "damping": [
+     1.278837372452652,
+     0.8166836324733682,
+     2.0514165352458105,
+     2.3017272100059936,
+     100.0,
+     1.278837372452652
+    ],
+    "force_limit": [
+     30.0,
+     40.0,
+     30.0,
+     15.0,
+     10.0,
+     10.0
+    ],
+    "action_delay_s": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "prefilter_tau_s": [
+     0.148237371314317,
+     0.06614509876817465,
+     0.05114509876817465,
+     0.047395098768174646,
+     0.0,
+     0.161362371314317
+    ],
+    "gravity": true
+   },
+   "l2_test_passed": false,
+   "source_robot": "arx_x5",
+   "fit": {
+    "dataset": "RobotisAI/evButtonPush-arx5-260722-0-lerobot",
+    "license": "none stated (all rights reserved by default): internal calibration use only, do not redistribute",
+    "fps": 30.0,
+    "sim_freq": 120.0,
+    "train_segments": 17,
+    "train_frames": 2557
+   },
+   "heldout": {
+    "rmse_default_rad": [
+     0.01353693290229912,
+     0.06393323053522694,
+     0.08871775905309719,
+     0.11407761894888006,
+     0.01264669050440839,
+     0.008607163436811439
+    ],
+    "rmse_calibrated_rad": [
+     0.013015280886537337,
+     0.012181213922553776,
+     0.019355375657250342,
+     0.0780080851031741,
+     0.012651706899754426,
+     0.008345925303406793
+    ],
+    "mean_default": 0.050253232563453855,
+    "mean_calibrated": 0.023926264628779465,
+    "n_segments": 9,
+    "n_frames": 1652
+   },
+   "transfer": {
+    "be6257__arx5_grab_yellow_cube:arm": {
+     "default": 0.005986121995446705,
+     "calibrated": 0.03969586825158406
+    }
+   },
+   "notes": "gripper not calibrated (level 3 needs a real robot); fitted on free-space motion only",
+   "posthoc": false
+  }
+ }
+}

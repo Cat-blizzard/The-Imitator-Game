@@ -1,4 +1,4 @@
-python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
+python -m imitator.dataset.h5_to_lerobot \
   --input demos \
   --output-dir imitator_data \
   --recursive \

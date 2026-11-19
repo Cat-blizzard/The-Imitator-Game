@@ -1,0 +1,265 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_dual_stack_v1",
+ "protocol": "v3",
+ "instruction": "With the left arm put the red cube on the green square, with the right arm put the blue cube on top of the red one; then both arms let go and move away.",
+ "outcome": [
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.0,
+   "units": "m",
+   "args": {
+    "signal": "a_target_margin_m",
+    "window": 20
+   },
+   "real_measurement": "Red cube A on the green square: A's centre inside the square at every judged step (min(half - |dx|, half - |dy|) >= 0). Real world: top camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "cubeA_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "A on the table: lowest box corner within 5 mm of the table top at every judged step. Real world: RGB-D pose vs the table plane."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m",
+   "args": {
+    "signal": "ab_xy_m",
+    "window": 20
+   },
+   "real_measurement": "B over A: horizontal distance of the two centres <= 2 cm at every judged step. Real world: top camera."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "ab_dz_err_m",
+    "window": 20
+   },
+   "real_measurement": "B rests on A: | z(B) - z(A) - 5 cm | <= 5 mm. Real world: RGB-D."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "cubeA_cubeB_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Supported by A: A-B contact impulse > 0 in every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_cubeB_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "B does not touch the table in the judged window."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 10.0,
+   "units": "deg",
+   "args": {
+    "signal": "cubeB_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "B lies flat on a face (smallest axis angle to vertical <= 10 deg)."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.5,
+   "units": "",
+   "args": {
+    "signal": "carry_A_by_arm0",
+    "carry_steps": 5,
+    "airborne_dz_m": 0.003
+   },
+   "real_measurement": "Process: A was carried by the LEFT arm alone (off the table: no table contact, bottom > 3 mm; touched by the left robot and not by the right) for >= 5 consecutive control steps at some point. Derived by imsim.verify.dual_tasks_b1.carry_signal. Real world: per-arm F/T + side camera."
+  },
+  {
+   "metric": "trace.max",
+   "op": ">=",
+   "threshold": 0.5,
+   "units": "",
+   "args": {
+    "signal": "carry_B_by_arm1",
+    "carry_steps": 5,
+    "airborne_dz_m": 0.003
+   },
+   "real_measurement": "Process: B was carried by the RIGHT arm alone for >= 5 consecutive control steps at some point (same definition)."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of either cube retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; either cube must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cubeA_x",
+    "signals": [
+     "cubeA_x",
+     "cubeA_y",
+     "cubeA_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the cubeA centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "cubeB_x",
+    "signals": [
+     "cubeB_x",
+     "cubeB_y",
+     "cubeB_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the cubeB centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_cubeA_impulse_Ns",
+   "robot_cubeB_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "cubeA_enclosure_m",
+   "cubeB_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "cubeA_x",
+     "cubeA_y",
+     "cubeA_z"
+    ],
+    "max": 0.001
+   },
+   {
+    "signals": [
+     "cubeB_x",
+     "cubeB_y",
+     "cubeB_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: left places A on the target, retreats; right places B on A, retreats",
+   "expected": true,
+   "generator": "imsim.planning.dual_stack.run(variant='expert')"
+  },
+  {
+   "name": "one_arm_does_both",
+   "description": "the left arm places A and then B on A; the right arm never moves",
+   "expected": false,
+   "generator": "imsim.planning.dual_stack.run(variant='one_arm_does_both')"
+  },
+  {
+   "name": "hold_top",
+   "description": "as the expert, the right gripper stays closed on B",
+   "expected": false,
+   "generator": "imsim.planning.dual_stack.run(variant='hold_top')"
+  },
+  {
+   "name": "side_by_side",
+   "description": "B put on the table next to A instead of on it",
+   "expected": false,
+   "generator": "imsim.planning.dual_stack.run(variant='side_by_side')"
+  },
+  {
+   "name": "cage",
+   "description": "B set on A, the right gripper opened only ~1.2 mm beyond the cube width (no contact, still around B)",
+   "expected": false,
+   "generator": "imsim.planning.dual_stack.run(variant='cage')"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms stay at home",
+   "expected": false,
+   "generator": "imsim.planning.dual_stack.run(variant='no_op')"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E29b)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "DualStack-v1 (imsim/imsim/envs/dual_stack.py)",
+  "released_code_predicate": "A's centre in the target square, B within (2.5, 2.5, 1.2) cm of A + (0, 0, 5 cm), both grippers' opening from the joint state >= 80 % of max, at the evaluated step (RoboTwin stack_blocks_two style)"
+ },
+ "notes": "Release over both cubes and both robots (contact + all-link enclosure), commanded vs actual opening, retreat over both cubes. The per-arm carry terms state 'each arm carried its own cube' (instruction)."
+}

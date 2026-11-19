@@ -1,0 +1,52 @@
+# From `main` (1.0) to `imitator2.0`
+
+## What moved
+
+| 1.0 location | 2.0 location |
+|---|---|
+| `examples/baselines/lerobot_dataset/` (IG-10K LeRobot conversion, loaders, configs, task mapping, task descriptions, mask generation) | `imitator/dataset/` |
+| `examples/baselines/lerobot_dataset/evaluate_processor.py` | `imitator/eval/processor.py` |
+| `examples/baselines/lerobot_dataset/trajectory_metrics.py` (TSS / nDTW) | `imitator/eval/trajectory_metrics.py` |
+| `examples/baselines/lerobot_dataset/eval/*.txt` (evaluation lists) | `imitator/eval/lists/` |
+| `examples/baselines/diffusion_policy/diffusion_policy/make_env.py` | `imitator/eval/make_env.py` |
+| model-independent parts of `examples/baselines/diffusion_policy/eval_dp_imitator.py` (rollout loop, L0–L3 handling, result bookkeeping) | `imitator/eval/rollout.py` (logic unchanged) + `imitator/eval/run.py` (CLI with `--policy module:factory`) + `imitator/eval/policy.py` (interface) |
+| `examples/baselines/_template/` | `examples/policy_template/` (evaluation interface only) |
+| `python -m examples.baselines.lerobot_dataset.h5_to_lerobot` | `python -m imitator.dataset.h5_to_lerobot` |
+
+## What was removed (still on `main`)
+
+- All policy / model code: `examples/baselines/{act, diffusion_policy, vqbet, uniskill, xskill, gr00t, rdt, pi, openvla_oft, hypericl, encoders, exp_scripts, hand_estimation}` and their dependencies in `pyproject.toml` (jax, flax, transformers, deepspeed, diffusers, tensorflow, ...).
+- One-off loaders and converters: `lerobot_dataset/agibot/`, `lerobot_xskill_task_dataset.py`, `lerobot_self_prompt_dataset.py`.
+- Hardware / one-off scripts: `scripts/{gr00t_*, graspnet_*, single_camera_cloudpoint*, camera_cloudpoint_realman_microwave_ask, view_pcd}.py`, `mani_skill/examples/motionplanning/maniskill_graspnet_pose.py`, `mani_skill/examples/motionplanning/widowxai/test_simple_motion.py` (hard-coded `/home` paths), `mani_skill/examples/demo_repley_action_vis.py` (hard-coded path), `examples/tutorials/1_quickstart.ipynb` (stock ManiSkill notebook with saved outputs, 17 MB).
+
+## What was added
+
+- `imitator/` (the 2.0 platform layer, formerly `imsim`): dual-arm embodiments, contract-judged tasks, data engine, verification, cloth bridge, tactile pads, Newton camera. See `PLATFORM.md`.
+- `veritask/` (success contracts and their audit tools). See `VERITASK.md`.
+- `tests/` (`tests/imitator`, `tests/veritask`).
+
+## Changes to the fork itself (`mani_skill/`)
+
+Only one change: `mani_skill/envs/sapien_env.py` (and `sim2real_env.py`) read `controller.sets_target_qpos/qvel`, which
+the fork's controllers never define (they were added in ManiSkill 3.0.1). Single-robot GPU simulation therefore raised
+AttributeError; it now defaults to applying both targets. Multi-robot envs (all 1.0 tasks) never took this branch, so
+their behaviour is unchanged.
+
+## How `imsim` was ported to the fork (ManiSkill 3.0.0b21 instead of 3.0.1)
+
+| difference | handling |
+|---|---|
+| `parse_backend_device_id` does not exist in the fork | the render-backend patch is skipped (`imitator/compat.py`) |
+| the fork's `PDJointPosMimicControllerConfig` has no `mimic` map | ManiSkill 3.0.1's mimic controller is vendored (`imitator/embodiments/controllers.py`) |
+| the fork's `TableSceneBuilder` is the RoboTwin-style table (top at 0.725 m, needs a render system) | the single-arm Panda tasks use ManiSkill 3.0.1's stock builder (`imitator/envs/stock_table.py`) |
+| the fork's `PandaArmMotionPlanningSolver` has a different API, `base_motionplanner` is missing | ManiSkill 3.0.1's planner stack is vendored (`imitator/planning/ms_planner/`) |
+| the fork's Panda has no `tcp_pose` | added to the cloth Panda agent |
+| `import mani_skill.utils.x as y` resolves `mani_skill.utils` to the tabletop `utils` package in the fork | `from ... import` forms are used instead |
+| the fork has no stock tabletop tasks (PickCube, ...) | the ten Panda wrappers of those tasks register only if the stock tasks exist; their tests skip |
+| robot meshes were absolute paths into a local research folder | the needed source files are vendored in `imitator/assets/embodiments/_src/` (licenses in `NOTICE.md`), URDF paths are relative |
+| hard-coded project paths | `IMITATOR_OUT`, `IMITATOR_SAPIEN_HOME`, `MS_ASSET_DIR` (`imitator/paths.py`) |
+
+Parity check (same scripted behaviours and seeds, contract verdicts compared episode by episode, ManiSkill 3.0.1 +
+imsim vs this branch): DualCubePlace on all four gripper embodiments, DualCubePlace `hold`, DualHandover, DualStack,
+DualDrawer, DualLiftBox, DualPegInHole, RingOnPeg (`expert`, `held`), MugOnHook (`expert`, `on_tip`) on CPU; FoldTowel
+and DualFoldTowel (Newton cloth, GPU) and batched GPU DualCubePlace (4 envs x 4 seeds). All verdicts identical.

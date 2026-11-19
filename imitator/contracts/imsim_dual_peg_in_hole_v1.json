@@ -1,0 +1,244 @@
+{
+ "schema_version": "0.3",
+ "task_id": "imsim_dual_peg_in_hole_v1",
+ "protocol": "v3",
+ "instruction": "Left arm: lift the blue holed block by its handle and hold it up. Right arm: put the red peg into the block's hole and let go of it, then move away. The left arm keeps holding the block.",
+ "outcome": [
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.008,
+   "units": "m",
+   "args": {
+    "signal": "peg_radial_m",
+    "window": 20
+   },
+   "real_measurement": "In the hole: the peg's bottom centre within 8 mm of the hole axis (block frame) at every judged step (hole clearance 5 mm per side). Real world: pose tracking of peg and block."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "signal": "peg_height_m",
+    "window": 20
+   },
+   "real_measurement": "Inserted: the peg's bottom centre within 1 cm of the hole floor (>= 3.4 cm of the 4.4 cm hole) at every judged step. Real world: pose tracking / depth gauge mark on the peg."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 15.0,
+   "units": "deg",
+   "args": {
+    "signal": "peg_hole_tilt_deg",
+    "window": 20
+   },
+   "real_measurement": "Aligned: peg axis within 15 deg of the hole axis (a peg standing in the hole leans at most ~13 deg). Real world: pose tracking."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "peg_block_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Supported by the block: peg-block contact impulse > 0 in every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_peg_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "The peg does not touch the table."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "arm0_block_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "Held by the left arm: left robot-block contact impulse > 0 in every judged step. Real world: left gripper current / F-T."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.0,
+   "units": "N s",
+   "args": {
+    "signal": "table_block_impulse_Ns",
+    "window": 20
+   },
+   "real_measurement": "The block is off the table (no table-block contact in the judged window)."
+  },
+  {
+   "metric": "trace.window_min",
+   "op": ">=",
+   "threshold": 0.015,
+   "units": "m",
+   "args": {
+    "signal": "block_bottom_dz_m",
+    "window": 20
+   },
+   "real_measurement": "Held up: the block's lowest corner >= 1.5 cm above the table at every judged step."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.005,
+   "units": "m",
+   "args": {
+    "signal": "grip_cmd_gap_m",
+    "window": 20
+   },
+   "real_measurement": "Commanded vs actual opening (v3.2, E24c fix 3): for every arm whose gripper is within 3 cm of a judged object, measured opening minus the free-space opening of its current gripper command <= 5 mm at every judged step (a gripper still closing on, or propped open by, something fails). Real world: gripper encoder vs command."
+  },
+  {
+   "metric": "aftermath.retreat_object_disp",
+   "op": "<=",
+   "threshold": 0.01,
+   "units": "m",
+   "args": {
+    "retreat_m": 0.03,
+    "retreat_s": 0.5,
+    "hold_s": 0.5,
+    "near_m": 0.03
+   },
+   "real_measurement": "Consequence test after the judged window (protocol v3.1/v3.2): every arm whose gripper is within 3 cm of the peg retracts its TCP 3 cm along its approach axis in 0.5 s with its last gripper command unchanged, then holds 0.5 s; the peg must move <= 1 cm. Real world: same motion, tracked pose."
+  },
+  {
+   "metric": "trace.window_max",
+   "op": "<=",
+   "threshold": 0.02,
+   "units": "m/s",
+   "args": {
+    "signal": "objs_speed",
+    "window": 20
+   },
+   "real_measurement": "Settled: the fastest bounding-box corner of every judged object moves <= 2 cm/s at every judged step, speed from positions (v3.2, E24c fix 1). Real world: frame differencing of the tracked pose."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "block_x",
+    "signals": [
+     "block_x",
+     "block_y",
+     "block_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the block centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  },
+  {
+   "metric": "trace.window_disp",
+   "op": "<=",
+   "threshold": 0.002,
+   "units": "m",
+   "args": {
+    "signal": "peg_x",
+    "signals": [
+     "peg_x",
+     "peg_y",
+     "peg_z"
+    ],
+    "window": 20
+   },
+   "real_measurement": "Stays put: the peg centre moves <= 2 mm over the judged window. Real world: tracked pose, 1 s."
+  }
+ ],
+ "require_released": true,
+ "release": {
+  "contact_signals": [
+   "robot_peg_impulse_Ns"
+  ],
+  "max_impulse_Ns": 0.0,
+  "enclosure_signals": [
+   "peg_enclosure_m"
+  ],
+  "enclosure_margin_m": 0.002
+ },
+ "settle_seconds": 1.0,
+ "settle": {
+  "hold": "A",
+  "max_seconds": 5.0,
+  "window_seconds": 1.0,
+  "quiet_steps": 10,
+  "quiet_max": {
+   "objs_speed": 0.02
+  },
+  "quiet_disp": [
+   {
+    "signals": [
+     "block_x",
+     "block_y",
+     "block_z"
+    ],
+    "max": 0.001
+   },
+   {
+    "signals": [
+     "peg_x",
+     "peg_y",
+     "peg_z"
+    ],
+    "max": 0.001
+   }
+  ],
+  "robot_speed_signal": "robot_qvel_max",
+  "robot_speed_max": 0.01
+ },
+ "counterexamples": [
+  {
+   "name": "expert",
+   "description": "positive control: left lifts the block 3.5 cm and holds it; right picks the peg, inserts it along the hole axis to 4 mm above the floor, opens, backs off, goes home",
+   "expected": true,
+   "generator": "imsim.planning.dual_peg_in_hole.run(variant='expert')"
+  },
+  {
+   "name": "hold_peg",
+   "description": "as the expert, but the right arm never opens (peg inside the hole, still in its gripper)",
+   "expected": false,
+   "generator": "imsim.planning.dual_peg_in_hole.run(variant='hold_peg')"
+  },
+  {
+   "name": "peg_at_entrance",
+   "description": "the right arm holds the peg with its bottom 1 cm above the hole mouth (not inserted)",
+   "expected": false,
+   "generator": "imsim.planning.dual_peg_in_hole.run(variant='peg_at_entrance')"
+  },
+  {
+   "name": "block_on_table",
+   "description": "the left arm never moves (block left on the table); the right arm inserts the peg, opens, backs off",
+   "expected": false,
+   "generator": "imsim.planning.dual_peg_in_hole.run(variant='block_on_table')"
+  },
+  {
+   "name": "no_op",
+   "description": "both arms stay at home",
+   "expected": false,
+   "generator": "imsim.planning.dual_peg_in_hole.run(variant='no_op')"
+  }
+ ],
+ "source": {
+  "benchmark": "imsim (E29b)",
+  "protocol": "v3 (veritask, unchanged) + imsim v3.2 signals (imsim/imsim/verify/v32.py): position-based speeds, all-link enclosure, retreat aftermath, commanded vs actual opening, 5 s settle cap",
+  "frozen": "E29b; see research/results/e29_platform/tasks/contract_manifest.json",
+  "task": "DualPegInHole-v1 (imsim/imsim/envs/dual_peg_in_hole.py)",
+  "released_code_predicate": "env info['success']: peg bottom centre within 8 mm of the hole axis and within 12 mm of the hole floor at the evaluated step (no release, no settle, nothing about the block being held)"
+ },
+ "notes": "Release over the peg only (contact with every robot link + all-link enclosure); the block is NOT released (it must be held by the left arm: arm0_block contact in every judged step, no table contact, >= 1.5 cm up). The retreat aftermath moves only arms whose gripper is within 3 cm of the PEG (recorder aftermath=['peg']); the left arm stays under hold A. Quiescence over block and peg."
+}

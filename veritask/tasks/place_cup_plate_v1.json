@@ -1,0 +1,40 @@
+{
+ "task_id": "place_cup_plate_v1",
+ "instruction": "Place both cups upright on the tray, then let go.",
+ "outcome": [
+  {
+   "metric": "trace.final", "op": "<=", "threshold": 15.0, "units": "deg", "args": {"signal": "cup1_tilt_deg", "window": 20},
+   "real_measurement": "Rationale: 'upright' = the cup's own up axis (model local +y, which is world +z at reset; the released code wrongly tests local z against world -x) within 15 deg of vertical, averaged over the last 1 s. A cup standing on a flat tray is at ~0-2 deg; lying on its side is ~90 deg; 15 deg leaves room for model asymmetry and the tray floor. Real world: fiducial or fitted cylinder axis from a calibrated RGB-D camera, angle to the table normal."
+  },
+  {
+   "metric": "trace.final", "op": "<=", "threshold": 15.0, "units": "deg", "args": {"signal": "cup2_tilt_deg", "window": 20},
+   "real_measurement": "As for cup 1 (cup 2 = 021_cup model 6, local +y up)."
+  },
+  {
+   "metric": "trace.final", "op": ">=", "threshold": 1.0, "units": "fraction of final steps", "args": {"signal": "cup1_on_tray", "window": 20},
+   "real_measurement": "Rationale: 'on the tray' = cup xy inside the tray's footprint (world AABB of its collision mesh) AND cup-tray contact force > 0.05 N, in every one of the last 20 control steps (1 s). Real world: top camera segments tray and cup base (cup-base centroid inside the tray polygon) plus a scale/load cell under the tray showing the cup's weight."
+  },
+  {
+   "metric": "trace.final", "op": ">=", "threshold": 1.0, "units": "fraction of final steps", "args": {"signal": "cup2_on_tray", "window": 20},
+   "real_measurement": "As for cup 1."
+  },
+  {
+   "metric": "trace.final", "op": "<=", "threshold": 0.02, "units": "m/s", "args": {"signal": "cup_max_speed", "window": 20},
+   "real_measurement": "Rationale: settled = both cups at rest (mean of max cup speed over the last 1 s <= 2 cm/s), so a cup still rolling/sliding is not judged. Real world: frame differencing of the tracked cup poses over 1 s."
+  }
+ ],
+ "require_released": true,
+ "settle_seconds": 1.0,
+ "counterexamples": [
+  {"name": "place_then_knock_over", "description": "official placement, then each cup is swept over (E1)", "expected": false, "generator": "e1_cup_plate.place_then_knock_over"},
+  {"name": "no_op", "description": "both arms hold still", "expected": false, "generator": "e1_cup_plate.no_op"},
+  {"name": "expert", "description": "positive control: official _036 solution", "expected": true, "generator": "imitator.solutions._036_place_cup_plate"},
+  {"name": "place_upright_reimpl", "description": "positive control: re-implemented official placement", "expected": true, "generator": "e1_cup_plate.place_upright_reimpl"}
+ ],
+ "source": {
+  "benchmark": "imitator", "task": "_036_place_cup_plate (TwoRobotPlaceCupPlate-v1, L0)",
+  "released_code_predicate": "success = both cups' xy within 0.15 m of the tray centre; is_cup_*_upright (local z vs world -x/+x) computed, unused",
+  "e1_result": "research/results/e1/place_cup_plate_knock_f0.95_10seeds.json"
+ },
+ "notes": "released = neither cup is_grasping by either arm over the final 10 control steps."
+}

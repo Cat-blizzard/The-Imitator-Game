@@ -1,0 +1,204 @@
+{
+ "schema": "imsim.embodiment_calibration/1",
+ "name": "f1",
+ "created": "2026-11-17 02:53:36",
+ "source": "card F1 (research/results/f1_embodiment_cards); research/scripts/f1_calibrate.py, f1_report.py",
+ "usage": "imsim.make(task, embodiment, sim='cpu', embodiment_calibration='f1')",
+ "note": "arms whose calibrated actuator passed the held-out + transfer test; arms not listed keep the imsim defaults",
+ "arms": {
+  "piper": {
+   "level": 2,
+   "variant": "pd",
+   "arm": {
+    "joints": [
+     "joint1",
+     "joint2",
+     "joint3",
+     "joint4",
+     "joint5",
+     "joint6"
+    ],
+    "stiffness": [
+     316227.7660168379,
+     9907.46861997604,
+     2486.8264100347346,
+     37969.5346056641,
+     316227.7660168379,
+     55568.987967105284
+    ],
+    "damping": [
+     0.5339364529038869,
+     9.693388113346726,
+     6.154390536456406,
+     0.5339364529038869,
+     9.693388113346726,
+     32.07603051463746
+    ],
+    "force_limit": [
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0
+    ],
+    "action_delay_s": [
+     0.0197678180411458,
+     0.038211126113310456,
+     0.01892123743891716,
+     0.0197678180411458,
+     0.028367376113310454,
+     0.04679703273810446
+    ],
+    "prefilter_tau_s": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "gravity": false
+   },
+   "l2_test_passed": true,
+   "source_robot": "piper",
+   "fit": {
+    "dataset": "DRMNmadhan/piper_pickdrop_200",
+    "license": "apache-2.0",
+    "fps": 30.0,
+    "sim_freq": 120.0,
+    "train_segments": 43,
+    "train_frames": 9130
+   },
+   "heldout": {
+    "rmse_default_rad": [
+     0.005607521757563616,
+     0.011352139204640337,
+     0.008598156572605773,
+     0.012456573472544374,
+     0.006266861693817211,
+     0.003995056566906983
+    ],
+    "rmse_calibrated_rad": [
+     0.0010853474434199487,
+     0.004551898664434711,
+     0.0017974973545189863,
+     0.0011862941095851526,
+     0.0024768845110870446,
+     0.0025673197603549615
+    ],
+    "mean_default": 0.008046051544679715,
+    "mean_calibrated": 0.002277540307233467,
+    "n_segments": 33,
+    "n_frames": 7604
+   },
+   "transfer": {
+    "Ishan-Axibo__piperx_fold:left": {
+     "default": 0.009813643746875428,
+     "calibrated": 0.007703359994565857
+    },
+    "Ishan-Axibo__piperx_fold:right": {
+     "default": 0.012767001781024788,
+     "calibrated": 0.009400991222039983
+    }
+   },
+   "notes": "gripper not calibrated (level 3 needs a real robot); fitted on free-space motion only",
+   "posthoc": false
+  },
+  "xarm6_robotiq": {
+   "level": 0,
+   "variant": "pd_lpf_grav",
+   "arm": {
+    "joints": [
+     "joint1",
+     "joint2",
+     "joint3",
+     "joint4",
+     "joint5",
+     "joint6"
+    ],
+    "stiffness": [
+     5666.57037030162,
+     23050.895523083116,
+     46014.18564783622,
+     298216.21884821926,
+     14544.131827134894,
+     14550.963132499353
+    ],
+    "damping": [
+     3.162277660168379,
+     26.347734223156902,
+     2.8978348784950634,
+     601.055400636885,
+     4.17583446070561,
+     2.8978348784950634
+    ],
+    "force_limit": [
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0
+    ],
+    "action_delay_s": [
+     0.1195303669013083,
+     0.09073819546028972,
+     0.0718001168128103,
+     0.12617219472303987,
+     0.08323819546028971,
+     0.0671126168128103
+    ],
+    "prefilter_tau_s": [
+     0.037090435512363906,
+     0.058127197958528984,
+     0.07326620802283287,
+     0.22971734711900352,
+     0.055314697958528995,
+     0.09295370802283286
+    ],
+    "gravity": true
+   },
+   "l2_test_passed": true,
+   "source_robot": "xarm6",
+   "fit": {
+    "dataset": "Shizhec/xarm6_pick_toy_to_bowl_joint_v3",
+    "license": "apache-2.0",
+    "fps": 30.0,
+    "sim_freq": 120.0,
+    "train_segments": 65,
+    "train_frames": 9020
+   },
+   "heldout": {
+    "rmse_default_rad": [
+     0.00928566040121668,
+     0.008012010816971907,
+     0.00673610911013756,
+     5.265026044580195e-05,
+     0.006089580312272039,
+     0.0026237835349418254
+    ],
+    "rmse_calibrated_rad": [
+     0.0025438084792425886,
+     0.0018256938550049839,
+     0.001574753449151067,
+     0.0001221558141366337,
+     0.0015325643494227734,
+     0.0007649249818838772
+    ],
+    "mean_default": 0.005466632405997635,
+    "mean_calibrated": 0.0013939834881403204,
+    "n_segments": 46,
+    "n_frames": 6670
+   },
+   "transfer": {
+    "Shizhec__xarm6_pick_toy_to_bowl_joint_v2:arm": {
+     "default": 0.005530635215936449,
+     "calibrated": 0.0013249578069391098
+    }
+   },
+   "notes": "gripper not calibrated (level 3 needs a real robot); fitted on free-space motion only",
+   "posthoc": false
+  }
+ }
+}

@@ -30,7 +30,7 @@ For example:
 | L2 | `TwoRobotStirSpoon-v1` |
 | L3 | `TwoRobotStirSpoonL3-v1` |
 
-Names such as `L2_TwoRobotStirSpoon-v1` are dataset and trajectory aliases, not Gymnasium environment IDs. The complete alias mapping is stored in [`examples/baselines/lerobot_dataset/task_mapping.json`](../examples/baselines/lerobot_dataset/task_mapping.json).
+Names such as `L2_TwoRobotStirSpoon-v1` are dataset and trajectory aliases, not Gymnasium environment IDs. The complete alias mapping is stored in [`imitator/dataset/task_mapping.json`](../imitator/dataset/task_mapping.json).
 
 ## Components
 
@@ -272,7 +272,7 @@ Inspect the planned task-level jobs without launching simulation:
 python scripts/collect_data.py --demos-dir demos --dry-run
 ```
 
-## Convert demonstrations to LeRobot and load them in the baselines
+## Convert demonstrations to LeRobot and load them for training
 
 The training data path after simulation is:
 
@@ -285,11 +285,11 @@ motion-planning H5
   -> baseline-specific adapter
 ```
 
-The shared contract is implemented in [`examples/baselines/lerobot_dataset`](../examples/baselines/lerobot_dataset). The baselines share the converted datasets, task mapping, split files, and normalized sample fields. Architectures that need a different tensor layout add a thin adapter around this contract; the simulator data does not need to be converted again for each model.
+The shared contract is implemented in [`imitator/dataset`](../imitator/dataset). Policies (the 1.0 baselines on `main`, or your own) share the converted datasets, task mapping, split files, and normalized sample fields. Architectures that need a different tensor layout add a thin adapter around this contract; the simulator data does not need to be converted again for each model.
 
 ### Converter input contract
 
-[`h5_to_lerobot.py`](../examples/baselines/lerobot_dataset/h5_to_lerobot.py) reads the following fields from each trajectory group in the H5 file:
+[`h5_to_lerobot.py`](../imitator/dataset/h5_to_lerobot.py) reads the following fields from each trajectory group in the H5 file:
 
 | H5 field | Required shape | Meaning |
 | --- | --- | --- |
@@ -312,7 +312,7 @@ The companion JSON is not read during LeRobot conversion. It should still be ret
 First inspect all H5 files that the recursive conversion would process:
 
 ```bash
-python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
+python -m imitator.dataset.h5_to_lerobot \
   --input demos \
   --output-dir demos/imitator_data \
   --recursive \
@@ -323,7 +323,7 @@ python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
 Then convert them:
 
 ```bash
-python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
+python -m imitator.dataset.h5_to_lerobot \
   --input demos \
   --output-dir demos/imitator_data \
   --recursive \
@@ -361,9 +361,9 @@ There are `N+1` observations but only `N` simulator actions. The converter repea
 
 Conversion creates the physical datasets; the JSON configuration files decide which of them enter a particular experiment:
 
-- [`task_mapping.json`](../examples/baselines/lerobot_dataset/task_mapping.json) maps each human demonstration ID to the corresponding L0-L3 simulation repository IDs. For example, `human_H1` is paired with all four `TwoRobotStirSpoon` levels.
-- [`config/exp_configs`](../examples/baselines/lerobot_dataset/config/exp_configs) contains the released 15-, 30-, and 45-task training splits and the seen/unseen evaluation splits.
-- [`task_desc`](../examples/baselines/lerobot_dataset/task_desc) contains the human, simulation, and robot language descriptions used by language-conditioned modes.
+- [`task_mapping.json`](../imitator/dataset/task_mapping.json) maps each human demonstration ID to the corresponding L0-L3 simulation repository IDs. For example, `human_H1` is paired with all four `TwoRobotStirSpoon` levels.
+- [`config/exp_configs`](../imitator/dataset/config/exp_configs) contains the released 15-, 30-, and 45-task training splits and the seen/unseen evaluation splits.
+- [`task_desc`](../imitator/dataset/task_desc) contains the human, simulation, and robot language descriptions used by language-conditioned modes.
 
 A simulation config entry has the following form:
 
@@ -380,10 +380,10 @@ A simulation config entry has the following form:
 
 ### Unified loader interface
 
-[`build_lerobot_dataset`](../examples/baselines/lerobot_dataset/lerobot_dataloader.py) is the common single-source loader. [`HumanSimPairedDataset`](../examples/baselines/lerobot_dataset/lerobot_paired_dataset.py) uses it for both sides of a human-simulation pair and applies the task mapping:
+[`build_lerobot_dataset`](../imitator/dataset/lerobot_dataloader.py) is the common single-source loader. [`HumanSimPairedDataset`](../imitator/dataset/lerobot_paired_dataset.py) uses it for both sides of a human-simulation pair and applies the task mapping:
 
 ```python
-from examples.baselines.lerobot_dataset.lerobot_paired_dataset import (
+from imitator.dataset.lerobot_paired_dataset import (
     HumanSimPairedDataset,
     PairedDatasetConfig,
 )
@@ -392,19 +392,19 @@ config = PairedDatasetConfig(
     human_root="demos/demo_data",
     sim_root="demos/imitator_data",
     human_dataset_file=(
-        "examples/baselines/lerobot_dataset/config/exp_configs/"
+        "imitator/dataset/config/exp_configs/"
         "human_train_config_15.json"
     ),
     sim_dataset_file=(
-        "examples/baselines/lerobot_dataset/config/exp_configs/"
+        "imitator/dataset/config/exp_configs/"
         "sim_train_config_15.json"
     ),
-    task_mapping_file="examples/baselines/lerobot_dataset/task_mapping.json",
+    task_mapping_file="imitator/dataset/task_mapping.json",
     human_task_description_file=(
-        "examples/baselines/lerobot_dataset/task_desc/human_desc.json"
+        "imitator/dataset/task_desc/human_desc.json"
     ),
     sim_task_description_file=(
-        "examples/baselines/lerobot_dataset/task_desc/sim_desc.json"
+        "imitator/dataset/task_desc/sim_desc.json"
     ),
     split="train",
     cameras=["zed2i"],
