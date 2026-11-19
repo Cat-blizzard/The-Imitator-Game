@@ -543,6 +543,81 @@ the candidate and use a new scene-seed allocation for a paired 8/16 comparison
 before changing the evaluated inference setting. Same-scene multiple-goal
 following remains a separate question.
 
+## 9k paired execution-window validation on new scenes
+
+At source `b71ddf85f7a32442a8654a046882525327f5ba64`, both fixed 9k policies
+complete execute8 and execute16 on robot seeds **25000–25019 per task**. A bounded
+scan of retained local metadata and commands finds no prior scene-seed use in
+this range; its scope and omissions are retained in the preflight audit. The
+experiment adds **160 episodes / 32,000 control steps**, each allocated once.
+Human clips remain development episode 4 (H31/H8), with the same weights,
+training-only normalizers, native profiles, RGB/qpos, 16-action predictions,
+200-step horizon, 20/100 Hz rates and official scoring. No training, checkpoint
+reselection, failed-case retry or consumed-seed rerun occurs.
+
+| Condition | Actions executed per prediction | Pill final success | Basket final success | Macro final success |
+| --- | ---: | ---: | ---: | ---: |
+| Human video, 9k | 8 | 20/20 | 20/20 | 100% |
+| Human video, 9k | 16 | 20/20 | 20/20 | 100% |
+| Constant zero, 9k | 8 | 18/20 | 20/20 | 95% |
+| Constant zero, 9k | 16 | 20/20 | 20/20 | 100% |
+
+Once-success and final success agree in every case. Both execute8 constant
+failures time out; all other cases succeed. There are **zero interface errors**.
+All eighty within-model window pairs have bitwise-identical initial physical
+states, public RGB/qpos and first eight executed actions. All forty distinct
+task/seed scenes also have identical initial physical/public states across
+models. The independent raw-result audit verifies all 160 allocations, official
+success events and 32,000 finite action rows; ordinary clamp, recorded execution
+and H5 actions agree bitwise. Arm-coordinate clipping is zero. Maximum gripper
+excess is 0.0769407 in normalized command units, handled by the unchanged clamp.
+The per-task Wilson 95% intervals are approximately [83.9%, 100%] for 20/20 and
+[69.9%, 97.2%] for 18/20.
+
+The two newly improved cases are constant pill seeds 25010 and 25013:
+
+| Sampled milestone, both arms | Seed25010 execute8 → 16 | Seed25013 execute8 → 16 |
+| --- | --- | --- |
+| TCP lift by 8 cm from first grasp | 111 → 103 | 106 → 107 |
+| TCP advance 5 cm toward the goal | 194 → 132 | Not reached by 200 → 134 |
+| Delay from lift marker to advance | 83 → 29 steps | At least 94 → 27 steps |
+| First official success | None → 141 | None → 143 |
+
+At the execute8 horizon both cases still grasp both bottles outside their
+regions. Execute16 advances transport and completes placement; both objects
+are in-region and ungrasped by steps 153 and 156 respectively. The second case
+does not lift earlier, which distinguishes improved post-lift progression from
+simply faster initial motion. The 8 cm/5 cm markers are descriptive and do not
+alter scoring or impose a quality gate. A missing crossing is censored at step
+200, rather than treated as a completed transport time.
+
+No previously successful case becomes a final failure. Among the 78 pairs
+successful under both windows, first official success occurs earlier with
+execute16 in 57, later in 19 and at the same step in two. The median step
+changes (execute16 minus execute8) are video pill −11, video basket −7,
+constant pill −22.5 and constant basket **+6**. Constant basket succeeds later
+in 16/20 cases (mean +4.95 steps), so a longer window is not uniformly faster.
+All eighty execute16 episodes finally have both objects in their regions and
+ungrasped, compared with 76/80 execute8 episodes. This is a separate physical
+observation; the two execute8 cases that succeed while still grasped remain
+official successes.
+
+Together with the development intervention, this batch supports **execute16
+as the preferred setting for these fixed 9k two-task pilot policies**: it
+resolves two additional constant-policy transport timeouts without a final-SR
+regression here. Generic evaluator defaults and historical eight-step commands
+remain unchanged. This recommendation is limited to these policies and tasks;
+twenty scenes and one training seed do not establish a universally optimal
+window. The previous eighty-episode record remains 95% per model, and its four
+specific failures were not rerun or reclassified as fixed.
+
+At execute16 both models now have the same success count. These task scenes
+therefore still do not establish a benefit from following the demonstration's
+goal. The next learning question is whether different valid demonstrations
+select different executable goals in the **same scene**. The current batch uses
+known development clips and does not establish new-video generalization or a
+full TIG result. No additional training or rollout batch is started here.
+
 ## Retained evidence
 
 Raw evidence stays outside Git under
@@ -574,6 +649,10 @@ protocol and reference/weight audit, both launcher receipts, twelve new
 trajectories and videos, `paired-results.json`, `stage-comparison.json`, and
 the independent result audit. The original execute8 references are retained
 under `budget-12000/`; their records and scores are unchanged.
+The `execution-window-9k-fresh-20261119/` directory retains the new preflight and
+frozen protocol, both launcher receipts, all 160 trajectories/videos and action
+diagnostics, `paired-results.json`, compact stage comparisons with the two
+failed/improved pairs, and `independent-result-audit.json`.
 The compact JSON beside this report preserves
 portable identities and per-seed outcomes; datasets and weights are not included
 in the fork. Original ARX single-task results remain in

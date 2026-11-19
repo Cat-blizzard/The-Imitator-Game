@@ -231,6 +231,13 @@ identities and machine-readable results.
   Initial states and first eight actions match in all twelve pairs. No prior
   success regresses; execute16 remains a development candidate rather than a
   replacement for the recorded execute8 scene-regression result.
+- [x] Validate the fixed 9k execute8/16 comparison on twenty new scene seeds per
+  task: 160 episodes, zero interface errors. Video is 20/20 per task with either
+  window; constant pill improves 18/20→20/20 and basket remains 20/20. All eighty
+  window pairs and forty scenes pass initial-state/action checks. No success
+  regresses, although constant basket's median first success is six steps later.
+  Execute16 is preferred for these pilot policies; generic defaults and the
+  earlier eighty-episode result stay unchanged.
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -275,11 +282,12 @@ identities and machine-readable results.
      unchanged clips, horizon and scoring. All new cases succeed; constant7001
      advances through lift and transport instead of timing out. Seven previous
      successes occur earlier, three later by one or two steps, one unchanged.
-   - [ ] Freeze execute16 as a development candidate and compare execute8/16
-     on a new scene-seed allocation, keeping both9k weights and human identity
-     fixed. Preserve the earlier80 outcomes. Do not claim the unrerun video
-     approach failures are fixed; use separate development evidence if approach
-     robustness needs changes.
+   - [x] Freeze execute16 and validate execute8/16 on seeds25000–25019, keeping
+     both 9k weights and human identity fixed. All 160 allocations and 32,000 steps
+     complete. Constant25010/25013 improve from timeout to success; no prior
+     success regresses. Preserve the earlier80 outcomes and unrerun video
+     approach failures. Execute16 is preferred for this pilot, with the basket
+     timing tradeoff reported; no retraining or generic default change occurs.
    - [ ] Test demonstration following with the same valid initial scene and
      multiple executable goals. Different task scenes and cross-task video swaps
      do not establish a reliable video benefit or semantic necessity.

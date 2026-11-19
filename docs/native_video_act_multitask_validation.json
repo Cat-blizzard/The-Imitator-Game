@@ -4336,5 +4336,2352 @@
     "new_sampled_grasp_loss_outside_region_events": 0,
     "interpretation": "Execute16 improves constant pill7001 from timeout to success143, with earlier lift and subsequent transport. All prior11 successes remain successful; timing is not uniformly faster. Supports an execution-window contribution on these development cases, not universal optimality or a video benefit. Prior video approach failures were not rerun here and are not declared fixed.",
     "next_step": "Keep both9k checkpoints and old evaluated execute8 results fixed. Execute16 is a development candidate; freeze it before a new-seed paired8/16 validation rather than reuse the consumed80 scene cases. Same-scene multiple-goal following remains separate. No automatic extra rollout batch or retraining."
+  },
+  "execution_window_9k_fresh_scene_regression": {
+    "status": "completed",
+    "source_commit": "b71ddf85f7a32442a8654a046882525327f5ba64",
+    "runtime_same_as_original_pilot": true,
+    "runtime_implementation_commit": "376c5ecce1b6cf4cc8c8ef1ba8dfe449acc9f904",
+    "evidence_subdirectory": "execution-window-9k-fresh-20261119",
+    "evidence_sha256": {
+      "protocol.json": "6859011300bb2a51ebc9bb3b9605e08fbb9e1195a04a041842207453d6241f98",
+      "preflight-audit.json": "df056bd012722ab2875e5ca859af44ebceef6a91d5463accac4ec574e8473651",
+      "regression-seeds.json": "31a55378ef759f364b3eb891848489eebf43012f87ff1c7340af84992663cda6",
+      "run-paired-windows.py": "e137a9edb4f79a4a51272cb38f3dac3e97417c51def414a91daa80f962b5c072",
+      "audit-paired-windows.py": "e9e4bad0993134e6d13861df952484527b3d15de8605bff0d7c42328e30cc6d0",
+      "paired-results.json": "c915c934f054bd35abb937e7e5a7598e502e39731dd002125ed10744d0c30b81",
+      "analyze-stage-comparison.py": "9454cdcf114d87d2653ed0c111f21fe9bc559054684d1760a118b919207ed6e8",
+      "stage-comparison.json": "3f88f176fd84a8819ba0d1f2d4f8d09fc1c86d233cee28c042b33887fc491ea3",
+      "stage-comparison-selftest.log": "8c2bcd391f02ce033e430fad3f7f0a3dfa27f17b3eda0ef7dd8a9adadcf27749",
+      "independent-audit.py": "c9b1931414a1aae7bc78defcf87c523843df4f73b9c3d3053a55b7aabb4c054b",
+      "independent-result-audit.json": "56e63c92a3b3167bed057c690b24e34369a582adbd7a306d9cc2f93c4c2a6201",
+      "evaluation-video-receipt.json": "773046085e60ec70063158c5cb80aeb12878d9cafb669bc09243ef908bb9eabb",
+      "evaluation-constant-receipt.json": "5fb1f6314c536807b5d85f0cc8e3eb194b871dfc1c59a753e5e8e8adfcab7906"
+    },
+    "scope": "Paired execution-window validation on previously unused retained-local robot scene seeds. Same development human episode4; not new-human-video generalization or full TIG benchmark.",
+    "fixed_protocol": {
+      "models": {
+        "video": {
+          "checkpoint": "../budget-12000/training-video/checkpoint_step_009000.pt",
+          "sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390"
+        },
+        "constant": {
+          "checkpoint": "../budget-12000/training-constant/checkpoint_step_009000.pt",
+          "sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef"
+        }
+      },
+      "selected_update_step": 9000,
+      "robot_seeds": [
+        25000,
+        25001,
+        25002,
+        25003,
+        25004,
+        25005,
+        25006,
+        25007,
+        25008,
+        25009,
+        25010,
+        25011,
+        25012,
+        25013,
+        25014,
+        25015,
+        25016,
+        25017,
+        25018,
+        25019
+      ],
+      "tasks": {
+        "pill": {
+          "env_id": "TwoRobotPickPillToRegions-v1",
+          "human": "human_H31"
+        },
+        "basket": {
+          "env_id": "TwoRobotPickAppleBananaToBaskets-v1",
+          "human": "human_H8"
+        }
+      },
+      "human_role": "development",
+      "human_episode": 4,
+      "execute_windows": [
+        8,
+        16
+      ],
+      "prediction_steps": 16,
+      "max_episode_steps": 200,
+      "control_hz": 20,
+      "physics_hz": 100,
+      "attempts_per_case": 1,
+      "new_training_updates": 0,
+      "state_dim": 16,
+      "action_dim": 14
+    },
+    "new_episodes": 160,
+    "new_control_steps": 32000,
+    "baseline_episodes_reused": 0,
+    "interface_errors": 0,
+    "history_check": {
+      "selected_seed_count": 20,
+      "no_observed_retained_local_seed_conflict": true,
+      "scope": "Bounded retained-local metadata/commands, retained filenames and readable selected shell history; current allocation excluded. Scope and omissions retained in preflight audit."
+    },
+    "results": {
+      "video": {
+        "8": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 20
+            }
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 20
+            }
+          }
+        },
+        "16": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 20
+            }
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 20
+            }
+          }
+        }
+      },
+      "constant": {
+        "8": {
+          "pill": {
+            "episodes": 20,
+            "successes": 18,
+            "success_once": 18,
+            "sr": 0.9,
+            "wilson95": [
+              0.6989663547715196,
+              0.9721335187862309
+            ],
+            "timeouts": 2,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 18,
+              "transport_or_release_incomplete": 2
+            }
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 20
+            }
+          }
+        },
+        "16": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 20
+            }
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0,
+            "failure_stages": {
+              "success": 20
+            }
+          }
+        }
+      }
+    },
+    "macro_final_success": {
+      "video": {
+        "8": 1.0,
+        "16": 1.0
+      },
+      "constant": {
+        "8": 0.95,
+        "16": 1.0
+      }
+    },
+    "paired_window_outcomes": {
+      "video": {
+        "pill": {
+          "both_success": 20,
+          "execute8_only": 0,
+          "execute16_only": 0,
+          "both_failure": 0
+        },
+        "basket": {
+          "both_success": 20,
+          "execute8_only": 0,
+          "execute16_only": 0,
+          "both_failure": 0
+        }
+      },
+      "constant": {
+        "pill": {
+          "both_success": 18,
+          "execute8_only": 0,
+          "execute16_only": 2,
+          "both_failure": 0
+        },
+        "basket": {
+          "both_success": 20,
+          "execute8_only": 0,
+          "execute16_only": 0,
+          "both_failure": 0
+        }
+      }
+    },
+    "paired_model_outcomes": {
+      "8": {
+        "pill": {
+          "both_success": 18,
+          "video_only": 2,
+          "constant_only": 0,
+          "both_failure": 0
+        },
+        "basket": {
+          "both_success": 20,
+          "video_only": 0,
+          "constant_only": 0,
+          "both_failure": 0
+        }
+      },
+      "16": {
+        "pill": {
+          "both_success": 20,
+          "video_only": 0,
+          "constant_only": 0,
+          "both_failure": 0
+        },
+        "basket": {
+          "both_success": 20,
+          "video_only": 0,
+          "constant_only": 0,
+          "both_failure": 0
+        }
+      }
+    },
+    "paired_success_timing": {
+      "video": {
+        "pill": {
+          "paired_final_successes": 20,
+          "execute16_minus8_first_success_steps": [
+            -1,
+            -15,
+            -6,
+            -39,
+            -20,
+            -15,
+            -2,
+            -8,
+            -30,
+            -2,
+            -17,
+            -16,
+            3,
+            -10,
+            -11,
+            3,
+            -40,
+            -11,
+            -15,
+            2
+          ],
+          "median_delta_steps": -11.0,
+          "mean_delta_steps": -12.5,
+          "execute16_earlier": 17,
+          "same_step": 0,
+          "execute16_later": 3
+        },
+        "basket": {
+          "paired_final_successes": 20,
+          "execute16_minus8_first_success_steps": [
+            -8,
+            -16,
+            -6,
+            -5,
+            -3,
+            0,
+            -5,
+            -4,
+            -7,
+            -5,
+            -5,
+            -14,
+            -8,
+            -17,
+            -7,
+            -8,
+            -5,
+            -11,
+            -7,
+            -9
+          ],
+          "median_delta_steps": -7.0,
+          "mean_delta_steps": -7.5,
+          "execute16_earlier": 19,
+          "same_step": 1,
+          "execute16_later": 0
+        }
+      },
+      "constant": {
+        "pill": {
+          "paired_final_successes": 18,
+          "execute16_minus8_first_success_steps": [
+            -19,
+            -13,
+            -26,
+            -36,
+            -53,
+            -16,
+            -46,
+            -29,
+            -5,
+            -21,
+            -12,
+            -24,
+            -6,
+            -2,
+            -31,
+            -7,
+            -25,
+            -27
+          ],
+          "median_delta_steps": -22.5,
+          "mean_delta_steps": -22.11111111111111,
+          "execute16_earlier": 18,
+          "same_step": 0,
+          "execute16_later": 0
+        },
+        "basket": {
+          "paired_final_successes": 20,
+          "execute16_minus8_first_success_steps": [
+            9,
+            1,
+            -3,
+            6,
+            7,
+            13,
+            16,
+            7,
+            11,
+            1,
+            9,
+            -7,
+            10,
+            1,
+            6,
+            -1,
+            2,
+            2,
+            9,
+            0
+          ],
+          "median_delta_steps": 6.0,
+          "mean_delta_steps": 4.95,
+          "execute16_earlier": 3,
+          "same_step": 1,
+          "execute16_later": 16
+        }
+      }
+    },
+    "pairs": [
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25000,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25001,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 147,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25002,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 140,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 134,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25003,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 172,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25004,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 151,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25005,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 148,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25006,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25007,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 137,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25008,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 164,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 134,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25009,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 134,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25010,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 156,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 139,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25011,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 148,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25012,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 135,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25013,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 123,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25014,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 143,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25015,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 135,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25016,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 172,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25017,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 147,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25018,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 146,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25019,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25000,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25001,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 144,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25002,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25003,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25004,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25005,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25006,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 137,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25007,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25008,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25009,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25010,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25011,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 144,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25012,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25013,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 146,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25014,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25015,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 138,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25016,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 127,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25017,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 144,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25018,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 136,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "seed": 25019,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 139,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25000,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 159,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 140,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25001,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 152,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 139,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25002,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 167,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 141,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25003,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 178,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 142,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25004,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 195,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 142,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25005,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 157,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 141,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25006,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 187,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 141,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25007,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 171,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 142,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25008,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 146,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 141,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25009,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 163,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 142,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25010,
+        "execute8": {
+          "success": false,
+          "success_once": false,
+          "first_success_step": null,
+          "failure_stage": "transport_or_release_incomplete"
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 141,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25011,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 152,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 140,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25012,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 164,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 140,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25013,
+        "execute8": {
+          "success": false,
+          "success_once": false,
+          "first_success_step": null,
+          "failure_stage": "transport_or_release_incomplete"
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 143,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25014,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 149,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 143,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25015,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 145,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 143,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25016,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 171,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 140,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25017,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 147,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 140,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25018,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 166,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 141,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25019,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 169,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 142,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25000,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 119,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25001,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25002,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25003,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 126,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25004,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 123,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25005,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 114,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 127,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25006,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 112,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25007,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 121,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25008,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 118,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25009,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25010,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 122,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25011,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 141,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 134,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25012,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 121,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25013,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25014,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 122,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 128,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25015,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 132,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25016,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 124,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 126,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25017,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 131,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 133,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25018,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 120,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 129,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "seed": 25019,
+        "execute8": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "execute16": {
+          "success": true,
+          "success_once": true,
+          "first_success_step": 130,
+          "failure_stage": null
+        },
+        "initial_state_and_public_observations_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true
+      }
+    ],
+    "paired_audit": {
+      "window_pairs": 80,
+      "cross_model_scenes": 40,
+      "all_window_s0_public_observations_bitwise_equal": true,
+      "all_first8_executed_actions_bitwise_equal": true,
+      "all_human_checkpoint_conditioning_identities_unchanged": true,
+      "all_cross_model_initial_states_bitwise_equal": true
+    },
+    "action_audit": {
+      "all_finite": true,
+      "all_clamp_and_h5_bitwise": true,
+      "arm_clipped_coordinates": 0,
+      "max_gripper_excess_normalized_command": 0.07694065570831299,
+      "coordinate_limits_all160": [
+        {
+          "index": 0,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint1",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.618000030517578,
+          "high": 2.618000030517578,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.051392812281847,
+          "requested_max": 1.310530662536621,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 1,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint2",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": 0.0,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": 0.7665407657623291,
+          "requested_max": 2.4470624923706055,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 2,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint3",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.697000026702881,
+          "high": 2.697000026702881,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.6680954694747925,
+          "requested_max": -0.25232207775115967,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 3,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint4",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.8320000171661377,
+          "high": 1.8320000171661377,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.0008935327059589326,
+          "requested_max": 0.0012371502816677094,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 4,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint5",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.2200000286102295,
+          "high": 1.2200000286102295,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.2671496570110321,
+          "requested_max": 1.0756736993789673,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 5,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint6",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -3.140000104904175,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.047343261539936066,
+          "requested_max": 1.304043173789978,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 6,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "gripper",
+          "kind": "gripper",
+          "unit": "normalized_controller_command",
+          "low": -1.0,
+          "high": 1.0,
+          "lower_clip_count": 1474,
+          "upper_clip_count": 12404,
+          "total_clip_count": 13878,
+          "requested_min": -1.076940655708313,
+          "requested_max": 1.0230638980865479,
+          "max_abs_excess_on_clipped": 0.07694065570831299
+        },
+        {
+          "index": 7,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint1",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.618000030517578,
+          "high": 2.618000030517578,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.3391402959823608,
+          "requested_max": 0.02527385950088501,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 8,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint2",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": 0.0,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": 0.7525759339332581,
+          "requested_max": 2.5029149055480957,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 9,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint3",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.697000026702881,
+          "high": 2.697000026702881,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.6242351531982422,
+          "requested_max": -0.24798238277435303,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 10,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint4",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.8320000171661377,
+          "high": 1.8320000171661377,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.0011109055485576391,
+          "requested_max": 0.0022299103438854218,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 11,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint5",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.2200000286102295,
+          "high": 1.2200000286102295,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.3686928153038025,
+          "requested_max": 1.0594406127929688,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 12,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint6",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -3.140000104904175,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.328074336051941,
+          "requested_max": 0.022695958614349365,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 13,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "gripper",
+          "kind": "gripper",
+          "unit": "normalized_controller_command",
+          "low": -1.0,
+          "high": 1.0,
+          "lower_clip_count": 560,
+          "upper_clip_count": 8022,
+          "total_clip_count": 8582,
+          "requested_min": -1.0588736534118652,
+          "requested_max": 1.0305802822113037,
+          "max_abs_excess_on_clipped": 0.058873653411865234
+        }
+      ]
+    },
+    "independent_result_audit_passed": true,
+    "first_official_success_timing_among_78_common_successes": {
+      "execute16_earlier": 57,
+      "execute16_later": 19,
+      "same_step": 2,
+      "constant_basket_later_cases": 16,
+      "constant_basket_mean_delta_steps": 4.95,
+      "constant_basket_median_delta_steps": 6
+    },
+    "physical_placed_and_ungrasped_at_end_per40": {
+      "video": {
+        "8": 39,
+        "16": 40
+      },
+      "constant": {
+        "8": 37,
+        "16": 40
+      }
+    },
+    "physical_status_is_not_official_scoring": true,
+    "official_success_with_final_grasp_under_execute8": [
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25004
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "seed": 25016
+      }
+    ],
+    "improved_constant_pill_stage_markers": [
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25010,
+        "paired_outcome": "execute16_only_success",
+        "execute8": {
+          "official_success_at_end": false,
+          "first_success_step": null,
+          "descriptive_status": "held_outside_goal_after_some_advance",
+          "sides": {
+            "left": {
+              "first_grasp_post_state": 83,
+              "final_grasped": true,
+              "final_in_region": false,
+              "first_in_region_and_ungrasped_post_state": null,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 111,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": 194,
+              "lift_to_5cm_advance_observed_steps": 83,
+              "lift_to_advance_right_censored_at_200": false
+            },
+            "right": {
+              "first_grasp_post_state": 83,
+              "final_grasped": true,
+              "final_in_region": false,
+              "first_in_region_and_ungrasped_post_state": null,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 111,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": 194,
+              "lift_to_5cm_advance_observed_steps": 83,
+              "lift_to_advance_right_censored_at_200": false
+            }
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "first_success_step": 141,
+          "descriptive_status": "official_success",
+          "sides": {
+            "left": {
+              "first_grasp_post_state": 82,
+              "final_grasped": false,
+              "final_in_region": true,
+              "first_in_region_and_ungrasped_post_state": 153,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 103,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": 132,
+              "lift_to_5cm_advance_observed_steps": 29,
+              "lift_to_advance_right_censored_at_200": false
+            },
+            "right": {
+              "first_grasp_post_state": 82,
+              "final_grasped": false,
+              "final_in_region": true,
+              "first_in_region_and_ungrasped_post_state": 153,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 103,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": 132,
+              "lift_to_5cm_advance_observed_steps": 29,
+              "lift_to_advance_right_censored_at_200": false
+            }
+          }
+        }
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "seed": 25013,
+        "paired_outcome": "execute16_only_success",
+        "execute8": {
+          "official_success_at_end": false,
+          "first_success_step": null,
+          "descriptive_status": "held_outside_goal_no_5cm_advance_on_at_least_one_arm",
+          "sides": {
+            "left": {
+              "first_grasp_post_state": 84,
+              "final_grasped": true,
+              "final_in_region": false,
+              "first_in_region_and_ungrasped_post_state": null,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 106,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": null,
+              "lift_to_5cm_advance_observed_steps": 94,
+              "lift_to_advance_right_censored_at_200": true
+            },
+            "right": {
+              "first_grasp_post_state": 84,
+              "final_grasped": true,
+              "final_in_region": false,
+              "first_in_region_and_ungrasped_post_state": null,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 106,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": null,
+              "lift_to_5cm_advance_observed_steps": 94,
+              "lift_to_advance_right_censored_at_200": true
+            }
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "first_success_step": 143,
+          "descriptive_status": "official_success",
+          "sides": {
+            "left": {
+              "first_grasp_post_state": 85,
+              "final_grasped": false,
+              "final_in_region": true,
+              "first_in_region_and_ungrasped_post_state": 156,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 107,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": 134,
+              "lift_to_5cm_advance_observed_steps": 27,
+              "lift_to_advance_right_censored_at_200": false
+            },
+            "right": {
+              "first_grasp_post_state": 86,
+              "final_grasped": false,
+              "final_in_region": true,
+              "first_in_region_and_ungrasped_post_state": 155,
+              "tcp_first_8cm_lift_from_first_grasp_post_state": 107,
+              "tcp_first_5cm_goal_direction_advance_at_or_after_lift_post_state": 134,
+              "lift_to_5cm_advance_observed_steps": 27,
+              "lift_to_advance_right_censored_at_200": false
+            }
+          }
+        }
+      }
+    ],
+    "descriptive_marker_contract": "As in the earlier development stage helper: first sampled grasp anchors +8cm TCP lift and +5cm XY progress along the initial object-to-goal direction. Markers are descriptive, never scoring or rejection gates. A censored delay is a lower bound to episode200, not a completed transport time.",
+    "inference_recommendation": "Prefer execute16 for these fixed9k two-task pilot policies. Generic defaults and historical eight-step results stay unchanged; no universal optimality claim.",
+    "interpretation": [
+      "Two constant pill timeouts become successful transport/placement under16; no final-SR regression in80 window pairs.",
+      "Constant basket has a timing tradeoff:16/20 successes later, median+6 steps, unchanged SR.",
+      "Under16 both models have equal SR; fixed task scenes do not establish semantic demonstration following or new-human-video generalization.",
+      "Earlier80 execute8 outcomes stay95% per model. Their four failures were not rerun or reclassified as fixed.",
+      "One training seed,20 scenes/task. All allocations retained, no retries, new training or runtime/physics/scoring change."
+    ],
+    "next_step": "Design a same-scene multiple-executable-goal demonstration-following comparison. No additional run started."
   }
+
 }

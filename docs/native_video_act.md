@@ -363,9 +363,16 @@ reconstructs saved-observation chunks without new rollouts. It distinguishes
 unstable approach contact from commanded dwell. A subsequent twelve-episode
 development comparison executes sixteen predicted actions before replanning:
 all succeed, including the
-previous constant pill7001 failure. Sixteen is a candidate for independent
-validation; the earlier80-episode scene-regression record and the commands above
-retain their eight-action execution window. See the report for paired timings and limits.
+previous constant pill7001 failure. A subsequent frozen comparison on new robot
+seeds 25000–25019 adds 160 episodes across both models, tasks and windows.
+Video achieves 20/20 per task under either window; constant pill improves
+18/20→20/20 and constant basket stays 20/20. No final success regresses, and
+all paired initial states, first eight actions and action records pass audit.
+For these selected 9k pilot models, prefer `--execute-steps 16` in further
+development. Constant basket's median first success is six steps later, so
+sixteen is not uniformly faster. Generic defaults, the historical commands
+above and the earlier 80-episode record retain eight-action execution. No weights
+are retrained. See the report for paired timings, retained failures and limits.
 
 Piper supports two original L0 tasks through the shared expert and learning
 entries:
