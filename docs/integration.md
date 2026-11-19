@@ -224,6 +224,13 @@ identities and machine-readable results.
   actions and expose larger changes in the unexecuted later half at selected
   holding observations. No controller/interface error is confirmed; runtime and
   all original scores remain fixed. See the report's paired diagnosis.
+- [x] Complete the 9k execute8/16 development comparison, reusing twelve old
+  references and adding twelve execute16 episodes. All new cases succeed;
+  constant pill improves 2/3 to 3/3 and the other groups remain 3/3. The prior
+  constant7001 failure succeeds at step143 with earlier lift and transport.
+  Initial states and first eight actions match in all twelve pairs. No prior
+  success regresses; execute16 remains a development candidate rather than a
+  replacement for the recorded execute8 scene-regression result.
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -263,12 +270,16 @@ identities and machine-readable results.
    - [x] Compare all four pill failures with their same-seed successes, check
      the controller contract, and reconstruct full chunks at saved holding
      observations. The diagnosis uses no new simulator episode or training.
-   - [ ] Test the execution-window interaction on development cases: reuse
-     the existing 9k execute8 records, add execute16 for three seeds/task and
-     both conditions (twelve development episodes). Keep human episode4,
-     horizon200 and scoring fixed. Larger unexecuted joint changes do not yet
-     demonstrate that sixteen-step execution improves success. Use separate
-     development evidence for approach robustness if those failures persist.
+   - [x] Test the execution-window interaction on development cases: reuse
+     the existing 9k execute8 records and add twelve execute16 episodes with
+     unchanged clips, horizon and scoring. All new cases succeed; constant7001
+     advances through lift and transport instead of timing out. Seven previous
+     successes occur earlier, three later by one or two steps, one unchanged.
+   - [ ] Freeze execute16 as a development candidate and compare execute8/16
+     on a new scene-seed allocation, keeping both9k weights and human identity
+     fixed. Preserve the earlier80 outcomes. Do not claim the unrerun video
+     approach failures are fixed; use separate development evidence if approach
+     robustness needs changes.
    - [ ] Test demonstration following with the same valid initial scene and
      multiple executable goals. Different task scenes and cross-task video swaps
      do not establish a reliable video benefit or semantic necessity.

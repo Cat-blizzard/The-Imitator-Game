@@ -360,9 +360,12 @@ execution and official scoring; it does not test new human clips. See the
 report for all outcomes, failures and exact checkpoint identities.
 The subsequent paired failure diagnosis reads the existing trajectories and
 reconstructs saved-observation chunks without new rollouts. It distinguishes
-unstable approach contact from commanded dwell, and motivates a development
-comparison of eight versus sixteen executed queries; the evaluated setting
-remains eight.
+unstable approach contact from commanded dwell. A subsequent twelve-episode
+development comparison executes sixteen predicted actions before replanning:
+all succeed, including the
+previous constant pill7001 failure. Sixteen is a candidate for independent
+validation; the earlier80-episode scene-regression record and the commands above
+retain their eight-action execution window. See the report for paired timings and limits.
 
 Piper supports two original L0 tasks through the shared expert and learning
 entries:

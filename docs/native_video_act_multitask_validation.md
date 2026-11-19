@@ -468,11 +468,80 @@ despite its final left grasp; no release requirement is added to scoring.
 The next targeted development comparison is to reuse the existing 9k execute8
 development records and add execute16 on the same three development seeds per
 task for both conditions: **twelve additional development episodes, not run in
-this diagnosis**. Keep human episode 4, horizon 200 and scoring fixed, and inspect
+that diagnosis**. Keep human episode 4, horizon 200 and scoring fixed, and inspect
 grasp and transport behavior alongside success. This tests the observed timing
 mechanism without selecting settings on the consumed fresh-seed batch. Approach
 robustness and same-scene multiple-goal demonstration following remain separate
-development questions; no automatic retraining is started.
+development questions; no automatic retraining is started. The following
+experiment completes that twelve-episode development comparison.
+
+## 9k development comparison of execute8 and execute16
+
+At source `8f959fc3bd837edc02b1097b4abf8ff281c7d7bd`, the two fixed 9k policies
+execute sixteen predicted actions per query on pill seeds 7000–7002 and basket
+seeds 22000–22002. The experiment adds **twelve episodes / 2,400 control steps**
+and reuses twelve completed execute8 references without rerunning them. Only
+the execution window changes; human development episode 4, native profiles,
+training-only normalizers, public RGB/qpos, 200-step horizon, control/physics
+rates and official scoring remain fixed. No training or checkpoint reselection
+occurs, and the consumed scene-regression seeds are not evaluated again.
+
+| Condition | Actions executed per prediction | Pill development final success | Basket development final success | Macro development final success |
+| --- | ---: | ---: | ---: | ---: |
+| Human video, 9k | 8, retained reference | 3/3 | 3/3 | 100% |
+| Human video, 9k | 16 | 3/3 | 3/3 | 100% |
+| Constant zero, 9k | 8, retained reference | 2/3 | 3/3 | 83.3% |
+| Constant zero, 9k | 16 | 3/3 | 3/3 | 100% |
+
+Over 200 control steps, the eight-action window queries the policy 25 times;
+the sixteen-action window queries it 13 times and executes only the remaining
+eight actions after the last prediction. Both use the same 16-action prediction.
+
+All twelve new allocations complete once, with **zero interface errors or
+timeouts**; once-success and final success agree. Both objects are finally in
+their regions and ungrasped in all twelve, reported separately from official
+success. All twelve reference/candidate pairs have bitwise-identical initial
+physical/public states and first eight executed actions. Checkpoint and complete
+human-demonstration identities also match. All 4,800 old/new action rows are
+finite, and ordinary clamp, recorded execution and H5 actions agree bitwise.
+New execute16 actions have zero arm-coordinate clipping; maximum gripper excess
+is 0.0175323 in normalized command units. Each model's two task processes take
+about 72 seconds in total on its assigned RTX 5880 Ada GPU; these are run costs.
+
+The previously failed constant pill 7001 now completes the task:
+
+| Sampled milestone | Execute8 reference | Execute16 |
+| --- | ---: | ---: |
+| First double grasp | 86 | 83 |
+| TCP 8 cm above its first-grasp position | 148 | 106 |
+| TCP 5 cm forward along its object-to-goal direction | Not reached by step 200 | 134 |
+| Delay from lift marker to forward marker | At least 52 steps; truncated | 28 steps |
+| First official success | None | 143 |
+| Both objects in-region and ungrasped | Not observed | 156 |
+
+The 8 cm/5 cm values describe sampled movement timing and are not success or
+quality thresholds. Missing crossings are censored at step 200, not completed
+transport times. This case improves both its lift timing and subsequent
+transport; its change cannot be summarized solely as a shorter post-lift dwell.
+No sampled grasp-to-ungrasped transition outside the region occurs in any of
+the twelve new episodes.
+
+All eleven previously successful cases remain successful. Their first-success
+times improve in seven cases, worsen by one or two steps in three, and stay
+equal in one. For example, video pill 7001 changes 132→134, while constant basket
+seeds 22000/22001/22002 change 129→129, 129→130, 134→136. Longer execution therefore
+does not make every case faster, even though this batch has no success loss.
+
+The intervention supports an execution-window contribution to the constant
+policy's development failure, complementing the reconstructed later-half
+predictions. **Execute16 is a development candidate for independent validation**;
+three seeds per task and one training seed do not establish general improvement
+or an optimal window. The earlier eighty-episode execute8 scene-regression
+record remains 95% per model. Its four failures, including the video approach
+failures, were not rerun here and are not reclassified as fixed. Next, freeze
+the candidate and use a new scene-seed allocation for a paired 8/16 comparison
+before changing the evaluated inference setting. Same-scene multiple-goal
+following remains a separate question.
 
 ## Retained evidence
 
@@ -500,6 +569,11 @@ CPU pixel division while the recorded CUDA camera input divided on GPU; its
 small mismatch, partial output and original plan are retained. Correcting only
 the diagnostic preprocessing yields the sixteen exact reconstructions above.
 Total diagnostic model calls are seventeen, with zero new simulator episodes.
+The `execution-window-9k-20261119/` directory separately retains the pre-run
+protocol and reference/weight audit, both launcher receipts, twelve new
+trajectories and videos, `paired-results.json`, `stage-comparison.json`, and
+the independent result audit. The original execute8 references are retained
+under `budget-12000/`; their records and scores are unchanged.
 The compact JSON beside this report preserves
 portable identities and per-seed outcomes; datasets and weights are not included
 in the fork. Original ARX single-task results remain in

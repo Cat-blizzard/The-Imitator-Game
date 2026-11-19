@@ -3625,5 +3625,716 @@
     },
     "original80_outcomes_unchanged": true,
     "summary_file_sha256": "8821ed60aa8808e1c0e663d7f42cb6e915122b8d0539871e63d02091e9b17115"
+  },
+  "execution_window_9k_development": {
+    "status": "completed",
+    "source_commit": "8f959fc3bd837edc02b1097b4abf8ff281c7d7bd",
+    "runtime_same_as_original_pilot": true,
+    "evidence_subdirectory": "execution-window-9k-20261119",
+    "evidence_sha256": {
+      "protocol.json": "6a98d8f9ceb939c6c70770629f9a1ec74adb3917970572d4c9956abd10bb6dd6",
+      "reference-identity-audit.json": "556c19e8a703cf7a9f0d82b84831830a061f751533ef7581fd21213c27191b97",
+      "run-execute16.py": "517d31fa7c670c4e077d6eb34c91e693d2581ede26e745ab678443719af2ddd5",
+      "audit-execution-pairs.py": "1291cf1c34876d9987906fa27b59ecb1c0b7b4f82722141033d498fe1fc62193",
+      "evaluation-video-receipt.json": "146409f422263324921066c65daae45d3375b32a7755691b823b14907137922b",
+      "evaluation-constant-receipt.json": "5112c154a851477a69134a9abe1eb15b05d05b4241068056e9d270ea35a9fb53",
+      "paired-results.json": "c72622681c7d7eb8decf397c884949a73785a4462c6b6455aad3d1d901272660",
+      "analyze-stage-comparison.py": "d3c296608c169d9ca86a9c5cb0f696aab563347e665cb42e0ab73098f8b92b6e",
+      "stage-comparison.json": "5610c229b957c3d4fb3f644a884a0ef68c338a528c70924300f53366efba3ced",
+      "independent-audit.py": "d453e3478a3667c42a52aaa4ee40a76e45c98546f766a1967283c7b938cafe60",
+      "independent-result-audit.json": "db7fc2169b82c8fc9f77e479b6f01258ac7f484c17158e9d99d8b736463a358c",
+      "pill-config.json": "359519aa463f62f7a7ff112acc0a3d09ec1c55678101d8bef58ce248e4f8f737",
+      "basket-config.json": "df8c60fac61904b6ebabaa635d978d13aaa26599c0ad7d03744bf5f75ce4cb62",
+      "pill-seeds.json": "102ec3193b4e0bbd7c8942a2f4a19ce70fdbf08f7c0909654e08985aca0e9ef2",
+      "basket-seeds.json": "4d876d66ea09d0140442918ec206b9c67d0e367aaebc0b28a8183a47d9b0e179"
+    },
+    "scope": "Paired development execution-window intervention on two fixed9k policies; not new-scene test or demonstration-goal following. Original80 execute8 scene-regression outcomes unchanged.",
+    "fixed_protocol": {
+      "checkpoint_update": 9000,
+      "human_role": "development",
+      "human_episode": 4,
+      "seeds": {
+        "pill": [
+          7000,
+          7001,
+          7002
+        ],
+        "basket": [
+          22000,
+          22001,
+          22002
+        ]
+      },
+      "reference_execute_steps": 8,
+      "candidate_execute_steps": 16,
+      "prediction_steps": 16,
+      "max_episode_steps": 200,
+      "control_hz": 20,
+      "physics_hz": 100,
+      "attempts_per_new_case": 1,
+      "new_training_updates": 0,
+      "checkpoint_reselection": false,
+      "scoring_and_native_profiles_unchanged": true,
+      "public_rgb_qpos_only": true
+    },
+    "new_episodes": 12,
+    "new_control_steps": 2400,
+    "baseline_episodes_reused": 12,
+    "baseline_reruns": 0,
+    "interface_errors": 0,
+    "results": {
+      "video": {
+        "pill": {
+          "episodes_each": 3,
+          "execute8": {
+            "official_success_at_end": 3,
+            "official_success_once": 3,
+            "timeouts": 0
+          },
+          "execute16": {
+            "official_success_at_end": 3,
+            "official_success_once": 3,
+            "timeouts": 0,
+            "stage_counts": {
+              "success": 3
+            }
+          }
+        },
+        "basket": {
+          "episodes_each": 3,
+          "execute8": {
+            "official_success_at_end": 3,
+            "official_success_once": 3,
+            "timeouts": 0
+          },
+          "execute16": {
+            "official_success_at_end": 3,
+            "official_success_once": 3,
+            "timeouts": 0,
+            "stage_counts": {
+              "success": 3
+            }
+          }
+        }
+      },
+      "constant": {
+        "pill": {
+          "episodes_each": 3,
+          "execute8": {
+            "official_success_at_end": 2,
+            "official_success_once": 2,
+            "timeouts": 1
+          },
+          "execute16": {
+            "official_success_at_end": 3,
+            "official_success_once": 3,
+            "timeouts": 0,
+            "stage_counts": {
+              "success": 3
+            }
+          }
+        },
+        "basket": {
+          "episodes_each": 3,
+          "execute8": {
+            "official_success_at_end": 3,
+            "official_success_once": 3,
+            "timeouts": 0
+          },
+          "execute16": {
+            "official_success_at_end": 3,
+            "official_success_once": 3,
+            "timeouts": 0,
+            "stage_counts": {
+              "success": 3
+            }
+          }
+        }
+      }
+    },
+    "macro_final_success": {
+      "video": {
+        "execute8": 1.0,
+        "execute16": 1.0
+      },
+      "constant": {
+        "execute8": 0.8333333333333334,
+        "execute16": 1.0
+      }
+    },
+    "pairs": [
+      {
+        "condition": "video",
+        "task": "pill",
+        "seed": 7000,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 141,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 132,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "video",
+        "task": "pill",
+        "seed": 7001,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 132,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 134,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "video",
+        "task": "pill",
+        "seed": 7002,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 149,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 135,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "video",
+        "task": "basket",
+        "seed": 22000,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 135,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 128,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "video",
+        "task": "basket",
+        "seed": 22001,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 145,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 135,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "video",
+        "task": "basket",
+        "seed": 22002,
+        "checkpoint_sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 140,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 130,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "constant",
+        "task": "pill",
+        "seed": 7000,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 153,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 140,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "constant",
+        "task": "pill",
+        "seed": 7001,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": false,
+          "official_success_once": false,
+          "first_success_step": null,
+          "timeout": true,
+          "failure_stage": "transport_or_release_incomplete",
+          "final_predicates": {
+            "left_in_region": false,
+            "right_in_region": false,
+            "left_grasped": true,
+            "right_grasped": true,
+            "is_robot_static": false,
+            "step": 200,
+            "official_success": false
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 143,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "constant",
+        "task": "pill",
+        "seed": 7002,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 182,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 136,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "constant",
+        "task": "basket",
+        "seed": 22000,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 129,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 129,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "constant",
+        "task": "basket",
+        "seed": 22001,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 129,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 130,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      },
+      {
+        "condition": "constant",
+        "task": "basket",
+        "seed": 22002,
+        "checkpoint_sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+        "human_identity_unchanged": true,
+        "initial_physical_and_public_state_bitwise_equal": true,
+        "first8_executed_actions_bitwise_equal": true,
+        "execute8": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 134,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        },
+        "execute16": {
+          "official_success_at_end": true,
+          "official_success_once": true,
+          "first_success_step": 136,
+          "timeout": false,
+          "failure_stage": null,
+          "final_predicates": {
+            "left_in_region": true,
+            "right_in_region": true,
+            "left_grasped": false,
+            "right_grasped": false,
+            "is_robot_static": true,
+            "step": 200,
+            "official_success": true
+          }
+        }
+      }
+    ],
+    "paired_audit": {
+      "pairs": 12,
+      "all_initial_state_and_public_observations_bitwise_equal": true,
+      "all_first8_executed_actions_bitwise_equal": true
+    },
+    "action_audit_both_windows": {
+      "all_finite": true,
+      "all_clamp_and_h5_bitwise": true,
+      "arm_clipped_coordinates": 0,
+      "max_gripper_excess_normalized_command": 0.03479957580566406
+    },
+    "new_execute16_action_diagnostics": {
+      "any_gripper_clip_steps": 1197,
+      "max_gripper_excess_normalized_command": 0.0175323486328125,
+      "arm_clipped_coordinates": 0
+    },
+    "old_execute8_action_diagnostics": {
+      "any_gripper_clip_steps": 1234,
+      "max_gripper_excess_normalized_command": 0.03479957580566406,
+      "arm_clipped_coordinates": 0
+    },
+    "independent_result_audit_passed": true,
+    "constant_pill7001_stage_timing": {
+      "execute8": {
+        "left": {
+          "first_grasp_post_state": 86,
+          "tcp_first_8cm_lift_from_first_grasp_post_state": 148,
+          "tcp_first_5cm_goal_direction_advance_from_first_grasp_post_state": null,
+          "lift_to_5cm_advance_observed_steps": 52,
+          "lift_to_advance_right_censored_at_200": true,
+          "first_in_region_and_ungrasped_post_state": null,
+          "final_grasped": true,
+          "final_in_region": false
+        },
+        "right": {
+          "first_grasp_post_state": 86,
+          "tcp_first_8cm_lift_from_first_grasp_post_state": 148,
+          "tcp_first_5cm_goal_direction_advance_from_first_grasp_post_state": null,
+          "lift_to_5cm_advance_observed_steps": 52,
+          "lift_to_advance_right_censored_at_200": true,
+          "first_in_region_and_ungrasped_post_state": null,
+          "final_grasped": true,
+          "final_in_region": false
+        }
+      },
+      "execute16": {
+        "left": {
+          "first_grasp_post_state": 83,
+          "tcp_first_8cm_lift_from_first_grasp_post_state": 106,
+          "tcp_first_5cm_goal_direction_advance_from_first_grasp_post_state": 134,
+          "lift_to_5cm_advance_observed_steps": 28,
+          "lift_to_advance_right_censored_at_200": false,
+          "first_in_region_and_ungrasped_post_state": 156,
+          "final_grasped": false,
+          "final_in_region": true
+        },
+        "right": {
+          "first_grasp_post_state": 83,
+          "tcp_first_8cm_lift_from_first_grasp_post_state": 106,
+          "tcp_first_5cm_goal_direction_advance_from_first_grasp_post_state": 134,
+          "lift_to_5cm_advance_observed_steps": 28,
+          "lift_to_advance_right_censored_at_200": false,
+          "first_in_region_and_ungrasped_post_state": 156,
+          "final_grasped": false,
+          "final_in_region": true
+        }
+      }
+    },
+    "descriptive_marker_contract": "First sampled grasp anchors +8cm TCP lift and +5cm XY TCP displacement along the initial object-to-goal-center direction. These are timing descriptors, not success/quality/rejection requirements. A missing crossing is right-censored at state200; censored delays are lower-bound observations, not completed transport times.",
+    "previous_success_timing_changes": {
+      "episodes": 11,
+      "earlier": 7,
+      "later_by_1_or_2_steps": 3,
+      "unchanged": 1,
+      "official_success_regressions": 0
+    },
+    "new_final_placed_and_ungrasped_episodes": 12,
+    "new_sampled_grasp_loss_outside_region_events": 0,
+    "interpretation": "Execute16 improves constant pill7001 from timeout to success143, with earlier lift and subsequent transport. All prior11 successes remain successful; timing is not uniformly faster. Supports an execution-window contribution on these development cases, not universal optimality or a video benefit. Prior video approach failures were not rerun here and are not declared fixed.",
+    "next_step": "Keep both9k checkpoints and old evaluated execute8 results fixed. Execute16 is a development candidate; freeze it before a new-seed paired8/16 validation rather than reuse the consumed80 scene cases. Same-scene multiple-goal following remains separate. No automatic extra rollout batch or retraining."
   }
 }
