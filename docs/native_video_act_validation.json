@@ -1,0 +1,471 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-19",
+  "scope": "ARX X5, L0 pill task, real human-video-conditioned ACT engineering loop",
+  "task_id": "TwoRobotPickPillToRegions-v1",
+  "robot_uids": [
+    "arx_x5",
+    "arx_x5"
+  ],
+  "source": {
+    "training": "c1caeca8c116562556f613f8ca9abb3919c34b45",
+    "rollout": "537d086bd9e62665da7691df2efc810c293e8947",
+    "final_runtime": "9f2b06ba0b6c62d974c7cb3df3b8ec8ff0346c6b",
+    "base": "89e54f34ed7f17bdc48de5dfaab8e38340491121",
+    "post_run_change": "single-task configuration/recorded-task pairing validation only; no network, optimizer or rollout changes"
+  },
+  "local_evidence_root": "$WORKSPACE_ROOT/infrastructure/validation/native-video-act-20261119",
+  "dataset": {
+    "name": "arx_x5-pill-v1",
+    "train_episodes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "train_frames": 3876,
+    "development_episodes": [
+      20,
+      21,
+      22
+    ],
+    "development_frames": 581,
+    "train_seeds": [
+      6000,
+      6001,
+      6002,
+      6003,
+      6004,
+      6005,
+      6006,
+      6007,
+      6008,
+      6009,
+      6010,
+      6011,
+      6012,
+      6013,
+      6014,
+      6015,
+      6016,
+      6017,
+      6018,
+      6019
+    ],
+    "development_seeds": [
+      7000,
+      7001,
+      7002
+    ],
+    "aggregate_sha256": "e9674dbbfc3d465cbca98ef7c20eefd286c4917ebff20e2a3d50bd42c358a6c2",
+    "aggregate_definition": "SHA256 of UTF-8 json.dumps(dataset_input_files,sort_keys=True,separators=(\",\",\":\"),ensure_ascii=False), sorted by relative path; records contain path,size_bytes,sha256; meta/data/videos only, excluding .cache"
+  },
+  "human": {
+    "dataset": "human_H31",
+    "camera": "zed2i",
+    "video_sha256": "1531e2830acb156e6a4d63561257a2ae281fc709bf4c681d869c7c63cf03da5c",
+    "train_episodes": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "development_episodes": [
+      4
+    ],
+    "evaluation_episodes": [
+      5
+    ],
+    "manifest_sha256": "26f22c383861d3fb7c264dd3cbd85eb5e6cac4dbd6fff457c1e3c4ef04879b47",
+    "sampled_frames_per_episode": 10,
+    "backbone_sampled_frame_positions": [
+      0,
+      3,
+      6,
+      9
+    ],
+    "demos": [
+      {
+        "id": "human_H31_ep0_train",
+        "repo_id": "human_H31",
+        "episode_id": 0,
+        "camera": "zed2i",
+        "role": "train",
+        "episode_frame_range": [
+          0,
+          70
+        ],
+        "frame_indices": [
+          0,
+          7,
+          15,
+          23,
+          30,
+          38,
+          46,
+          53,
+          61,
+          69
+        ],
+        "video_sha256": "1531e2830acb156e6a4d63561257a2ae281fc709bf4c681d869c7c63cf03da5c"
+      },
+      {
+        "id": "human_H31_ep1_train",
+        "repo_id": "human_H31",
+        "episode_id": 1,
+        "camera": "zed2i",
+        "role": "train",
+        "episode_frame_range": [
+          70,
+          136
+        ],
+        "frame_indices": [
+          70,
+          77,
+          84,
+          91,
+          98,
+          106,
+          113,
+          120,
+          127,
+          135
+        ],
+        "video_sha256": "1531e2830acb156e6a4d63561257a2ae281fc709bf4c681d869c7c63cf03da5c"
+      },
+      {
+        "id": "human_H31_ep2_train",
+        "repo_id": "human_H31",
+        "episode_id": 2,
+        "camera": "zed2i",
+        "role": "train",
+        "episode_frame_range": [
+          136,
+          196
+        ],
+        "frame_indices": [
+          136,
+          142,
+          149,
+          155,
+          162,
+          168,
+          175,
+          181,
+          188,
+          195
+        ],
+        "video_sha256": "1531e2830acb156e6a4d63561257a2ae281fc709bf4c681d869c7c63cf03da5c"
+      },
+      {
+        "id": "human_H31_ep3_train",
+        "repo_id": "human_H31",
+        "episode_id": 3,
+        "camera": "zed2i",
+        "role": "train",
+        "episode_frame_range": [
+          196,
+          250
+        ],
+        "frame_indices": [
+          196,
+          201,
+          207,
+          213,
+          219,
+          225,
+          231,
+          237,
+          243,
+          249
+        ],
+        "video_sha256": "1531e2830acb156e6a4d63561257a2ae281fc709bf4c681d869c7c63cf03da5c"
+      },
+      {
+        "id": "human_H31_ep4_development",
+        "repo_id": "human_H31",
+        "episode_id": 4,
+        "camera": "zed2i",
+        "role": "development",
+        "episode_frame_range": [
+          250,
+          331
+        ],
+        "frame_indices": [
+          250,
+          258,
+          267,
+          276,
+          285,
+          294,
+          303,
+          312,
+          321,
+          330
+        ],
+        "video_sha256": "1531e2830acb156e6a4d63561257a2ae281fc709bf4c681d869c7c63cf03da5c"
+      },
+      {
+        "id": "human_H31_ep5_evaluation",
+        "repo_id": "human_H31",
+        "episode_id": 5,
+        "camera": "zed2i",
+        "role": "evaluation",
+        "episode_frame_range": [
+          331,
+          398
+        ],
+        "frame_indices": [
+          331,
+          338,
+          345,
+          353,
+          360,
+          367,
+          375,
+          382,
+          389,
+          397
+        ],
+        "video_sha256": "1531e2830acb156e6a4d63561257a2ae281fc709bf4c681d869c7c63cf03da5c"
+      }
+    ]
+  },
+  "training": {
+    "updates": 6000,
+    "epochs_entered": 25,
+    "batch_size": 16,
+    "lr": 0.0001,
+    "lr_resnet": 1e-05,
+    "weight_decay": 0.0001,
+    "gradient_clip_norm": 1.0,
+    "scheduler": "constant learning rates",
+    "precision": "CUDA bfloat16 autocast; GradScaler",
+    "seed": 1,
+    "model": "official visual video-conditioned ACT / ResNet18 / frozen DINOv2 ViT-L14",
+    "frozen_backbone_sha256": "399fba97a95f22c36834418bc69373364a99af3a1153da1c0fb31db567c92e23",
+    "parameters": {
+      "total": 337877518,
+      "trainable": 33508878
+    },
+    "pred_horizon": 16,
+    "obs_horizon": 1,
+    "state_dim": 16,
+    "action_dim": 14,
+    "task_latent_dim": 256,
+    "normalization": "bounds_q99; minimum range=0.01 native units; selected training rows only",
+    "loss": "padding-masked L1 + 10 * KL, KL summed over posterior coordinates then batch averaged",
+    "checkpoint_selection": "fixed final update 6000 before evaluation; checkpoint 3000 retained",
+    "optimizer_loop_seconds": 834.2337377939839,
+    "hardware": "one NVIDIA RTX 5880 Ada Generation, 48 GiB",
+    "last_loss": {
+      "global_step": 6000,
+      "epoch": 25,
+      "loss": 0.0238378643989563,
+      "l1": 0.019190043210983276,
+      "kl": 0.00046478211879730225,
+      "grad_norm": 2.9620232582092285,
+      "elapsed_seconds": 834.2337377939839
+    },
+    "first_backward": {
+      "adapter_gradient_norm": 0.11209513247013092,
+      "frozen_backbone_has_gradient": false
+    },
+    "checkpoint_file": "training/checkpoint_step_006000.pt",
+    "checkpoint_sha256": "625829ddebf75d2aaa36658e4fb5cb787f27b7b79ad79bcc4cafdb614108c038",
+    "image_size": [
+      224,
+      224
+    ],
+    "hidden_dim": 256,
+    "encoder_layers": 4,
+    "decoder_layers": 7,
+    "nheads": 8,
+    "dim_feedforward": 2048,
+    "dropout": 0.1
+  },
+  "rollout": {
+    "sim_backend": "physx_cpu",
+    "control_mode": "pd_joint_pos",
+    "control_hz": 20,
+    "physics_hz": 100,
+    "horizon": 200,
+    "execute_steps": 8,
+    "no_expert_actions": true,
+    "physical_measurements": "read-only; unchanged shared native evaluator",
+    "existing_native_action_limit_clamp": "retained; clipped-step counts reported per seed; no new rejection criterion",
+    "phases": {
+      "midpoint-development": {
+        "checkpoint_step": 3000,
+        "human_episode": 4,
+        "episodes": 1,
+        "success_at_end": 1,
+        "success_once": 1,
+        "timeouts": 0,
+        "results": [
+          {
+            "seed": 7000,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 137,
+            "human_demo_id": "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864",
+            "task_z_sha256": "aa50da57f1b45eee3c6ea332718533bfa952ce5d9cfce6006046da0a92dc13ab",
+            "both_final_placed_and_ungrasped": true
+          }
+        ]
+      },
+      "development": {
+        "checkpoint_step": 6000,
+        "human_episode": 4,
+        "episodes": 3,
+        "success_at_end": 3,
+        "success_once": 3,
+        "timeouts": 0,
+        "results": [
+          {
+            "seed": 7000,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 134,
+            "human_demo_id": "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864",
+            "task_z_sha256": "8c7f852c2e093558773529f585bad7d9cc992c03d7facf59e0a8173cbc60396a",
+            "both_final_placed_and_ungrasped": true
+          },
+          {
+            "seed": 7001,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 141,
+            "human_demo_id": "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864",
+            "task_z_sha256": "8c7f852c2e093558773529f585bad7d9cc992c03d7facf59e0a8173cbc60396a",
+            "both_final_placed_and_ungrasped": true
+          },
+          {
+            "seed": 7002,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 135,
+            "human_demo_id": "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864",
+            "task_z_sha256": "8c7f852c2e093558773529f585bad7d9cc992c03d7facf59e0a8173cbc60396a",
+            "both_final_placed_and_ungrasped": true
+          }
+        ]
+      },
+      "evaluation": {
+        "checkpoint_step": 6000,
+        "human_episode": 5,
+        "episodes": 5,
+        "success_at_end": 5,
+        "success_once": 5,
+        "timeouts": 0,
+        "results": [
+          {
+            "seed": 8000,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 118,
+            "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+            "task_z_sha256": "f1ea8bbcef6d15d55c7e9a18d35642d387ef0240d1bdb35c2601a832d4aa2214",
+            "both_final_placed_and_ungrasped": true
+          },
+          {
+            "seed": 8001,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 149,
+            "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+            "task_z_sha256": "f1ea8bbcef6d15d55c7e9a18d35642d387ef0240d1bdb35c2601a832d4aa2214",
+            "both_final_placed_and_ungrasped": true
+          },
+          {
+            "seed": 8002,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 143,
+            "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+            "task_z_sha256": "f1ea8bbcef6d15d55c7e9a18d35642d387ef0240d1bdb35c2601a832d4aa2214",
+            "both_final_placed_and_ungrasped": true
+          },
+          {
+            "seed": 8003,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 124,
+            "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+            "task_z_sha256": "f1ea8bbcef6d15d55c7e9a18d35642d387ef0240d1bdb35c2601a832d4aa2214",
+            "both_final_placed_and_ungrasped": true
+          },
+          {
+            "seed": 8004,
+            "steps": 200,
+            "official_success_at_end": true,
+            "official_success_once": true,
+            "timeout": false,
+            "action_clipped_steps": 145,
+            "human_demo_id": "clip-sha256:a24ed9b8059d9ef3eb83ec6b29964cf8c131196e6dcaa2e2cdf150471f90897f",
+            "task_z_sha256": "f1ea8bbcef6d15d55c7e9a18d35642d387ef0240d1bdb35c2601a832d4aa2214",
+            "both_final_placed_and_ungrasped": true
+          }
+        ]
+      }
+    }
+  },
+  "conditioning_diagnostic": {
+    "purpose": "condition wiring diagnostic; single-task differences do not establish semantic video understanding",
+    "robot_observation_split": "validation",
+    "robot_observation_index": 0,
+    "robot_observation_unchanged": true,
+    "checkpoint_step": 6000,
+    "conditions_differ": true,
+    "normalized_action_absolute_difference_mean": 6.82217887515435e-06,
+    "normalized_action_absolute_difference_max": 5.358457565307617e-05
+  },
+  "tests": {
+    "applicable_suite": {
+      "passed": 573,
+      "warnings": 32,
+      "seconds": 22.89,
+      "log": "regression-final.log"
+    },
+    "scope": "CPU interfaces plus real decoded clips; real pretrained model, training and simulator rollouts are separate evidence"
+  },
+  "limits": [
+    "One body and one task at L0; not full TIG L0-L3 or official main-table evaluation.",
+    "ARX expert action supervision is used; this is not zero-shot transfer to a new embodiment.",
+    "Five final evaluation seeds are a small engineering sample; they were used previously by the native non-video ACT workflow.",
+    "Same-task video replacement causes a very small action difference; this does not establish semantic video use or cross-task generalization.",
+    "6000 updates is a fixed interface-validation budget, not a demonstrated convergence point."
+  ]
+}

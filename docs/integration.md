@@ -83,7 +83,9 @@ See [generation and conversion](dual-arm-sync.md),
   saved camera/statistics/state/action contracts. State projection, padding
   masks, exact video frame access, floating-point image statistics and recorded
   dataset FPS fixes are preserved. Augmentation defaults to off and can be
-  enabled explicitly. The human-video ACT evaluator remains separate.
+  enabled explicitly. The native human-video ACT entry builds on this rollout
+  and adds the official frozen video encoder and trainable task adapter; see
+  [the ARX video-conditioned workflow](native_video_act.md).
 - Official success, physical events, expert execution/quality and recording
   facts remain separate. Optional policy-evaluation observation is read-only.
 
@@ -169,16 +171,18 @@ priorities distinguish implemented interfaces from remaining benchmark work.
    Investigate its physical cause before changing the task procedure or quality
    settings. Broader coverage and matched timing experiments remain necessary
    before general success-rate or cuRobo speed claims.
-2. **Connect a human demonstration to a new embodiment.** Select one supported
-   task and one added robot; fix human demo IDs, L0–L3 pairing, robot-data
-   provenance and train/dev/test roles. Run an existing video-conditioned
-   baseline through training and policy evaluation. The current five-body
-   single-task ACT checks use robot images and joint state and do not establish
-   this complete TIG imitation setting.
-3. **Prepare the minimal ACT interface fix for upstream review.** Extract
-   constructor/import, condition projection and evaluation entry fixes from the
-   broader learning workflow. Keep training choices and unrelated compatibility
-   changes reviewable separately. This can proceed alongside priority 2.
+2. **Extend the native video-conditioned pilot to benchmark coverage.** The
+   `feat/native-video-act` branch connects human_H31 videos to an ARX X5 policy
+   through native robot data, training, strict checkpoint reload and L0 policy
+   rollouts. Its fixed protocol and measured results are in the
+   [validation report](native_video_act_validation.md). Full L0–L3 pairing,
+   multiple tasks and cross-task evaluation remain separate work. The earlier
+   five-body single-task ACT checks have no human video condition.
+3. **Review the minimal ACT interface fix separately.**
+   `fix/act-single-interfaces` has been extracted from the current official base
+   and pushed to the fork. It contains constructor/import, condition projection
+   and evaluation entry fixes. It has not been submitted upstream; training
+   choices and this broader learning workflow remain separate.
 4. **Expand task coverage before increasing robot count.** Add a representative
    supported task or bounded new-seed set through the same entry, recording,
    replay and conversion paths. Backend comparisons require the same task,
