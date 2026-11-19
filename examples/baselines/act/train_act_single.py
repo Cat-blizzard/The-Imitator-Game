@@ -20,6 +20,7 @@ Usage:
 
 ALGO_NAME = "ACTSingleTask"
 
+import json
 import os, random, time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -281,6 +282,25 @@ def _auto_detect_cameras(sim_root, dataset_file, fallback):
     return fallback
 
 
+def _dataset_fps(sim_root: str, dataset_file: str) -> int:
+    """Use the recorded sampling rate for action-chunk timestamp offsets."""
+    with open(dataset_file) as stream:
+        configs = json.load(stream)
+    if not configs:
+        raise ValueError("The dataset configuration is empty")
+    rates = set()
+    for config in configs:
+        dataset_root = Path(sim_root) / config.get("root", config["repo_id"])
+        with (dataset_root / "meta" / "info.json").open() as stream:
+            rate = json.load(stream)["fps"]
+        if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not np.isfinite(rate) or rate <= 0:
+            raise ValueError(f"Invalid dataset fps {rate!r} in {dataset_root}")
+        rates.add(rate)
+    if len(rates) != 1:
+        raise ValueError(f"Single-task ACT requires one dataset sampling rate, got {sorted(rates)}")
+    return rates.pop()
+
+
 def build_dataloader(args: TrainingArgs):
     cameras = _auto_detect_cameras(args.sim_root, args.sub_config, args.cameras)
     cfg = LeRobotDataConfig(
@@ -295,7 +315,7 @@ def build_dataloader(args: TrainingArgs):
         single_arm=args.single_arm,
         horizon=args.pred_horizon,
         obs_horizon=args.obs_horizon,
-        fps=30,
+        fps=_dataset_fps(args.sim_root, args.sub_config),
         video_backend="torchcodec",
         tolerance_s=0.05,
         enable_augmentation=True,
