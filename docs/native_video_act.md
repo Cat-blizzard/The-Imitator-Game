@@ -351,6 +351,10 @@ magnitudes before considering any training or execution change.
 
 The completed Piper pilot and matched zero-condition run are documented in
 [the two-task validation report](native_video_act_multitask_validation.md).
+The subsequent matched runs use `--max-updates 12000` with new output directories
+and the same 3,000-update snapshot interval. Their development comparison selects
+the 9,000-update checkpoints for a fresh-seed evaluation; see the report for
+results and exact candidate identities.
 
 Piper supports two original L0 tasks through the shared expert and learning
 entries:

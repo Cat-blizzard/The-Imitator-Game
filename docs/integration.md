@@ -203,6 +203,13 @@ identities and machine-readable results.
   constant policy start and place right objects, but both pill models remain
   0/3. The default stays eight steps. Start-state stagnation and left grasp loss
   remain distinct development targets; see the report's development diagnosis.
+- [x] Complete matched 12,000-update training and the preallocated 9k/12k
+  development curve. All four new/old 3k/6k training prefixes match bitwise,
+  including full model and optimizer state. At 9k video achieves pill/baskets
+  3/3 and 3/3, constant 2/3 and 3/3; at 12k they reach 2/3 and 3/3, versus
+  2/3 and 1/3. All twenty-four new development episodes complete without
+  interface errors. Both 9k checkpoints are selected as candidates for an
+  independent fresh-seed comparison, with all weights and failures retained.
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -228,14 +235,17 @@ identities and machine-readable results.
      test the executed query window separately. Confirm static-prefix behavior,
      left grasp loss and continuing inference-error improvement, without finding
      an interface error requiring a data/model repair.
-   - [ ] Run the next bounded training comparison: 12,000 total updates per
-     condition, checking 9,000/12,000 on the same development splits. Keep the
-     current data, model and default execution configuration fixed. The trainer
-     has no exact-resume entry, so use a fresh matched seed1 run or implement
-     proper continuation before calling it a resume. If progress stalls, test
-     initial-wait sampling or another grasp-focused change as a separate factor.
-     Freeze fresh final seeds after selection; do not tune on the forty reported
-     evaluation episodes.
+   - [x] Complete the 12,000-update budget with unchanged data/model/execution
+     and checks at 9,000/12,000. Fresh seed1 runs reproduce the old 6k prefixes
+     exactly. The two 9k candidates score better than 12k on this development
+     set even though training loss keeps falling.
+   - [ ] Freeze fresh robot seeds and compare the selected 9k video/constant
+     candidates once with unchanged scoring and eight-step execution. Retain
+     every allocation, checkpoint and human identity, timeout, interface error,
+     per-task result and failed video. The earlier forty final episodes remain
+     unchanged and do not become new final tests. Decide any additional data or
+     training changes from the resulting evidence rather than increasing the
+     budget immediately.
    - [ ] Test demonstration following with the same valid initial scene and
      multiple executable goals. Different task scenes and cross-task video swaps
      do not establish a reliable video benefit or semantic necessity.

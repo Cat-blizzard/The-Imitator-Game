@@ -1519,7 +1519,7 @@
       "interpretation": "Constant policy starts and places the right object in all3, while left loss/missed grasp prevents final success; both conditions remain0/3. Execution window contributes to stagnation. This does not prove the stationary prefix is causal or that16 is optimal."
     },
     "next_training_plan": {
-      "status": "planned_not_run",
+      "status": "completed_in_budget_12000",
       "total_updates_per_condition": 12000,
       "development_checks": [
         9000,
@@ -1541,5 +1541,489 @@
       "budget_reason": "Double the pilot budget to test whether measured fitting and grasp-stage progress continue; not a convergence estimate.",
       "final_evaluation": "Freeze fresh final cases after development selection; preserve all previous40 final cases unchanged."
     }
+  },
+  "budget_12000": {
+    "status": "completed",
+    "source_commit": "ac52479fa57aaea90f61190ac6783893b2357022",
+    "runtime_same_as_original_pilot": true,
+    "evidence_subdirectory": "budget-12000",
+    "evidence_sha256": {
+      "protocol.json": "df727ffd5117e3aa5e55c2900c9b4282c57de15bd1f3c189d3f9da6292e33427",
+      "training-video-receipt.json": "ff72b73909e2f35609bafeb844088243fede6b547f80e426878b98cdb3bcf54c",
+      "training-constant-receipt.json": "b5a6f6541ce5e263b2e2a1e05acec981328db2586654b007291e5551654a8a24",
+      "prefix-reproducibility-audit.json": "b34867cd2d505a79f51e920d807060644d1410210f0780759b49209c0712c098",
+      "training-comparison.json": "d426f065bd1ffce356fe7b8cbfafbd4b684343f9be30e34c57e12e8f2a9f4443",
+      "compact-development.json": "757497e05a8a9ccf1fcc55749de6789263f20e4134a6a7bfdb6519c9e43b2fdf",
+      "selected-checkpoints.json": "f184d3d3cd12c9e655c27897af2e2669879290919275e0a7ed17172e0651c42f",
+      "development-video-receipt.json": "f2cd1ef6bedc441e34c2b9e2426747a00210b4f0875c52cce079d7704e7e7be4",
+      "development-constant-receipt.json": "9059c69949f70d58d7727d5019b8fdd1d8a9923470d1ebd1c959af6f77d2bc5a"
+    },
+    "training": {
+      "start": "Fresh matched seed1; only max_updates and output differ from pilot. Exact old/new3k and6k prefixes verified including all794 state tensors, optimizer, sampler and metrics excluding elapsed time.",
+      "prefix_audit_complete": true,
+      "all_four_prefix_pairs_bitwise_equal": true,
+      "configuration_equal_except_condition_and_output": true,
+      "actual_windows_per_condition": 191825,
+      "sampling_matches_independent_cpu_reconstruction": true,
+      "models": {
+        "video": {
+          "training_exit_code": 0,
+          "process_seconds": 1644.1504008390475,
+          "global_step": 12000,
+          "sampler_epochs": 25,
+          "actual_sampling": {
+            "task_windows": {
+              "TwoRobotPickPillToRegions-v1": 95908,
+              "TwoRobotPickAppleBananaToBaskets-v1": 95917
+            },
+            "window_index_sequence_sha256": "560be2cd8db2347395a7be1ec0d59c97c5c1946e2675972b6b3ee6f3bf80fb2c"
+          },
+          "all_metric_rows_finite": true,
+          "metric_rows": 12000,
+          "last500_update_windows": [
+            {
+              "first_update": 2501,
+              "last_update": 3000,
+              "loss_mean": 0.07962308605015278,
+              "l1_mean": 0.05705584415793419,
+              "kl_mean": 0.0022567241862416266
+            },
+            {
+              "first_update": 5501,
+              "last_update": 6000,
+              "loss_mean": 0.04477290944010019,
+              "l1_mean": 0.040650546435266735,
+              "kl_mean": 0.00041223630268359554
+            },
+            {
+              "first_update": 8501,
+              "last_update": 9000,
+              "loss_mean": 0.034719409059733156,
+              "l1_mean": 0.03296625220403075,
+              "kl_mean": 0.00017531568682170473
+            },
+            {
+              "first_update": 11501,
+              "last_update": 12000,
+              "loss_mean": 0.029194557305425407,
+              "l1_mean": 0.02816209143400192,
+              "kl_mean": 0.00010324658908939454
+            }
+          ],
+          "checkpoints": {
+            "9000": {
+              "path": "training-video/checkpoint_step_009000.pt",
+              "sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+              "global_step": 9000
+            },
+            "12000": {
+              "path": "training-video/checkpoint_step_012000.pt",
+              "sha256": "3d692cd2941fa4c8a779052d25c21379b12e7f2a38b167a51887a922911e44af",
+              "global_step": 12000
+            }
+          }
+        },
+        "constant": {
+          "training_exit_code": 0,
+          "process_seconds": 1567.6730069811456,
+          "global_step": 12000,
+          "sampler_epochs": 25,
+          "actual_sampling": {
+            "task_windows": {
+              "TwoRobotPickPillToRegions-v1": 95908,
+              "TwoRobotPickAppleBananaToBaskets-v1": 95917
+            },
+            "window_index_sequence_sha256": "560be2cd8db2347395a7be1ec0d59c97c5c1946e2675972b6b3ee6f3bf80fb2c"
+          },
+          "all_metric_rows_finite": true,
+          "metric_rows": 12000,
+          "last500_update_windows": [
+            {
+              "first_update": 2501,
+              "last_update": 3000,
+              "loss_mean": 0.0794559882581234,
+              "l1_mean": 0.05680073016136885,
+              "kl_mean": 0.0022655258057639005
+            },
+            {
+              "first_update": 5501,
+              "last_update": 6000,
+              "loss_mean": 0.04448342694714665,
+              "l1_mean": 0.040467690218240024,
+              "kl_mean": 0.0004015736745786853
+            },
+            {
+              "first_update": 8501,
+              "last_update": 9000,
+              "loss_mean": 0.03413425844535232,
+              "l1_mean": 0.03239129750430584,
+              "kl_mean": 0.00017429609224200247
+            },
+            {
+              "first_update": 11501,
+              "last_update": 12000,
+              "loss_mean": 0.02887919022515416,
+              "l1_mean": 0.027743968695402146,
+              "kl_mean": 0.00011352215251827147
+            }
+          ],
+          "checkpoints": {
+            "9000": {
+              "path": "training-constant/checkpoint_step_009000.pt",
+              "sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+              "global_step": 9000
+            },
+            "12000": {
+              "path": "training-constant/checkpoint_step_012000.pt",
+              "sha256": "33fa63bc10bf0c441773e229babd544f910bbb2cccfc3ac5fb1ccf6b3077e843",
+              "global_step": 12000
+            }
+          }
+        }
+      }
+    },
+    "development": {
+      "episodes": 24,
+      "control_steps": 4800,
+      "human_role": "development",
+      "human_episode": 4,
+      "execute_steps": 8,
+      "max_episode_steps": 200,
+      "interface_errors": 0,
+      "results": [
+        {
+          "condition": "video",
+          "updates": 9000,
+          "macro_development_success": 1.0,
+          "tasks": {
+            "pill": {
+              "episodes": 3,
+              "success_at_end": 3,
+              "timeouts": 0,
+              "cases": [
+                {
+                  "seed": 7000,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 141,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 7001,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 132,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 7002,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 149,
+                  "timeout": false,
+                  "failure_stage": null
+                }
+              ]
+            },
+            "basket": {
+              "episodes": 3,
+              "success_at_end": 3,
+              "timeouts": 0,
+              "cases": [
+                {
+                  "seed": 22000,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 135,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 22001,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 145,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 22002,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 140,
+                  "timeout": false,
+                  "failure_stage": null
+                }
+              ]
+            }
+          }
+        },
+        {
+          "condition": "video",
+          "updates": 12000,
+          "macro_development_success": 0.8333333333333333,
+          "tasks": {
+            "pill": {
+              "episodes": 3,
+              "success_at_end": 2,
+              "timeouts": 1,
+              "cases": [
+                {
+                  "seed": 7000,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 165,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 7001,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 154,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 7002,
+                  "official_success_at_end": false,
+                  "official_success_once": false,
+                  "first_success_step": null,
+                  "timeout": true,
+                  "failure_stage": "transport_or_release_incomplete"
+                }
+              ]
+            },
+            "basket": {
+              "episodes": 3,
+              "success_at_end": 3,
+              "timeouts": 0,
+              "cases": [
+                {
+                  "seed": 22000,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 137,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 22001,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 153,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 22002,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 146,
+                  "timeout": false,
+                  "failure_stage": null
+                }
+              ]
+            }
+          }
+        },
+        {
+          "condition": "constant",
+          "updates": 9000,
+          "macro_development_success": 0.8333333333333333,
+          "tasks": {
+            "pill": {
+              "episodes": 3,
+              "success_at_end": 2,
+              "timeouts": 1,
+              "cases": [
+                {
+                  "seed": 7000,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 153,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 7001,
+                  "official_success_at_end": false,
+                  "official_success_once": false,
+                  "first_success_step": null,
+                  "timeout": true,
+                  "failure_stage": "transport_or_release_incomplete"
+                },
+                {
+                  "seed": 7002,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 182,
+                  "timeout": false,
+                  "failure_stage": null
+                }
+              ]
+            },
+            "basket": {
+              "episodes": 3,
+              "success_at_end": 3,
+              "timeouts": 0,
+              "cases": [
+                {
+                  "seed": 22000,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 129,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 22001,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 129,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 22002,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 134,
+                  "timeout": false,
+                  "failure_stage": null
+                }
+              ]
+            }
+          }
+        },
+        {
+          "condition": "constant",
+          "updates": 12000,
+          "macro_development_success": 0.5,
+          "tasks": {
+            "pill": {
+              "episodes": 3,
+              "success_at_end": 2,
+              "timeouts": 1,
+              "cases": [
+                {
+                  "seed": 7000,
+                  "official_success_at_end": false,
+                  "official_success_once": false,
+                  "first_success_step": null,
+                  "timeout": true,
+                  "failure_stage": "transport_or_release_incomplete"
+                },
+                {
+                  "seed": 7001,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 135,
+                  "timeout": false,
+                  "failure_stage": null
+                },
+                {
+                  "seed": 7002,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 176,
+                  "timeout": false,
+                  "failure_stage": null
+                }
+              ]
+            },
+            "basket": {
+              "episodes": 3,
+              "success_at_end": 1,
+              "timeouts": 2,
+              "cases": [
+                {
+                  "seed": 22000,
+                  "official_success_at_end": false,
+                  "official_success_once": false,
+                  "first_success_step": null,
+                  "timeout": true,
+                  "failure_stage": "grasp_not_observed"
+                },
+                {
+                  "seed": 22001,
+                  "official_success_at_end": false,
+                  "official_success_once": false,
+                  "first_success_step": null,
+                  "timeout": true,
+                  "failure_stage": "grasp_not_observed"
+                },
+                {
+                  "seed": 22002,
+                  "official_success_at_end": true,
+                  "official_success_once": true,
+                  "first_success_step": 151,
+                  "timeout": false,
+                  "failure_stage": null
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "paired_initial_state_audit": {
+        "task_seed_cases": 6,
+        "comparisons": 18,
+        "all_bitwise_equal": true,
+        "same_as_existing6000_development": true
+      },
+      "action_audit": {
+        "all_finite": true,
+        "clamp_and_h5_reproduction_all_bitwise": true,
+        "arm_clipped_coordinates": 0,
+        "max_gripper_excess_normalized_command": 0.03479957580566406
+      }
+    },
+    "selected_candidates": {
+      "schema_version": 1,
+      "source_commit": "ac52479fa57aaea90f61190ac6783893b2357022",
+      "selection": "Best macro official final success on fixed development cases, per condition; neither selected on final-test outcomes",
+      "selected_update_step": 9000,
+      "development_seeds": {
+        "pill": [
+          7000,
+          7001,
+          7002
+        ],
+        "basket": [
+          22000,
+          22001,
+          22002
+        ]
+      },
+      "human_role": "development",
+      "execute_steps": 8,
+      "max_episode_steps": 200,
+      "final_test_status": "not_run_for_selected_candidates",
+      "models": {
+        "video": {
+          "checkpoint": "training-video/checkpoint_step_009000.pt",
+          "sha256": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+          "macro_development_success": 1.0,
+          "per_task_success": {
+            "pill": 3,
+            "basket": 3
+          }
+        },
+        "constant": {
+          "checkpoint": "training-constant/checkpoint_step_009000.pt",
+          "sha256": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef",
+          "macro_development_success": 0.8333333333333333,
+          "per_task_success": {
+            "pill": 2,
+            "basket": 3
+          }
+        }
+      }
+    },
+    "interpretation": "Both conditions perform better at9k than12k on these three development seeds/task. Training loss still decreases. Preserve both9k candidates at a matched budget for fresh independent evaluation; not proof of overfitting, robust video gains or full TIG performance.",
+    "next_step": "Freeze and run a fresh-seed comparison of the selected9k video/constant candidates with unchanged execution/scoring. No new final tests in the completed budget protocol."
   }
 }

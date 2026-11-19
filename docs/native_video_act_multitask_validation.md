@@ -17,6 +17,11 @@ seeds per task do not establish a reliable video benefit, convergence or a
 complete official TIG result. The scenes also expose task identity, so the
 comparison alone does not establish demonstration-goal understanding.
 
+The subsequent [12,000-update experiment](#completed-12000-update-budget)
+completes the planned development curve. Its two 9,000-update checkpoints are
+the current candidates for an independent evaluation; the table above remains
+the original 6,000-update final batch and is not replaced by development scores.
+
 ## Data and task routing
 
 | Original environment | Human source | Robot train episodes / frames | Robot development episodes / frames |
@@ -221,18 +226,98 @@ These are comparisons at expert observations, not closed-loop success or
 posterior-conditioned training loss. The constant model's low later error also
 shows why offline error alone cannot choose the successful controller.
 
-The next bounded training plan is **12,000 total updates per condition**, keeping
-the robot/human data, architecture, sampling, loss and default eight-step
-execution fixed, with development checks at 9,000 and 12,000. This doubles the
-pilot budget to test whether the observed fitting and grasp-stage progress
-continues; it is not a convergence target. No new training was run during this
-diagnosis. The current trainer has no resume entry or complete mid-epoch/RNG
-recovery record: a fresh seed1 run to 12,000 with 3,000-step snapshots provides
-the straightforward controlled comparison. Loading only model weights must not
-be described as an exact continuation. If further training gives no sustained
-development improvement, test the initial-wait sampling or another grasp-focused
-change separately before scaling data. Execution-window changes remain a
-separate factor. Freeze a fresh final evaluation batch after making those choices.
+This diagnosis motivated a bounded plan of **12,000 total updates per condition**,
+with development checks at 9,000 and 12,000, keeping the robot/human data,
+architecture, sampling, loss and default eight-step execution fixed. The budget
+doubling tested whether fitting and grasp-stage progress continued; it was not
+a convergence estimate. The experiment below executes that plan. Because the
+trainer has no exact-resume entry or complete mid-epoch/RNG recovery record,
+it uses fresh matched seed1 runs and checks their actual 6,000-update prefixes.
+
+## Completed 12,000-update budget
+
+Both runs complete at source `ac52479fa57aaea90f61190ac6783893b2357022`, with
+the same runtime as the pilot. The two original training commands change only
+`max_updates=12000` and the output directory. Full saved configuration checks
+confirm the data, human clips, native profiles, normalization and model settings.
+
+Each new 3,000/6,000-update checkpoint exactly reproduces its corresponding
+pilot checkpoint: all **794 state-dict tensors**, optimizer state/parameter
+groups, sampler RNG, actual window sequence and training metrics excluding
+elapsed time match bitwise. This includes the frozen human backbone and its
+trainable adapter, beyond the narrower initial-policy hash. Thus the previous
+6,000-update development results remain the matched baseline for this budget
+comparison, without repeating those rollouts.
+
+Both models finish all 12,000 updates and exit zero. Each draws **191,825
+windows**, including 95,908 pill and 95,917 basket windows, over 25 sampler
+epochs with replacement. Each epoch's final batch has nine rows, so the actual
+count is 175 below `12000 * 16`. The two actual sequences and saved sampler RNGs
+match an independent CPU reconstruction. Their final sequence SHA256 is
+`560be2cd8db2347395a7be1ec0d59c97c5c1946e2675972b6b3ee6f3bf80fb2c`.
+All 24,000 training metric rows are finite and contiguous. Process wall times
+are 1,644.15 seconds for video and 1,567.67 seconds for constant conditioning,
+on separate RTX 5880 Ada GPUs; these are run costs, not a controlled speed test.
+
+### Fixed development results
+
+The preallocated 9k/12k comparison uses the same three robot development seeds
+per task and human episode4, with the original 200-step horizon and eight
+executed actions. All **24 episodes / 4,800 control steps** complete once, with
+zero interface errors. Their initial physical/public states match across all
+four groups and the existing 6k development recordings. Actions are finite,
+the ordinary clamp reproduces execution bitwise, and execution matches H5.
+No arm action clips; maximum gripper excess is 0.034800 in normalized command
+units. No policy, quality threshold, task limit or final-test seed is changed.
+
+| Condition | Updates | Pill development final success | Basket development final success | Macro final success |
+| --- | ---: | ---: | ---: | ---: |
+| Human video | 6,000 baseline | 0/3 | 3/3 | 50% |
+| Human video | 9,000 | 3/3 | 3/3 | 100% |
+| Human video | 12,000 | 2/3 | 3/3 | 83.3% |
+| Constant zero condition | 6,000 baseline | 0/3 | 3/3 | 50% |
+| Constant zero condition | 9,000 | 2/3 | 3/3 | 83.3% |
+| Constant zero condition | 12,000 | 2/3 | 1/3 | 50% |
+
+The 9k video policy succeeds on pill seeds7000/7001/7002 at steps141/132/149;
+both objects are finally placed and ungrasped, with no observed grasp loss
+outside the region. The 9k constant policy succeeds on seeds7000/7002; seed7001
+grasps both objects but remains holding them at the horizon. Starting stagnation
+from the 6k constant policy is absent in all three 9k development cases under
+the unchanged eight-step execution rule.
+
+At 12k, video pill7002 loses its left grasp outside the region at step93 and
+still holds the right object at the horizon. Constant pill7000 only grasps at
+steps150/169, then loses the right grasp outside the region at step193. Its
+two failed basket seeds22000/22001 move the TCPs about 0.50 m while leaving
+grippers almost fully open; neither arm satisfies the grasp predicate. These
+failures are retained rather than rerun or grouped as uniform starting failures.
+
+Training fit continues to improve while these development scores decline:
+the last-500-update mean loss decreases from 0.034719 at 9k to 0.029195 at
+12k for video, and from 0.034134 to 0.028879 for constant conditioning. This
+demonstrates that lower training loss and the latest checkpoint do not reliably
+select the better controller in this experiment. Three development seeds and
+one training seed do not identify overfitting or establish a stable video gain.
+
+### Candidate checkpoints and next evaluation
+
+The recorded macro-development selection criterion favors **9,000 updates for
+both conditions**. Preserve both candidates at the same update budget:
+
+- Video: `budget-12000/training-video/checkpoint_step_009000.pt`, SHA256
+  `b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390`.
+- Constant: `budget-12000/training-constant/checkpoint_step_009000.pt`, SHA256
+  `61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef`.
+
+The local `budget-12000/selected-checkpoints.json` records those identities and
+their selection basis. Every 3k/6k/9k/12k checkpoint remains retained. The next
+step is a separately frozen fresh-seed comparison of the selected policies,
+keeping execution and scoring fixed. No new final-test episodes were run in
+this budget experiment. Additional long training or task/data expansion is not
+the immediate next step; the current candidates first need that independent
+check. Demonstration following in a common scene with multiple valid goals
+remains a separate experiment.
 
 ## Retained evidence
 
@@ -245,7 +330,12 @@ and offline-intervention audits. The `development-diagnosis/` subdirectory
 retains both development protocols, all thirty development rollouts and videos,
 paired-state and motion audits, data/loss statistics, and offline chunk arrays.
 The initial offline-loader metadata error and its successful corrected run are
-retained separately. The compact JSON beside this report preserves
+retained separately. The `budget-12000/` subdirectory retains the frozen
+12k protocol, both complete training runs and snapshots, 24 development records
+and videos, full prefix and final-training audits, candidate identities and
+action/initial-state audits. A tuple/list comparison mismatch in the standalone
+audit was corrected with its original log retained; it was not a training or
+rollout failure. The compact JSON beside this report preserves
 portable identities and per-seed outcomes; datasets and weights are not included
 in the fork. Original ARX single-task results remain in
 [their separate validation report](native_video_act_validation.md).
