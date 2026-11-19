@@ -286,12 +286,14 @@ class VideoDecoderCache:
         tried_modes: list[str] = []
 
         def _try_path_source():
-            return VideoDecoder(video_path, seek_mode="approximate"), None
+            # Callers request physical frame indices from the dataset clock.
+            # Approximate seeking can return the adjacent frame with a new PTS.
+            return VideoDecoder(video_path, seek_mode="exact"), None
 
         def _try_fsspec_handle():
             file_handle = fsspec.open(video_path).__enter__()
             try:
-                decoder = VideoDecoder(file_handle, seek_mode="approximate")
+                decoder = VideoDecoder(file_handle, seek_mode="exact")
             except Exception:
                 file_handle.close()
                 raise
