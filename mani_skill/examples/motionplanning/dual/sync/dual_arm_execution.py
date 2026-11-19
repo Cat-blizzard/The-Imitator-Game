@@ -1,4 +1,4 @@
-"""Synchronous dual-Panda phases with one paired environment step per tick.
+"""Synchronous dual-arm phases with one paired environment step per tick.
 
 Physical left/right identities are never reordered. Both arms cross each phase
 barrier together; a shorter source trajectory holds its own endpoint. Carried
@@ -19,11 +19,14 @@ import numpy as np
 from .combined_collision import validate_schedule
 from .measurements import _actions_valid, _budget, _error, _measure, _positive
 from .measurements import _observe, _rotation_distance, _transform
+from .measurements import (GRIPPER_OPEN_TOLERANCE as OPEN_TOL, gripper_coordinates,
+                           gripper_is_open, gripper_open_settings, finger_positions_m,
+                           finger_displacement_m)
 from .runtime_policy import DEFAULT_POLICY, RuntimePolicy
-from .trajectory_execution import as_numpy, bindings, snapshot
+from .trajectory_execution import as_numpy, bindings, snapshot, native_arm_action
 from .trajectory_schedule import ArmTrajectory, DualArmSchedule, build_hold_schedule, plan_pose
 
-JOINT_STEP, TRACK, ENDPOINT, ARM_SPEED, OPEN_TOL = .02, .2, .03, .05, .002
+JOINT_STEP, TRACK, ENDPOINT, ARM_SPEED = .02, .2, .03, .05
 DROP = .01
 OBJECT_SPEED, OBJECT_ANGULAR_SPEED = .03, .2
 WINDOW_POSITION, WINDOW_ROTATION, WINDOW_JOINT = .003, .03, .003
@@ -52,7 +55,7 @@ def _canonical(env: Any) -> tuple[Any, Any]:
     raw = env.unwrapped
     agents = raw.agent.agents
     if len(agents) != 2:
-        raise ValueError("Exactly two physical Panda agents are required")
+        raise ValueError("Exactly two physical arm agents are required")
     if hasattr(raw, "left_agent") and (agents[0] is not raw.left_agent or agents[1] is not raw.right_agent):
         raise ValueError("Agent sequence must retain physical left/right identity")
     keys = []
@@ -105,7 +108,8 @@ class _Phase:
             "raw_velocity_telemetry": "retained without alteration",
             "continuous_collision_detection": False,
             "thresholds": {"joint_sample_rad": JOINT_STEP, "tracking_rad": TRACK, "endpoint_rad": ENDPOINT,
-                           "arm_speed_rad_s": ARM_SPEED, "finger_open_m": OPEN_TOL,
+                           "arm_speed_rad_s": ARM_SPEED,
+                           "gripper_open": {arm.key: gripper_open_settings(arm) for arm in self.arms},
                            "position_slip_m": self.policy.position_slip_m, "rotation_slip_rad": self.policy.rotation_slip_rad,
                            "drop_below_attachment_m": DROP, "grasp_loss_ticks": 2,
                            "object_speed_m_s": OBJECT_SPEED, "object_angular_speed_rad_s": OBJECT_ANGULAR_SPEED,
@@ -113,6 +117,8 @@ class _Phase:
                            "window_joint_rad": WINDOW_JOINT},
             "abort_semantics": "stop both arms; no automatic release, retreat, reset or next phase",
         }
+        if all(gripper_open_settings(arm)["coordinate_unit"] == "m" for arm in self.arms):
+            self.report["thresholds"]["finger_open_m"] = OPEN_TOL
         self.started = time.monotonic()
 
     def observe(self) -> dict[str, Any]:
@@ -134,9 +140,7 @@ class _Phase:
         return {"measurements": measurements, "objects": objects}
 
     def opened(self, arm: Any, row: dict[str, Any]) -> bool:
-        fingers = [index for index in range(9) if index not in arm.indices]
-        upper = as_numpy(arm.agent.robot.get_qlimits())[0, fingers, 1]
-        return bool(np.allclose(row["measurements"][arm.key]["finger_qpos_m"], upper, rtol=0, atol=OPEN_TOL))
+        return gripper_is_open(arm, gripper_coordinates(row["measurements"][arm.key]))
 
     def hold(self, grip: int) -> dict[str, np.ndarray]:
         return {arm.key: np.r_[self.report["initial_measurements"][arm.key]["qpos_rad"], grip] for arm in self.arms}
@@ -159,9 +163,13 @@ class _Phase:
             return False
         return True
 
-    def tick(self, action: dict[str, Any], label: str) -> dict[str, Any] | None:
-        _actions_valid(self.env, self.arms, action)
-        actual = {arm.key: np.asarray(action[arm.key], dtype=np.float32).copy() for arm in self.arms}
+    def tick(self, action: dict[str, Any], label: str, *,
+             native_actions: bool = False) -> dict[str, Any] | None:
+        """Map planning commands once, or execute saved native actions directly."""
+        _actions_valid(self.env, self.arms, action, native_actions=native_actions)
+        actual = {arm.key: (np.asarray(action[arm.key], dtype=np.float32).copy()
+                           if native_actions else native_arm_action(arm, action[arm.key]))
+                  for arm in self.arms}
         before = as_numpy(self.env.unwrapped.elapsed_steps).copy()
         row: dict[str, Any] = {"phase": label, "step": self.report["environment_steps"] + 1,
                                "action": {key: value.tolist() for key, value in actual.items()},
@@ -170,7 +178,7 @@ class _Phase:
             if self.held and getattr(self.checker, "measured_attachment_prediction", False):
                 current = self.observe()
                 receipt = self.checker.validate_measured_command(
-                    *(actual[arm.key][:7] for arm in self.arms),
+                    *(actual[arm.key][:len(arm.names)] for arm in self.arms),
                     grasping=tuple(bool(obj["is_grasping"]) for obj in current["objects"]),
                     max_joint_step_rad=JOINT_STEP)
                 row["attachment_geometry"] = receipt
@@ -202,7 +210,7 @@ class _Phase:
                 obj["control_frame_angular_speed_rad_s"] = _rotation_distance(self.previous[index][:3, :3], pose[:3, :3]) / self.dt
                 self.previous[index] = pose
             row["collisions"] = self.collisions(row)
-            row["tracking_error_rad"] = max(float(np.max(np.abs(joints[arm.key] - actual[arm.key][:7]))) for arm in self.arms)
+            row["tracking_error_rad"] = max(float(np.max(np.abs(joints[arm.key] - actual[arm.key][:len(arm.names)]))) for arm in self.arms)
             row["max_arm_velocity_rad_s"] = max(float(np.max(np.abs(row["measurements"][arm.key]["qvel_rad_s"]))) for arm in self.arms)
         except Exception as exc:
             row["observed_elapsed_steps_after_error"] = as_numpy(self.env.unwrapped.elapsed_steps).tolist()
@@ -322,7 +330,7 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
         label = "moving" if index < len(actions) else "settling"
         row = phase.tick(actions[index] if label == "moving" else final, label)
         if row is None or phase.report["status"] != "running": break
-        row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:7]))) for arm in phase.arms)
+        row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:len(arm.names)]))) for arm in phase.arms)
         if held and not phase.monitor(row): break
         count = count + 1 if stable(row) else 0
         row["stable_steps"] = count
@@ -339,7 +347,7 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
         for _ in range(hover):
             row = phase.tick(final, "hover")
             if row is None or phase.report["status"] != "running": break
-            row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:7]))) for arm in phase.arms)
+            row["endpoint_error_rad"] = max(float(np.max(np.abs(np.asarray(row["measurements"][arm.key]["qpos_rad"]) - final[arm.key][:len(arm.names)]))) for arm in phase.arms)
             if not phase.monitor(row, hovering=True): break
             for obj, reference in zip(row["objects"], references):
                 pose = _transform(obj["object_T_world"])
@@ -382,9 +390,13 @@ def close_dual_and_confirm(env: Any, checker: Any, targets: tuple[Any, Any], *,
     if budget < required: raise ValueError("Grasp budget cannot be smaller than the required stable interval")
     phase = _Phase(env, checker, "dual_close", targets=targets, policy=policy)
     action = phase.hold(-1); _actions_valid(env, phase.arms, action)
-    previous = [np.asarray(phase.report["initial_measurements"][arm.key]["finger_qpos_m"]) for arm in phase.arms]
+    previous = [finger_positions_m(arm, phase.report["initial_measurements"][arm.key]) for arm in phase.arms]
     counts = [0, 0]
     phase.report.update(max_steps=budget, stable_steps_required=required)
+    phase.report["finger_stability_measurement"] = [
+        "TCP-local physical finger-link translation (m)" if "finger_positions_tcp_m" in
+        phase.report["initial_measurements"][arm.key] else "prismatic finger joint translation (m)"
+        for arm in phase.arms]
     checker.set_target_contacts_allowed((True, True))
     try:
         if not phase.preflight(): return phase.finish()
@@ -394,8 +406,8 @@ def close_dual_and_confirm(env: Any, checker: Any, targets: tuple[Any, Any], *,
             if row["tracking_error_rad"] > ENDPOINT:
                 phase.report.update(status="aborted", reason="arm_hold_error"); break
             for index, arm in enumerate(phase.arms):
-                fingers = np.asarray(row["measurements"][arm.key]["finger_qpos_m"])
-                change = float(np.max(np.abs(fingers - previous[index])))
+                fingers = finger_positions_m(arm, row["measurements"][arm.key])
+                change = finger_displacement_m(fingers, previous[index])
                 previous[index] = fingers.copy()
                 counts[index] = counts[index] + 1 if row["objects"][index]["is_grasping"] and change <= .0002 else 0
                 row["objects"][index].update(finger_change_m=change, stable_steps=counts[index])

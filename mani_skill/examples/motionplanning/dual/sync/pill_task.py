@@ -148,18 +148,36 @@ class PillTask:
 
     def grasp_poses(self) -> tuple:
         agents = self.raw.agent.agents
+        profile = self.raw.embodiment_profile
         approaching = np.array([0., 0., -1.])
-        closing = _array(agents[1].tcp.pose.to_transformation_matrix())[0, :3, 1].copy()
-        closing -= np.dot(closing, approaching) * approaching
-        if np.linalg.norm(closing) < 1e-8:
-            raise ValueError("Degenerate horizontal closing direction")
-        closing /= np.linalg.norm(closing)
+        closing = None
+        if any(quaternion is None for quaternion in profile.grasp_quaternions):
+            closing = _array(agents[1].tcp.pose.to_transformation_matrix())[0, :3, 1].copy()
+            closing -= np.dot(closing, approaching) * approaching
+            if np.linalg.norm(closing) < 1e-8:
+                raise ValueError("Degenerate horizontal closing direction")
+            closing /= np.linalg.norm(closing)
         pairs = []
         for i, (agent, actor) in enumerate(zip(agents, self.targets)):
-            height = (.12, .13)[i]
-            grasp = agent.build_grasp_pose(approaching, closing,
-                _single(actor.pose.p, 3, "pill origin")) * sapien.Pose(p=[0., 0., -height])
-            pairs.append((grasp * sapien.Pose(p=[0., 0., -(.21-height)]), grasp))
+            height = profile.grasp_height_offsets_m[i]
+            quaternion = profile.grasp_quaternions[i]
+            origin = _single(actor.pose.p, 3, "pill origin")
+            offsets = profile.grasp_position_offsets_m
+            offset = (_finite(offsets[i], (3,), "world grasp offset") if offsets is not None
+                      else np.array([0., 0., height]))
+            if quaternion is None:
+                grasp = agent.build_grasp_pose(approaching, closing,
+                    origin if offsets is None else origin+offset)
+                if offsets is None:
+                    grasp *= sapien.Pose(p=[0., 0., -height])
+            else:
+                grasp = sapien.Pose(p=origin+offset, q=quaternion)
+            pregrasp_offsets = profile.pregrasp_position_offsets_m
+            pregrasp = (grasp * sapien.Pose(p=[0., 0., -profile.pregrasp_clearances_m[i]])
+                        if pregrasp_offsets is None else sapien.Pose(
+                            p=grasp.p+_finite(pregrasp_offsets[i], (3,), "world pregrasp offset"),
+                            q=grasp.q))
+            pairs.append((pregrasp, grasp))
         return tuple(pairs)
 
     def release_poses(self) -> tuple:
@@ -173,10 +191,25 @@ class PillTask:
             self.vertices(actor)
             quaternion = _single(agent.tcp.pose.q, 4, "carry WXYZ")
             value = support_clearance_tcp_height(self.local_vertices[id(actor)],
-                np.linalg.inv(tcp) @ obj, quaternion, support_top_z=top, clearance=.015)
+                np.linalg.inv(tcp) @ obj, quaternion, support_top_z=top,
+                clearance=self.raw.embodiment_profile.release_clearance_m)
             position = _single(destination.pose.p, 3, "destination XYZ").copy()
             position[2] = value["target_tcp_z_m"]
             poses.append(sapien.Pose(p=position, q=quaternion))
+        return tuple(poses)
+
+    def retreat_poses(self, vertical_distance_m: float) -> tuple:
+        """Withdraw in configured world XY and raise by the shared policy distance."""
+        distance = float(vertical_distance_m)
+        if not np.isfinite(distance) or distance <= 0:
+            raise ValueError("Retreat vertical distance must be finite and positive")
+        offsets = self.raw.embodiment_profile.retreat_horizontal_offsets_m
+        poses = []
+        for i, agent in enumerate(self.raw.agent.agents):
+            xy = np.zeros(2) if offsets is None else _finite(offsets[i], (2,), "world retreat XY")
+            position = _single(agent.tcp.pose.p, 3, "retreat XYZ") + np.r_[xy, distance]
+            poses.append(sapien.Pose(p=position,
+                q=_single(agent.tcp.pose.q, 4, "retreat WXYZ")))
         return tuple(poses)
 
     def region_predicates(self) -> tuple:

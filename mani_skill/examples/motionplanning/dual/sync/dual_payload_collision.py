@@ -1,4 +1,4 @@
-"""Two measured or rigidly predicted payloads in one private dual-Panda world.
+"""Two measured or rigidly predicted payloads in one private dual-robot world.
 
 Robot identities are always physical (left, right). ``attach`` captures two
 TCP/object relations for collision prediction only: it never welds, teleports,
@@ -16,7 +16,7 @@ import numpy as np
 from mplib.pymp import PlanningWorld
 
 from .combined_collision import NativeDualCollisionChecker, _array, _vector
-from .grasp_collision import FINGER_LINKS, LiveGraspCollisionChecker
+from .grasp_collision import LiveGraspCollisionChecker
 from .held_collision import _entity_transform, _object_at, _pair_result, _world_tcp
 from .scene_collision import check_plane_halfspaces
 from .table_support_collision import NumericalTableSupportCollisionChecker
@@ -144,7 +144,8 @@ class DualPayloadCollisionChecker:
         if (type(max_joint_step_rad) not in (int, float)
                 or not np.isfinite(max_joint_step_rad) or max_joint_step_rad <= 0):
             raise ValueError("Use the existing positive joint sampling step")
-        goals = (_vector(left7, 7), _vector(right7, 7))
+        goals = tuple(_vector(value, len(indices)) for value, indices in
+                      zip((left7, right7), self.native.arm_indices))
         starts = tuple(q[index] for q, index in zip(self._measured_qpos, self.native.arm_indices))
         intervals = max(1, int(np.ceil(max(float(np.max(np.abs(b-a)))
             for a, b in zip(starts, goals)) / max_joint_step_rad)))
@@ -258,7 +259,8 @@ class DualPayloadCollisionChecker:
             if (robot, link, other) in mounts:
                 return True
             for index, physical in enumerate(("left", "right")):
-                if (robot == physical and link in FINGER_LINKS and other in self._target_names[index]
+                if (robot == physical and link in self.lives[index].finger_links[physical]
+                        and other in self._target_names[index]
                         and (self.attached or self.target_contacts_allowed[index])):
                     return True
         return False
@@ -353,7 +355,8 @@ class DualPayloadCollisionChecker:
     def check(self, left7: np.ndarray, right7: np.ndarray) -> list[dict[str, Any]]:
         if self.attached and self.measured_attachment_prediction:
             self._assert_prediction_current()
-        joints = (_vector(left7, 7), _vector(right7, 7))
+        joints = tuple(_vector(value, len(indices)) for value, indices in
+                       zip((left7, right7), self.native.arm_indices))
         full_states = []
         for q, full, arm, limits in zip(joints, self._measured_qpos, self.native.arm_indices, self.native.joint_limits):
             if np.any(q < limits[:, 0] - 1e-6) or np.any(q > limits[:, 1] + 1e-6):

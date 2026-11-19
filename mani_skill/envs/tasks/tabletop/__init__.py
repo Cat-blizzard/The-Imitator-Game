@@ -1,4 +1,5 @@
 from .object_gallery import ObjectGalleryEnv, ObjectGalleryTwoPandaEnv
+from .dual_pick_place import DualArmPickPlaceEnv
 
 from .rm_tasks.rm_pick import RealmanPickCubeYCBEnv
 from .rm_tasks.rm_microwave import RealmanMicrowaveEnv

@@ -65,10 +65,12 @@ def test_converter_emits_two_real_rows_and_preserves_legacy_split(trajectory, tm
         str(trajectory), str(tmp_path / "output"), fps=20, drop_terminal_frame=True
     )
     assert ok
-    assert meta.info == {"fps": 20, "terminal_observation": "dropped"}
+    assert meta.info["fps"] == 20
+    assert meta.info["terminal_observation"] == "dropped"
+    assert meta.info["splits"]["train"] == []
     assert len(frames) == 2
     np.testing.assert_array_equal(frames[1]["action.qpos_gripper_actions"], np.arange(16, 32))
-    assert meta.splits["train"] == []  # Existing 95% single-episode semantics stay unchanged.
+    assert meta.info["splits"]["train"] == []  # Existing 95% single-episode semantics stay unchanged.
 
 
 def write_dataset(root, name, fps):

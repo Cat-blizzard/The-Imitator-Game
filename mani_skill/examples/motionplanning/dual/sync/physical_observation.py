@@ -28,8 +28,19 @@ def physical_support_transition(previous: bool, geometry_released: bool, referen
                             and measured_z-reference_z >= PHYSICAL_SUPPORT_CLEARANCE_M))
 
 def contact_identities(raw: Any, agents: Any, names: Any, targets: Any) -> tuple[dict, dict]:
-    identities = {obj.entity: {'kind':'robot','robot_index':i,'link_name':link.name,'actor':link.name}
-        for i,agent in enumerate(agents) for link in agent.robot.get_links() for obj in link._objs}
+    identities = {}
+    for i, agent in enumerate(agents):
+        fingers = tuple(getattr(agent, 'finger_link_names', ('panda_leftfinger', 'panda_rightfinger')))
+        root = getattr(agent.robot, 'root', None)
+        root_name = getattr(agent, 'robot_root_link_name', getattr(root, 'name', 'panda_link0'))
+        mount_support = f'mount_{i}' if f'mount_{i}' in raw.scene.actors else 'table'
+        for link in agent.robot.get_links():
+            for obj in link._objs:
+                identities[obj.entity] = {'kind': 'robot', 'robot_index': i,
+                    'link_name': link.name, 'actor': link.name,
+                    'is_grasp_finger': link.name in fingers,
+                    'is_mount_root': link.name == root_name,
+                    'mount_support_actor': mount_support}
     for name,actor in raw.scene.actors.items():
         for obj in actor._objs:
             if obj not in identities: identities[obj] = {'kind':'actor','actor':name}
@@ -43,7 +54,8 @@ def support_name(actor: Any) -> str:
 
 def contact_class(other: dict, index: int, released: bool, phase: str,
                   initial: tuple, destinations: tuple) -> str:
-    if other.get('robot_index') == index and other.get('link_name') in ('panda_leftfinger','panda_rightfinger'):
+    if other.get('robot_index') == index and other.get('is_grasp_finger',
+            other.get('link_name') in ('panda_leftfinger','panda_rightfinger')):
         return 'own_finger_allowed'
     placement = phase in ('release','retreat','verify_placement','observe_task_outcome')
     if placement and other.get('actor') == destinations[index]: return 'destination_support'
@@ -165,8 +177,12 @@ def contact_allowed(sides: list[dict[str, Any]], phase: str,
     """Exact physical robot-contact permissions; no broad target/palm exception."""
     if len(sides) != 2:
         return False
-    if any(s.get('link_name') == 'panda_link0' for s in sides) and any(s.get('actor') == 'table' for s in sides):
-        return True
+    for i in (0, 1):
+        robot, support = sides[i], sides[1-i]
+        if (robot.get('kind') == 'robot' and support.get('kind') == 'actor'
+                and robot.get('is_mount_root', robot.get('link_name') == 'panda_link0')
+                and support.get('actor') == robot.get('mount_support_actor', 'table')):
+            return True
     if all(s.get('kind') == 'robot' for s in sides):
         index = sides[0]['robot_index']
         return sides[1]['robot_index'] == index and frozenset(s['link_name'] for s in sides) in srdf[index]
@@ -175,7 +191,8 @@ def contact_allowed(sides: list[dict[str, Any]], phase: str,
             robot, target = sides[i], sides[1-i]
             if (robot.get('kind') == 'robot' and target.get('kind') == 'payload'
                     and robot['robot_index'] == target['target_index']
-                    and robot['link_name'] in ('panda_leftfinger', 'panda_rightfinger')):
+                    and robot.get('is_grasp_finger',
+                        robot.get('link_name') in ('panda_leftfinger', 'panda_rightfinger'))):
                 return True
     return False
 

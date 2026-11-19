@@ -14,20 +14,36 @@ import gymnasium as gym
 import h5py
 import numpy as np
 
-from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
+from mani_skill.agents.robots.embodiment_profiles import get_robot_profile
 from mani_skill.trajectory.utils import index_dict
 from .dual_arm_execution import (_Phase, ARM_SPEED, OBJECT_SPEED, OBJECT_ANGULAR_SPEED,
     WINDOW_POSITION, WINDOW_ROTATION, ENDPOINT)
-from .measurements import _rotation_distance
+from .measurements import _rotation_distance, finger_positions_m, finger_displacement_m
 from .observation import ObservedEnvironment
 from .physical_observation import measured_source_departure
 from .pill_support_collision import PillDualPayloadCollisionChecker
 from .pill_task import PillTask, TASK_ID
 from .runtime_policy import RuntimePolicy
-from .solve import phase_sequence
+from .solve import SYNC_TASK_IDS, phase_sequence, pill_planners, task_components
 from .trajectory_execution import as_numpy
 
 ACTION_ORDER = ("panda_wristcam-0", "panda_wristcam-1")
+
+
+def action_layout(metadata: dict) -> tuple[tuple[str, str], tuple[int, int]]:
+    """Read native controller widths; old Panda archives retain their contract."""
+    motion = metadata.get("motion_planning", {})
+    robots = tuple(motion.get("robot_uids", ("panda_wristcam", "panda_wristcam")))
+    widths = {uid: get_robot_profile(uid).action_size
+              for uid in ("panda_wristcam", "piper", "ur5_wsg", "arx_x5", "xarm6_robotiq")}
+    if len(robots) != 2 or robots[0] != robots[1] or robots[0] not in widths:
+        raise ValueError("Action replay requires a supported homogeneous robot pair")
+    order = tuple(motion.get("action_order", ()))
+    expected = tuple(f"{uid}-{i}" for i, uid in enumerate(robots))
+    sizes = tuple(motion.get("action_sizes", (widths[robots[0]],)*2))
+    if order != expected or sizes != (widths[robots[0]],)*2:
+        raise ValueError("Missing or incompatible physical left/right action order or widths")
+    return order, sizes
 
 
 def load_episode(path: str | Path, episode_id: int = 0) -> tuple:
@@ -38,10 +54,9 @@ def load_episode(path: str | Path, episode_id: int = 0) -> tuple:
     if episode is None or "dual_sync" not in episode:
         raise ValueError("Selected episode needs standard synchronous episode metadata")
     sync = episode["dual_sync"]
-    if metadata["env_info"]["env_id"] != TASK_ID or sync.get("schema") != "dual-panda-sync-v1":
-        raise ValueError("This action replay supports the synchronous pill task only")
-    if tuple(metadata.get("motion_planning", {}).get("action_order", ())) != ACTION_ORDER:
-        raise ValueError("Missing or incompatible physical left/right action order")
+    if metadata["env_info"]["env_id"] not in SYNC_TASK_IDS or sync.get("schema") not in ("dual-panda-sync-v1", "dual-arm-sync-v2"):
+        raise ValueError("This action replay supports declared synchronous tasks only")
+    _, sizes = action_layout(metadata)
     policy = RuntimePolicy.from_dict(sync["policy"])
     if policy.max_episode_steps != 200 or policy.last_completion_step != 199:
         raise ValueError("The official 200-step horizon must be preserved")
@@ -58,19 +73,20 @@ def load_episode(path: str | Path, episode_id: int = 0) -> tuple:
     with h5py.File(path, "r") as h5:
         group = h5[f"traj_{episode_id}"]
         actions = np.asarray(group["actions"], dtype=np.float32)
-        if actions.ndim != 2 or actions.shape[1] != 16 or not np.isfinite(actions).all():
-            raise ValueError("Recorded actions must be finite T by 16 absolute joint/gripper commands")
+        if actions.ndim != 2 or actions.shape[1] != sum(sizes) or not np.isfinite(actions).all():
+            raise ValueError("Recorded actions must be finite T by native paired controller width")
         if len(actions) != sum(count for _, count in phases) or len(actions) >= policy.max_episode_steps:
             raise ValueError("Action count differs from phase metadata or official episode horizon")
         initial_state = index_dict(group["env_states"], 0)
     return metadata, episode, policy, phases, actions, initial_state
 
 
-def paired_action(action: Any) -> dict[str, np.ndarray]:
+def paired_action(action: Any, order=ACTION_ORDER, sizes=(8, 8)) -> dict[str, np.ndarray]:
     action = np.asarray(action, dtype=np.float32)
-    if action.shape != (16,) or not np.isfinite(action).all():
-        raise ValueError("Expected one finite 16-component paired action")
-    return {key: action[8*i:8*(i+1)].copy() for i, key in enumerate(ACTION_ORDER)}
+    if action.shape != (sum(sizes),) or not np.isfinite(action).all():
+        raise ValueError("Expected one finite native paired action")
+    offsets = np.r_[0, np.cumsum(sizes)]
+    return {key: action[offsets[i]:offsets[i+1]].copy() for i, key in enumerate(order)}
 
 
 def placement_window(row: dict, opened: bool, regions: list[bool], count: int,
@@ -91,13 +107,29 @@ def placement_window(row: dict, opened: bool, regions: list[bool], count: int,
     return count+1, window
 
 
+def failure_details(name: str, report: dict[str, Any]) -> dict[str, Any]:
+    """Keep existing refusal evidence without another collision/state query."""
+    details = {"phase": name, **{key: report[key] for key in
+        ("status", "reason", "error", "initial_collisions") if key in report}}
+    if report.get("trace"):
+        details["last_event"] = {key: report["trace"][-1][key] for key in
+            ("error", "collisions", "attachment_geometry", "elapsed_step_delta_on_error")
+            if key in report["trace"][-1]}
+    return details
+
+
 def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
     metadata, episode, policy, phases, actions, initial_state = load_episode(path, episode_id)
+    order, sizes = action_layout(metadata)
+    task_id = metadata["env_info"]["env_id"]
+    task_factory, checker_factory = task_components(task_id)
     kwargs = dict(metadata["env_info"]["env_kwargs"])
     kwargs.update(sim_backend="physx_cpu", num_envs=1, obs_mode="none")
-    env = gym.make(TASK_ID, **kwargs)
+    env = gym.make(task_id, **kwargs)
     raw, capture, checker = env.unwrapped, None, None
-    result = {"schema": "dual-panda-action-replay-v1", "episode_id": episode_id,
+    result = {"schema": ("dual-panda-action-replay-v1" if raw.robot_uids[0] == "panda_wristcam"
+                         else "dual-arm-action-replay-v2"),
+        "task_id": task_id, "robot_uids": list(raw.robot_uids), "episode_id": episode_id,
         "seed": episode["episode_seed"], "recorded_actions": len(actions), "executed_actions": 0,
         "execution": {"status": "running"}, "quality": {"status": "not_evaluated"}}
     release_count = stable_count = 0
@@ -111,7 +143,7 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 or not np.isclose(raw.sim_timestep, .01)
                 or any(agent.control_mode != "pd_joint_pos" for agent in raw.agent.agents)):
             raise ValueError("Replay requires original 20 Hz absolute-joint control and 100 Hz CPU physics")
-        task = PillTask(raw)
+        task = task_factory(raw)
         capture = ObservedEnvironment(env, task, lambda: checker, policy)
         capture.install()
         predicates = task.region_predicates()
@@ -119,10 +151,8 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
             capture.phase = name
             held = name in ("lift_and_hold", "carry_lower")
             if name == "pregrasp":
-                solvers = [PandaArmMotionPlanningSolver(env, base_pose=agent.robot.pose, multi_robot_id=i,
-                    debug=False, vis=False, visualize_target_grasp_pose=False, print_env_info=False)
-                    for i, agent in enumerate(raw.agent.agents)]
-                checker = PillDualPayloadCollisionChecker.from_solvers(raw, *solvers, targets=task.targets)
+                solvers = pill_planners(env)
+                checker = checker_factory.from_solvers(raw, *solvers, targets=task.targets)
                 checker.set_measured_attachment_prediction(True)
             if name == "lift_and_hold":
                 checker.attach()
@@ -134,30 +164,32 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 checker.set_target_contacts_allowed((name in ("descend", "close_and_confirm", "release") or held,)*2)
                 phase = _Phase(capture, checker, name, targets=task.targets, held=held, policy=policy)
                 if not phase.preflight():
+                    result["failure"] = failure_details(name, phase.report)
                     raise RuntimeError(f"{name}: {phase.report['status']}")
             if name == "retreat":
                 retreat_start = np.asarray([as_numpy(agent.tcp.pose.p)[0] for agent in raw.agent.agents])
             window, grasp_counts = None, np.zeros(2, dtype=int)
-            previous_fingers = ([np.asarray(phase.report["initial_measurements"][arm.key]["finger_qpos_m"])
+            previous_fingers = ([finger_positions_m(arm, phase.report["initial_measurements"][arm.key])
                 for arm in phase.arms] if phase is not None else None)
             row = phase.report["initial_observation"] if phase is not None else None
             for _ in range(count):
-                command = paired_action(actions[result["executed_actions"]])
+                command = paired_action(actions[result["executed_actions"]], order, sizes)
                 before = int(as_numpy(raw.elapsed_steps).item())
-                row = phase.tick(command, name) if phase is not None else capture.step(command)
+                row = phase.tick(command, name, native_actions=True) if phase is not None else capture.step(command)
                 result["executed_actions"] += int(as_numpy(raw.elapsed_steps).item())-before
                 if phase is None:
                     continue
-                phase.report["trace"].clear()
                 if row is None or phase.report["status"] != "running" or (held and not phase.monitor(row)):
+                    result["failure"] = failure_details(name, phase.report)
                     raise RuntimeError(f"{name}: {phase.report.get('reason', phase.report['status'])}")
+                phase.report["trace"].clear()
                 opened = all(phase.opened(arm, row) for arm in phase.arms)
                 if name == "close_and_confirm":
                     if row["tracking_error_rad"] > ENDPOINT:
                         raise RuntimeError("Grasp arm hold error exceeded executor tolerance")
                     for i, arm in enumerate(phase.arms):
-                        fingers = np.asarray(row["measurements"][arm.key]["finger_qpos_m"])
-                        valid = row["objects"][i]["is_grasping"] and np.max(np.abs(fingers-previous_fingers[i])) <= .0002
+                        fingers = finger_positions_m(arm, row["measurements"][arm.key])
+                        valid = row["objects"][i]["is_grasping"] and finger_displacement_m(fingers, previous_fingers[i]) <= .0002
                         grasp_counts[i] = grasp_counts[i]+1 if valid else 0
                         previous_fingers[i] = fingers
                 if name == "release":

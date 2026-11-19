@@ -177,7 +177,42 @@ def test_native_monitor_decodes_payload_robot_contact_once_and_preserves_finger_
     contacts[:] = [contact(data, 'palm', 'finger', robot_point)]
     observed.record_substep()
     assert [error['reason'] for error in observed.pending_errors] == ['forbidden_robot_contact']
-    assert robot_point.reads == dict(separation=1, impulse=1)
+    assert robot_point.reads == dict(separation=1, impulse=1, position=1, normal=1)
+
+
+def test_multi_monitor_keeps_diagnostic_fields_and_reads_payload_geometry_once(monkeypatch):
+    data, task = fixture()
+    point = Point()
+    contacts = [contact(data, 'palm', 'left', point)]
+    observed = monitor(data, task, contacts, monkeypatch)
+    observed.record_substep()
+    assert [error['reason'] for error in observed.pending_errors] == [
+        'forbidden_payload_contact', 'forbidden_robot_contact']
+    for error in observed.pending_errors:
+        assert error['physical_substep_index'] == 1
+        assert error['points'] == [{'position_m': [.1, .2, .3], 'normal': [0., 0., 1.],
+            'separation_m': 0., 'impulse_Ns': [0., 0., 0.]}]
+    assert point.reads == dict(separation=1, impulse=1, position=1, normal=1)
+
+
+def test_multi_monitor_contents_proof_runs_only_after_source_update(monkeypatch):
+    data, task = fixture()
+    contacts = [contact(data, 'right', 'contents', Point())]
+    observed = monitor(data, task, contacts, monkeypatch)
+    observed.phase = 'release'
+    observed.record_substep()
+    assert task.proof_calls == [(1, 'fruit', 'release')]
+    assert not observed.pending_errors
+
+
+def test_multi_monitor_preserves_native_grasp_link_permission(monkeypatch):
+    data, task = fixture()
+    data['identities'][data['entities']['finger']].update(
+        link_name='robotiq_left_inner_finger', actor='robotiq_left_inner_finger', is_grasp_finger=True)
+    contacts = [contact(data, 'finger', 'left', Point())]
+    observed = monitor(data, task, contacts, monkeypatch)
+    observed.record_substep()
+    assert not observed.pending_errors
 
 
 if __name__ == '__main__':

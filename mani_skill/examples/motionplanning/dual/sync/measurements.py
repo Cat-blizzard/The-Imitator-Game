@@ -3,7 +3,45 @@ from __future__ import annotations
 import math
 from typing import Any
 import numpy as np
-from .trajectory_execution import ArmBinding, as_numpy
+from .trajectory_execution import ArmBinding, as_numpy, native_arm_action
+
+GRIPPER_OPEN_TOLERANCE = .002
+
+
+def gripper_coordinates(row: dict[str, Any]) -> np.ndarray:
+    """Read native physical coordinates; old prismatic reports remain valid."""
+    return np.asarray(row["gripper_qpos"] if "gripper_qpos" in row else row["finger_qpos_m"])
+
+
+def gripper_open_settings(arm: ArmBinding) -> dict[str, Any]:
+    unit = str(getattr(arm.agent, "gripper_coordinate_unit", "m"))
+    tolerance = float(getattr(arm.agent, "gripper_open_tolerance", GRIPPER_OPEN_TOLERANCE))
+    if unit not in ("m", "rad") or not np.isfinite(tolerance) or tolerance <= 0:
+        raise ValueError("Gripper open tolerance needs a positive value and explicit coordinate unit")
+    return {"tolerance": tolerance, "coordinate_unit": unit}
+
+
+def finger_positions_m(arm: ArmBinding, measurements: dict[str, Any]) -> np.ndarray:
+    """Use TCP-local finger translation for rotary hands, joint metres otherwise."""
+    if "finger_positions_tcp_m" in measurements:
+        return np.asarray(measurements["finger_positions_tcp_m"])
+    if gripper_open_settings(arm)["coordinate_unit"] != "m":
+        raise ValueError("Rotary grasp stability requires measured TCP-local finger positions")
+    return gripper_coordinates(measurements)
+
+
+def finger_displacement_m(current: np.ndarray, previous: np.ndarray) -> float:
+    """Largest finger translation, using Euclidean distance for 3D link positions."""
+    delta = np.asarray(current) - np.asarray(previous)
+    return float(np.max(np.linalg.norm(delta, axis=-1) if delta.ndim == 2 else np.abs(delta)))
+
+
+def gripper_is_open(arm: ArmBinding, coordinates: Any = None) -> bool:
+    settings = gripper_open_settings(arm)
+    upper = as_numpy(arm.agent.robot.get_qlimits())[0, arm.finger_indices, 1]
+    expected = np.broadcast_to(getattr(arm.agent, "gripper_open_qpos", upper), upper.shape)
+    actual = arm.full_qpos()[arm.finger_indices] if coordinates is None else np.asarray(coordinates)
+    return bool(np.allclose(actual, expected, rtol=0, atol=settings["tolerance"]))
 
 def _positive(value: Any, name: str) -> float:
     result = float(value)
@@ -25,28 +63,49 @@ def _measure(arms: tuple[ArmBinding, ArmBinding]) -> dict[str, Any]:
     for arm in arms:
         full = arm.full_qpos()
         velocity = as_numpy(arm.agent.robot.get_qvel())
-        if velocity.shape != (1, 9) or not np.isfinite(velocity).all():
-            raise ValueError("Expected one finite nine-joint Panda velocity state")
-        fingers = [i for i in range(9) if i not in arm.indices]
+        if velocity.shape != (1, len(arm.all_names)) or not np.isfinite(velocity).all():
+            raise ValueError("Expected one finite velocity state in active joint order")
+        fingers = arm.finger_indices
+        unit = gripper_open_settings(arm)["coordinate_unit"]
         result[arm.key] = {"qpos_rad": full[arm.indices].tolist(),
                            "qvel_rad_s": velocity[0, arm.indices].tolist(),
-                           "finger_qpos_m": full[fingers].tolist(),
-                           "finger_qvel_m_s": velocity[0, fingers].tolist()}
+                           "gripper_qpos": full[fingers].tolist(),
+                           "gripper_qvel": velocity[0, fingers].tolist(),
+                           "gripper_coordinate_unit": unit,
+                           "gripper_velocity_unit": f"{unit}/s"}
+        if unit == "m":
+            result[arm.key].update(finger_qpos_m=full[fingers].tolist(),
+                                  finger_qvel_m_s=velocity[0, fingers].tolist())
+        if (unit == "rad" and
+                all(hasattr(arm.agent, name) for name in ("finger1_link", "finger2_link", "tcp"))):
+            # Rotary grippers cannot compare a joint angle against a distance
+            # tolerance. Measure both contact links relative to the TCP so arm
+            # tracking does not masquerade as finger motion.
+            tcp = _transform(arm.agent.tcp.pose.to_transformation_matrix())
+            points = np.stack([as_numpy(link.pose.p).reshape(3) for link in
+                               (arm.agent.finger1_link, arm.agent.finger2_link)])
+            local = (points - tcp[:3, 3]) @ tcp[:3, :3]
+            if not np.isfinite(local).all():
+                raise ValueError("Expected finite physical finger positions")
+            result[arm.key]["finger_positions_tcp_m"] = local.tolist()
     return result
 
 
 
-def _actions_valid(env: Any, arms: tuple[ArmBinding, ArmBinding], action: dict[str, Any]) -> None:
+def _actions_valid(env: Any, arms: tuple[ArmBinding, ArmBinding], action: dict[str, Any],
+                   *, native_actions: bool = False) -> None:
     if set(action) != {arm.key for arm in arms}:
         raise ValueError("Every control tick must contain exactly both robot actions")
     converted = {}
     for arm in arms:
         value = np.asarray(action[arm.key], dtype=np.float64)
-        if value.shape != (8,) or not np.isfinite(value).all() or abs(value[7]) > 1:
-            raise ValueError("Each action must contain seven finite radians and one normalized gripper command")
-        if np.any(value[:7] < arm.limits[:, 0] - 1e-6) or np.any(value[:7] > arm.limits[:, 1] + 1e-6):
+        count = len(arm.names)
+        if (value.shape != (count + 1,) or not np.isfinite(value).all()
+                or not native_actions and abs(value[-1]) > 1):
+            raise ValueError("Each action must contain the named arm radians and one normalized gripper command")
+        if np.any(value[:count] < arm.limits[:, 0] - 1e-6) or np.any(value[:count] > arm.limits[:, 1] + 1e-6):
             raise ValueError("Arm target exceeds joint limits")
-        converted[arm.key] = value.astype(np.float32)
+        converted[arm.key] = value.astype(np.float32) if native_actions else native_arm_action(arm, value)
     if not env.unwrapped.agent.single_action_space.contains(converted):
         raise ValueError("Action exceeds the actual controller action space")
 

@@ -113,3 +113,44 @@ The reported ACT experiments are reproduced by the launchers under [`../exp_scri
   year={2023}
 }
 ```
+## Single-task learning with another robot pair
+
+The `train_act_single` and `eval_act_single` entries reuse the simulation loader
+without a human-video task encoder. Train a separate policy for each embodiment.
+For `DualArmPickPlace-v1`, select the recorded `base_camera` RGB stream and native
+qpos. Dual Piper uses 16 state values and 14 actions; dual Panda uses 18 and 16.
+The converter preserves the named controller/joint order in dataset metadata.
+
+A dataset configuration can use the episode splits stored by the converter:
+
+```json
+[{"repo_id": "dual-piper-v1", "root": "dual-piper-v1", "env_id": "DualArmPickPlace-v1"}]
+```
+
+```bash
+python -m examples.baselines.act.train_act_single \
+  --sub-config path/to/piper-datasets.json --sim-root path/to/converted \
+  --cameras base_camera --state-dim 16 --action-dim 14 \
+  --batch-size 16 --num-workers 2 --total-epochs 30 \
+  --output-dir outputs/piper-act
+
+python -m examples.baselines.act.eval_act_single \
+  --checkpoint outputs/piper-act/checkpoint_epoch_0030.pt \
+  --sub-config path/to/piper-datasets.json \
+  --env-id DualArmPickPlace-v1 --robot piper \
+  --seeds-file path/to/episodes.json --seed-split evaluation \
+  --max-episode-steps 400 --fps 20 --execute-steps 1 \
+  --save-video --output-dir outputs/piper-act-eval
+```
+
+For Panda, select its dataset configuration and use `--state-dim 18 --action-dim
+16` during training and `--robot panda` during evaluation. The original pill task
+keeps its own 200-step horizon. `--max-updates` optionally sets a finite optimizer
+update budget instead of an epoch budget.
+
+Training reads FPS from dataset metadata. Normalization statistics use only the
+selected training episodes and are saved in the checkpoint; validation and policy
+evaluation reuse those statistics. Action chunks mask padded tail labels. Evaluation
+strictly reloads the model, observes RGB/qpos, and executes the predicted native
+actions on fixed seeds. It records success, timeout, grasp/release observations and
+failure stage; it does not invoke expert planning or restore intermediate states.

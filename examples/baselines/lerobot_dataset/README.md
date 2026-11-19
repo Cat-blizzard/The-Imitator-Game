@@ -188,3 +188,45 @@ The masks are generated offline using Grounded-SAM-2. Human-curated task object 
 These annotations may contain missed objects, false detections, boundary errors, identity swaps, or temporal drift and should not be treated as ground-truth task-success labels.
 
 Loading examples, visualization commands, the full generation configuration, and postprocessing details are documented in [`maskgen/MASK.md`](maskgen/MASK.md).
+
+## Convert recorded multi-embodiment experts
+
+`h5_to_lerobot` accepts the original dual-Panda recordings and the native action
+order in `DualArmPickPlace-v1` recording sidecars. RGB camera names such as
+`base_camera` are retained. Use the recorded control frequency and omit the final
+observation from supervised rows: T actions and T+1 observations become T aligned
+`(observation[i], action[i])` rows, with timestamp `i / fps`.
+
+For a dataset assembled from separate successful recordings, assign seed pools
+before collection and create an episode manifest:
+
+```json
+{
+  "schema_version": 1,
+  "seed_splits": {
+    "train": [1000, 1001],
+    "development": [2000],
+    "evaluation": [3000, 3001]
+  },
+  "episodes": [
+    {"h5_path": "raw/train-1000/trajectory.h5", "episode_id": 0, "seed": 1000, "split": "train"},
+    {"h5_path": "raw/development-2000/trajectory.h5", "episode_id": 0, "seed": 2000, "split": "development"}
+  ]
+}
+```
+
+Relative source paths are resolved against this manifest. Evaluation seeds are
+reserved for policy rollouts and are not converted into training episodes.
+
+```bash
+python -m examples.baselines.lerobot_dataset.h5_to_lerobot \
+  --episode-manifest path/to/episodes.json \
+  --output-dir path/to/converted --name dual-piper-v1 \
+  --fps 20 --drop-terminal-frame --no-gpu --n-jobs 1
+```
+
+The selected episodes are mapped to `train` and `validation` in `meta/info.json`.
+`meta/source_episodes.json` retains the source episode, seed and split mapping.
+A manifest writes a new dataset directory and leaves earlier versions intact.
+Conversion failures retain partial output without a completion marker. The original
+`--input` conversion mode remains available.

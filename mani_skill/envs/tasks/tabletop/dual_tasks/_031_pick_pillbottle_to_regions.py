@@ -17,6 +17,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig
 from mani_skill.utils.structs.types import SimConfig
 from mani_skill.utils.building.actors.robotwin import get_model_id
+from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
 from transforms3d.euler import euler2quat
 from mani_skill.envs.tasks.tabletop.utils.L0_L3_utils import (
     apply_l1_offset_xy,
@@ -41,17 +42,19 @@ REWARD_PHASES = [
 class TwoRobotPickPillToRegionsEnv(BaseEnv):
     """
     **Task Description:**
-    Two panda_wristcam robots operate on a table.
+    Two supported robot arms operate on a table (Panda wrist-camera by default).
     1) Pick pill A and place it into region A-1.
     2) Pick pill B and place it into region B-1.
 
     **Success Conditions:**
     - Pill A is in region A-1.
     - Pill B is in region B-1.
-    - Both robots are static.
+    Robot static status is reported separately as a diagnostic.
     """
 
-    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam"), ("piper", "piper"),
+                        ("ur5_wsg", "ur5_wsg"), ("arx_x5", "arx_x5"),
+                        ("xarm6_robotiq", "xarm6_robotiq")]
     agent: MultiAgent[Tuple[PandaWristCam, PandaWristCam]]
 
     PILL_MODEL_NAME = "080_pillbottle"
@@ -77,6 +80,12 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
         wrist_sensor: bool = False, 
         **kwargs
     ):
+        robot_uids = tuple(robot_uids)
+        if robot_uids not in self.SUPPORTED_ROBOTS:
+            raise ValueError(f"Pill task supports homogeneous pairs: {self.SUPPORTED_ROBOTS}")
+        if wrist_sensor and robot_uids != ("panda_wristcam", "panda_wristcam"):
+            raise ValueError(f"{robot_uids[0]} has no wrist camera; use the original external zed2i camera")
+        self.embodiment_profile = get_task_profile("TwoRobotPickPillToRegions-v1", robot_uids[0])
         self.hi_res = hi_res
         self.wrist_sensor = wrist_sensor
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -138,14 +147,41 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
-        super()._load_agent(
-            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
-        )
+        poses = ([sapien.Pose(p=m.position, q=m.quaternion)
+                  for m in self.embodiment_profile.mount_poses]
+                 if self.robot_uids != ("panda_wristcam", "panda_wristcam") else
+                 [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])])
+        super()._load_agent(options, poses)
         self.agent.__init__(self.agent.agents, wrist_sensor=self.wrist_sensor)
+        self._configure_embodiment_gripper()
+
+    def _configure_embodiment_gripper(self) -> None:
+        """Apply an explicit task effort setting without changing agent defaults."""
+        effort = self.embodiment_profile.gripper_drive_force_limit
+        if effort is None:
+            return
+        if not np.isfinite(effort) or effort <= 0:
+            raise ValueError("Task gripper effort must be positive and finite")
+        for agent in self.agent.agents:
+            agent.gripper_force_limit = effort
+            names = tuple(agent.embodiment_profile.controlled_gripper_joints)
+            for controller in agent.controllers.values():
+                for part in controller.controllers.values():
+                    if tuple(part.config.joint_names) == names:
+                        part.config.force_limit = effort
+                        part.set_drive_property()
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
         self.table_scene.build()
+        if self.robot_uids != ("panda_wristcam", "panda_wristcam"):
+            for i, mount in enumerate(self.embodiment_profile.mount_poses):
+                x, y, z = mount.position
+                if z <= .002:
+                    continue
+                actors.build_box(self.scene, half_sizes=[.065, .065, (z-.002)/2],
+                    color=[.3, .3, .33, 1], name=f"mount_{i}", body_type="static",
+                    initial_pose=sapien.Pose([x, y, (z-.002)/2]))
 
         self.pill_a_pose = sapien.Pose(
             p=[self.pill_a_xy[0], self.pill_a_xy[1], 0.0],
@@ -226,6 +262,11 @@ class TwoRobotPickPillToRegionsEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            if self.robot_uids != ("panda_wristcam", "panda_wristcam"):
+                for agent in self.agent.agents:
+                    agent.reset(agent.keyframes["rest"].qpos)
+            for agent, mount in zip(self.agent.agents, self.embodiment_profile.mount_poses):
+                agent.robot.set_pose(sapien.Pose(p=mount.position, q=mount.quaternion))
 
             # Initialize reward tracker
             if not hasattr(self, "reward_tracker"):

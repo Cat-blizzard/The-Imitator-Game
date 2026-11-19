@@ -167,6 +167,27 @@ def test_candidate_uses_supplied_geometry_without_changing_measured_release():
     assert checker._world_vertices("piece0", deep)[:, 2].min() < -0.004
 
 
+def test_initial_support_uses_actual_geometry_instead_of_vertical_pick_window():
+    checker, objects = pill_fixture()
+    pose = checker._initial_object.copy()
+    pose[0, 3] += .002
+    pose[2, 3] -= 20e-6
+    pose[:3, :3] = euler2mat(0., 0., .05)
+    assert support_allowed(checker, objects, pose)
+    receipt = checker._last_support_validation
+    assert receipt['motion_window_is_collision_gate'] is False
+    assert receipt['legacy_motion_window_passed'] is False
+    assert not checker.support_released
+
+
+@pytest.mark.parametrize('axis,value', [(2, -.0003), (0, .995)])
+def test_initial_support_still_rejects_depth_growth_and_finite_table_edge(axis, value):
+    checker, objects = pill_fixture()
+    pose = checker._initial_object.copy()
+    pose[axis, 3] = value
+    assert not support_allowed(checker, objects, pose)
+
+
 def test_measured_attachment_rejects_snapshot_after_physical_tick():
     checker = DualPayloadCollisionChecker()
     checker._fresh = checker.attached = checker.measured_attachment_prediction = True

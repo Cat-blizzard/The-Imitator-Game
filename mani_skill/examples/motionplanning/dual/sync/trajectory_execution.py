@@ -1,4 +1,4 @@
-"""Bind measured Panda states to explicit controller joint/action order."""
+"""Bind measured robot states to explicit controller joint/action order."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -20,15 +20,36 @@ class ArmBinding:
     names: tuple[str, ...]
     indices: np.ndarray
     limits: np.ndarray
+    all_names: tuple[str, ...]
+    finger_indices: np.ndarray
 
     def full_qpos(self) -> np.ndarray:
         value = as_numpy(self.agent.robot.get_qpos())
-        if value.shape != (1, 9) or not np.isfinite(value).all():
-            raise ValueError("This executor requires one finite nine-joint Panda state")
+        if value.shape != (1, len(self.all_names)) or not np.isfinite(value).all():
+            raise ValueError("Expected one finite state matching the robot's active joint order")
         return value[0].copy()
 
     def arm_qpos(self) -> np.ndarray:
         return self.full_qpos()[self.indices]
+
+
+def native_arm_action(arm: ArmBinding, command: Any) -> np.ndarray:
+    """Map canonical open/close to this robot's native scalar gripper action.
+
+    Planning schedules use +1 open and -1 closed. The environment and recorder
+    receive native controller values, so saved actions replay without remapping.
+    """
+    result = np.asarray(command, dtype=np.float32).copy()
+    if (result.shape != (len(arm.names) + 1,) or not np.isfinite(result).all()
+            or abs(float(result[-1])) > 1):
+        raise ValueError("Expected named arm radians and one canonical gripper command")
+    opened = float(getattr(arm.agent, "gripper_open_action", 1.))
+    closed = float(getattr(arm.agent, "gripper_closed_action", -1.))
+    if not np.isfinite([opened, closed]).all() or opened == closed:
+        raise ValueError("Native gripper endpoints must be finite and different")
+    fraction = (float(result[-1]) + 1.) / 2.
+    result[-1] = closed + fraction * (opened - closed)
+    return result
 
 
 def bind_arm(key: str, agent: Any) -> ArmBinding:
@@ -39,13 +60,23 @@ def bind_arm(key: str, agent: Any) -> ArmBinding:
         raise ValueError("Arm commands must be absolute, unnormalized radians")
     names = tuple(joint.get_name() for joint in arm.joints)
     all_names = tuple(joint.get_name() for joint in agent.robot.get_active_joints())
-    if len(names) != 7 or len(all_names) != 9 or len(set(names)) != 7:
-        raise ValueError("Expected seven arm joints and two physical finger joints")
+    if (not names or len(set(names)) != len(names)
+            or len(set(all_names)) != len(all_names) or not set(names).issubset(all_names)):
+        raise ValueError("Arm controller joints must uniquely name actual active joints")
+    # Agents name the physical gripper joints; the complement preserves the
+    # existing two-finger fixture/agent contract when no explicit list exists.
+    finger_names = tuple(getattr(agent, "gripper_joint_names",
+                                 tuple(name for name in all_names if name not in names)))
+    if (not finger_names or len(set(finger_names)) != len(finger_names)
+            or set(names) & set(finger_names)
+            or set(names) | set(finger_names) != set(all_names)):
+        raise ValueError("This binding requires one arm and its named physical gripper joints")
     indices = np.array([all_names.index(name) for name in names])
+    fingers = np.array([all_names.index(name) for name in finger_names])
     limits = as_numpy(agent.robot.get_qlimits())[0, indices].copy()
-    if limits.shape != (7, 2) or not np.isfinite(limits).all():
+    if limits.shape != (len(names), 2) or not np.isfinite(limits).all():
         raise ValueError("Invalid arm joint limits")
-    return ArmBinding(key, agent, names, indices, limits)
+    return ArmBinding(key, agent, names, indices, limits, all_names, fingers)
 
 
 def bindings(env: Any, keys: tuple[str, str]) -> tuple[ArmBinding, ArmBinding]:

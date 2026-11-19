@@ -5,6 +5,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import numpy as np
+from mani_skill import format_path
 
 from .trajectory_execution import as_numpy
 from .physical_observation import (contact_identities, contact_allowed, decode_native_contacts,
@@ -36,7 +37,9 @@ class ObservedEnvironment:
             task.target_names, task.targets)
         self.srdf = {}
         for i, agent in enumerate(self.unwrapped.agent.agents):
-            tree = ET.parse(Path(agent.urdf_path).with_suffix(".srdf")).getroot()
+            urdf = Path(format_path(agent.urdf_path))
+            srdf = Path(format_path(str(getattr(agent, "srdf_path", urdf.with_suffix(".srdf")))))
+            tree = ET.parse(srdf).getroot()
             self.srdf[i] = {frozenset((node.attrib['link1'], node.attrib['link2']))
                 for node in tree.findall('disable_collisions')}
         self.original_hook = self.unwrapped._after_simulation_step
@@ -63,7 +66,7 @@ class ObservedEnvironment:
         geometry = measured_source_departure(checker, refresh=False)
         contacts = decode_native_contacts(native_contacts, self.identities)
         rows = classify_task_object_contacts(contacts, tuple(self.physical_released),
-            self.phase, self.task)
+            self.phase, self.task, include_destination_contents_proof=False)
         source_contact = [False, False]
         for row in rows:
             if row['physical_contact']:
@@ -83,13 +86,27 @@ class ObservedEnvironment:
             self.phase, self.task)
         for row in rows:
             if row['physical_contact'] and row['class'] == 'forbidden':
-                self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies']})
-        for contact in contacts:
+                self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies'],
+                    "physical_substep_index": self.substeps, "points": row['points']})
+        for contact, native_contact in zip(contacts, native_contacts):
             sides = contact['bodies']
             if not any(side.get('kind') == 'robot' for side in sides):
                 continue
             if contact['physical_contact'] and not contact_allowed(sides, self.phase, self.srdf):
-                self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides})
+                # Retain details only for an already forbidden event. This is
+                # the same native manifold, with no additional scene query or
+                # physical acceptance threshold.
+                points = []
+                for copied, native_point in zip(contact['points'], native_contact.points):
+                    point = {'separation_m': copied['separation_m'], 'impulse_Ns': copied['impulse_Ns']}
+                    if 'position_m' in copied:
+                        point.update(position_m=copied['position_m'], normal=copied['normal'])
+                    else:
+                        point.update(position_m=np.asarray(native_point.position).tolist(),
+                                     normal=np.asarray(native_point.normal).tolist())
+                    points.append(point)
+                self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides,
+                    "physical_substep_index": self.substeps, "points": points})
         if self.references is not None and (self.phase == 'lift_and_hold' or self.phase.startswith('carry_')):
             self.held_substeps += 1
             for i, (agent, actor) in enumerate(zip(self.unwrapped.agent.agents, self.task.targets)):

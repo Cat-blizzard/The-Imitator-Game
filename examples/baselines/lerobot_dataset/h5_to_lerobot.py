@@ -29,16 +29,17 @@ Usage examples:
     --n-jobs 128
 
 H5 data format:
-  - actions (N, 16): used directly as qpos_gripper_actions
-  - panda_wristcam-0 qpos (N+1, 9): left arm [7 joints + 2 grippers]
-  - panda_wristcam-1 qpos (N+1, 9): right arm [7 joints + 2 grippers]
+  - actions (N, native paired action width), used directly
+  - per-robot qpos (N+1, physical joint count), in recorded native order
+  - layout comes from the sidecar; original dual-Panda archives retain a fallback
 
 LeRobot output format:
-  - qpos_gripper_states (18): [left(9) + right(9)]
-  - qpos_gripper_actions (16): uses H5 actions directly
+  - qpos_gripper_states: concatenated native states (Panda 18, Piper 16)
+  - qpos_gripper_actions: native paired actions (Panda 16, Piper 14)
 """
 
 import os
+import copy
 import sys
 import argparse
 import h5py
@@ -57,6 +58,7 @@ from threading import Lock
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import math
 import multiprocessing
+from dataclasses import dataclass
 
 # GPU manager module lives in scripts/ (repo-root relative), not installed as a package.
 _SCRIPTS_DIR = Path(__file__).resolve().parents[3] / "scripts"
@@ -181,40 +183,103 @@ def depth2rgb(d, zrange, *, output=None, sanitized=False, inv_depth=False, opts=
 def get_traj_names(h5_file):
     return sorted([k for k in h5_file.keys() if k.startswith('traj_')])
 
-def load_trajectory_data(h5_file, traj_name, drop_terminal_frame=False):
+def native_data_contract(h5_file: h5py.File, action_width: int) -> dict:
+    """Read native controller/joint order; old dual-Panda recordings remain supported."""
+    sidecar = Path(h5_file.filename).with_suffix(".json")
+    metadata = json.loads(sidecar.read_text()) if sidecar.is_file() else {}
+    sync = metadata.get("embodiment_sync", {})
+    motion = metadata.get("motion_planning", {})
+    env = metadata.get("env_info", {})
+    kwargs = env.get("env_kwargs", {})
+    order = sync.get("action_order")
+    frequency = sync.get("control_freq")
+    if order is None:
+        order = motion.get("native_action_layout")
+        frequency = motion.get("control_freq")
+    if order is None:
+        robots = motion.get("robot_uids", kwargs.get("robot_uids"))
+        if (action_width != 16 or robots is not None
+                and tuple(robots) not in (("panda_wristcam",)*2, ("panda",)*2)):
+            raise ValueError("Recording lacks an explicit native action layout; "
+                             "record the controller and physical joint order before conversion. "
+                             "Only original dual-Panda archives have a legacy fallback.")
+        # The original TIG recorder flattens these two native controllers in this order.
+        order = [{"key": f"panda_wristcam-{side}", "size": 8,
+                  "arm_joint_names": [f"panda_joint{i}" for i in range(1, 8)],
+                  "state_joint_names": [f"panda_joint{i}" for i in range(1, 8)]
+                  + ["panda_finger_joint1", "panda_finger_joint2"]} for side in range(2)]
+    if not isinstance(order, list) or len(order) != 2:
+        raise ValueError("A recording must describe two native action controllers")
+    for item in order:
+        arm, state = item.get("arm_joint_names", []), item.get("state_joint_names", [])
+        if (not isinstance(item.get("key"), str) or not arm or not state
+                or len(set(arm)) != len(arm) or len(set(state)) != len(state)
+                or not set(arm).issubset(state) or item.get("size") != len(arm)+1):
+            raise ValueError("Invalid recorded native joint/action order")
+    if len({item["key"] for item in order}) != 2 or sum(item["size"] for item in order) != action_width:
+        raise ValueError("Recorded action order differs from the H5 action width")
+    # Old Panda/Piper archives omitted these descriptive fields. Normalize only
+    # their established defaults; explicit native radian gripper endpoints survive.
+    order = [dict(item) for item in order]
+    for item in order:
+        item.setdefault("arm_coordinate_unit", "rad")
+        item.setdefault("gripper_coordinate_unit", "m")
+        item.setdefault("gripper_open_action", 1.0)
+        item.setdefault("gripper_closed_action", -1.0)
+    contract = {"action_order": order, "env_id": env.get("env_id"),
+            "robot_uids": kwargs.get("robot_uids", motion.get("robot_uids")),
+            "control_mode": kwargs.get("control_mode", "pd_joint_pos"),
+            "control_freq": frequency,
+            "rendering": {"shader_dir": kwargs.get("shader_dir"),
+                          "sensor_configs": kwargs.get("sensor_configs", {})}}
+    # Keep recorded physical settings with the data, rather than reconstructing
+    # them from whichever source checkout later converts the recording.
+    reports = [episode.get("dual_sync", {}) for episode in metadata.get("episodes", [])]
+    for field in ("task_profile", "robot_profile"):
+        values = [report[field] for report in reports if field in report]
+        if values:
+            if any(not isinstance(value, dict) or value != values[0] for value in values):
+                raise ValueError(f"Recording contains inconsistent {field} settings")
+            contract[field] = values[0]
+    return contract
+
+
+def load_trajectory_data(h5_file: h5py.File, traj_name: str,
+                         drop_terminal_frame: bool = False) -> dict:
+    """T native actions and T+1 observations; supervised row i is (obs[i], action[i])."""
     traj = h5_file[traj_name]
     actions = traj['actions'][()].astype(np.float32)
+    if actions.ndim != 2 or not len(actions) or not np.isfinite(actions).all():
+        raise ValueError(f"{traj_name}: expected nonempty finite (T, native action width) actions")
     num_frames = len(actions) + 1
-    qpos_left = traj['obs']['agent']['panda_wristcam-0']['qpos'][()].astype(np.float32)
-    qpos_right = traj['obs']['agent']['panda_wristcam-1']['qpos'][()].astype(np.float32)
-    if actions.ndim != 2 or actions.shape[1] != 16 or len(actions) == 0:
-        raise ValueError(f"{traj_name}: expected nonempty (T, 16) joint-position actions")
-    for side, qpos in (("left", qpos_left), ("right", qpos_right)):
-        if qpos.shape != (num_frames, 9):
-            raise ValueError(f"{traj_name}: {side} qpos must have shape (T + 1, 9)")
+    contract = native_data_contract(h5_file, actions.shape[1])
+    positions = []
+    for item in contract["action_order"]:
+        qpos = traj['obs']['agent'][item["key"]]['qpos'][()].astype(np.float32)
+        if qpos.shape != (num_frames, len(item["state_joint_names"])) or not np.isfinite(qpos).all():
+            raise ValueError(f"{traj_name}: {item['key']} qpos must have shape (T + 1, named state width)")
+        positions.append(qpos)
     sensor_data = traj['obs']['sensor_data']
     rgb_data, depth_data = {}, {}
-    camera_mapping = {
-        'panda_wristcam_0_hand_camera': 'wristcam0',
-        'panda_wristcam_1_hand_camera': 'wristcam1',
-        'cam1': 'cam1', 'cam2': 'cam2', 'cam3': 'cam3', 'zed2i': 'zed2i',
-    }
-    for h5_cam, lr_cam in camera_mapping.items():
-        if h5_cam in sensor_data:
-            cg = sensor_data[h5_cam]
-            if 'rgb' in cg: rgb_data[lr_cam] = cg['rgb'][()]
-            if 'depth' in cg: depth_data[lr_cam] = cg['depth'][()]
+    aliases = {'panda_wristcam_0_hand_camera': 'wristcam0',
+               'panda_wristcam_1_hand_camera': 'wristcam1'}
+    for h5_cam, cg in sensor_data.items():
+        lr_cam = aliases.get(h5_cam, h5_cam)
+        if 'rgb' in cg:
+            rgb_data[lr_cam] = cg['rgb'][()]
+        if 'depth' in cg:
+            depth_data[lr_cam] = cg['depth'][()]
     for camera, frames in list(rgb_data.items()) + list(depth_data.items()):
         if len(frames) != num_frames:
             raise ValueError(f"{traj_name}: camera {camera} must contain T + 1 frames")
     if drop_terminal_frame:
-        # Observation i precedes action i; the terminal observation has no next action.
         num_frames = len(actions)
-        qpos_left, qpos_right = qpos_left[:-1], qpos_right[:-1]
+        positions = [qpos[:-1] for qpos in positions]
         rgb_data = {key: frames[:-1] for key, frames in rgb_data.items()}
         depth_data = {key: frames[:-1] for key, frames in depth_data.items()}
-    return {'actions': actions, 'qpos_left': qpos_left, 'qpos_right': qpos_right,
-            'rgb_data': rgb_data, 'depth_data': depth_data, 'num_frames': num_frames}
+    return {'actions': actions, 'qpos_left': positions[0], 'qpos_right': positions[1],
+            'rgb_data': rgb_data, 'depth_data': depth_data, 'num_frames': num_frames,
+            'data_contract': contract}
 
 def process_depth_images(depth_data, verbose=False):
     processed = {}
@@ -242,10 +307,14 @@ def build_lerobot_features(sample):
         _, C, H, W = sample['processed_depth'][cam_name].shape
         fk = f"observation.images.{cam_name}_depth"
         features[fk] = {"dtype": "video", "shape": (C, H, W), "names": get_proper_feature_names(fk, C)}
+    order = sample["data_contract"]["action_order"]
+    state_names = [f"{item['key']}/{joint}" for item in order for joint in item["state_joint_names"]]
+    action_names = [f"{item['key']}/{joint}" for item in order
+                    for joint in item["arm_joint_names"]+["gripper"]]
     fk = "observation.qpos_gripper_states"
-    features[fk] = {"dtype": "float32", "shape": (18,), "names": get_proper_feature_names(fk, 18)}
+    features[fk] = {"dtype": "float32", "shape": (len(state_names),), "names": state_names}
     fk = "action.qpos_gripper_actions"
-    features[fk] = {"dtype": "float32", "shape": (16,), "names": get_proper_feature_names(fk, 16)}
+    features[fk] = {"dtype": "float32", "shape": (len(action_names),), "names": action_names}
     return features
 
 def get_h5_trajectory_count(h5_path):
@@ -255,6 +324,8 @@ def get_h5_trajectory_count(h5_path):
 
 def check_dataset_complete(dataset_dir, h5_path=None, fps=None, drop_terminal_frame=None):
     if not dataset_dir.exists(): return False, "directory does not exist"
+    if (dataset_dir / ".conversion-failed.json").exists():
+        return False, "previous conversion failed"
     info_file = dataset_dir / "meta" / "info.json"
     if not info_file.exists(): return False, "missing meta/info.json"
     try:
@@ -290,6 +361,204 @@ def cleanup_failed_dataset(dataset_dir, name):
             print(f"  [{name}] ⚠️ {e}")
 
 
+@dataclass(frozen=True)
+class EpisodeSource:
+    h5_path: Path
+    episode_id: int
+    seed: Optional[int] = None
+    split: Optional[str] = None
+
+    @property
+    def trajectory(self) -> str:
+        return f"traj_{self.episode_id}"
+
+
+def load_episode_manifest(manifest_path: Path) -> Tuple[Dict[str, List[int]], List[EpisodeSource]]:
+    """Select recorded episodes without changing their preassigned seed split.
+
+    Schema: {"schema_version": 1, "seed_splits": {"train": [...],
+    "development": [...], "evaluation": [...]}, "episodes": [{"h5_path":
+    "relative/or/absolute.h5", "episode_id": 0, "seed": 123, "split": "train"}]}.
+    Evaluation seeds are reserved for actual policy evaluation, never converted.
+    """
+    manifest_path = Path(manifest_path)
+    with manifest_path.open() as handle:
+        manifest = json.load(handle)
+    if type(manifest.get("schema_version")) is not int or manifest["schema_version"] != 1:
+        raise ValueError("episode manifest requires schema_version=1")
+    seed_splits = manifest.get("seed_splits", {})
+    if set(seed_splits) != {"train", "development", "evaluation"}:
+        raise ValueError("seed_splits must define train, development and evaluation")
+    assigned = set()
+    for split, seeds in seed_splits.items():
+        if not isinstance(seeds, list) or any(type(seed) is not int for seed in seeds):
+            raise ValueError(f"{split} seeds must be an integer list")
+        if len(seeds) != len(set(seeds)) or assigned.intersection(seeds):
+            raise ValueError("seed splits must contain unique, disjoint seeds")
+        assigned.update(seeds)
+    entries = manifest.get("episodes")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("episode manifest must select at least one episode")
+    sources, seen_seeds, seen_sources = [], set(), set()
+    for entry in entries:
+        seed, episode_id, split = entry.get("seed"), entry.get("episode_id"), entry.get("split")
+        if type(seed) is not int or type(episode_id) is not int or episode_id < 0:
+            raise ValueError("each episode requires an integer seed and nonnegative episode_id")
+        if split not in ("train", "development") or seed not in seed_splits[split]:
+            raise ValueError(f"seed {seed} is not assigned to the requested training/development split")
+        raw_path = entry.get("h5_path")
+        if not isinstance(raw_path, str) or not raw_path:
+            raise ValueError("each episode requires h5_path")
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = manifest_path.parent / path
+        path = path.resolve()
+        identity = (path, episode_id)
+        if seed in seen_seeds or identity in seen_sources:
+            raise ValueError("each seed and source episode may be selected only once")
+        seen_seeds.add(seed)
+        seen_sources.add(identity)
+        sources.append(EpisodeSource(path, episode_id, seed, split))
+    return seed_splits, sources
+
+
+def _source_record(source: EpisodeSource, dataset_dir: Path, episode_id: int) -> dict:
+    return {
+        "episode_id": episode_id, "seed": source.seed, "split": source.split,
+        "source_path": os.path.relpath(source.h5_path.resolve(), dataset_dir.resolve()),
+        "source_episode_id": source.episode_id,
+    }
+
+
+def _convert_episodes(sources: List[EpisodeSource], dataset_dir: Path, dataset_name: str,
+                      fps: int, drop_terminal_frame: bool, gpu_id: int,
+                      seed_splits: Optional[Dict[str, List[int]]] = None) -> Tuple[bool, str, str]:
+    """Use the original LeRobot writer for either one H5 or an explicit episode selection.
+
+    An episode is counted only after save_episode succeeds. A failed write stops
+    this conversion, so its pending images/frames cannot leak into another episode.
+    Partial output is retained for diagnosis and is never marked complete.
+    """
+    from examples.baselines.lerobot_dataset.lerobot_dataset import LeRobotDataset
+
+    dataset, finalized, current_source = None, False, None
+    converted = []
+    try:
+        if fps <= 0:
+            raise ValueError("fps must be positive")
+        if not sources:
+            raise ValueError("no trajectory selected")
+        features = None
+        for source in sources:
+            current_source = source
+            with h5py.File(source.h5_path, "r") as h5_file:
+                traj_data = load_trajectory_data(h5_file, source.trajectory, drop_terminal_frame)
+            traj_data["processed_depth"] = process_depth_images(traj_data["depth_data"])
+            source_features = build_lerobot_features(traj_data)
+            native_contract = traj_data["data_contract"]
+            if native_contract["control_freq"] is not None and not np.isclose(native_contract["control_freq"], fps):
+                raise ValueError("Requested fps differs from the recorded control frequency")
+            if dataset is None:
+                features = source_features
+                dataset_dir.parent.mkdir(parents=True, exist_ok=True)
+                dataset = LeRobotDataset.create(
+                    repo_id=dataset_name, fps=fps, root=str(dataset_dir),
+                    features=copy.deepcopy(features), use_videos=True, video_backend="torchcodec",
+                )
+                dataset.meta.info["terminal_observation"] = (
+                    "dropped" if drop_terminal_frame else "duplicate_last_action"
+                )
+                dataset.meta.info["native_data_contract"] = native_contract
+            elif native_contract != dataset.meta.info["native_data_contract"]:
+                raise ValueError("Selected episodes have different robot/controller contracts")
+            elif source_features != features:
+                raise ValueError(f"{source.trajectory}: camera/features differ from the first selected episode")
+            qpos_states = np.concatenate([traj_data["qpos_left"], traj_data["qpos_right"]], axis=1)
+            qpos_actions = traj_data["actions"]
+            if not drop_terminal_frame:
+                qpos_actions = np.vstack([qpos_actions, qpos_actions[-1:]])
+            for i in range(traj_data["num_frames"]):
+                frame = {"task": dataset_name}
+                for camera, rgb in traj_data["rgb_data"].items():
+                    frame[f"observation.images.{camera}"] = rgb[i].transpose(2, 0, 1)
+                for camera, depth in traj_data["processed_depth"].items():
+                    frame[f"observation.images.{camera}_depth"] = depth[i]
+                frame["observation.qpos_gripper_states"] = qpos_states[i]
+                frame["action.qpos_gripper_actions"] = qpos_actions[i]
+                dataset.add_frame(frame)
+            dataset.save_episode()
+            converted.append(_source_record(source, dataset_dir, len(converted)))
+            del traj_data
+            gc.collect()
+
+        total_episodes = len(converted)
+        if seed_splits is None:
+            # Preserve the original default split for ordinary --input use.
+            shuffled = np.random.permutation(total_episodes).tolist()
+            train_n = int(0.95 * total_episodes)
+            splits = {"train": shuffled[:train_n], "test": shuffled[train_n:],
+                      dataset_name: list(range(total_episodes))}
+        else:
+            splits = {
+                "train": [entry["episode_id"] for entry in converted if entry["split"] == "train"],
+                "validation": [entry["episode_id"] for entry in converted if entry["split"] == "development"],
+            }
+        dataset.meta.info["splits"] = splits
+        dataset.finalize()
+        finalized = True
+        meta_dir = dataset_dir / "meta"
+        meta_dir.mkdir(parents=True, exist_ok=True)
+        # meta.save_episode writes a default all-train split. Persist our final
+        # assignment in info.json, rather than setting an unused meta.splits attribute.
+        (meta_dir / "info.json").write_text(json.dumps(dataset.meta.info, indent=2) + "\n")
+        if seed_splits is not None:
+            (meta_dir / "source_episodes.json").write_text(json.dumps({
+                "schema_version": 1, "fps": fps,
+                "terminal_observation": dataset.meta.info["terminal_observation"],
+                "seed_splits": seed_splits, "episodes": converted,
+            }, indent=2) + "\n")
+        (dataset_dir / ".complete").write_text(json.dumps({
+            "completed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "episodes": total_episodes, "gpu_id": gpu_id, "fps": fps,
+            "drop_terminal_frame": drop_terminal_frame,
+        }, indent=2) + "\n")
+        return True, dataset_name, f"success: {total_episodes} episodes"
+    except Exception as error:
+        message = f"error: {error}"
+        if dataset is not None and not finalized:
+            try:
+                dataset.finalize()
+            except Exception as close_error:
+                message += f"; closing partial output: {close_error}"
+        if dataset_dir.exists():
+            (dataset_dir / ".complete").unlink(missing_ok=True)
+            (dataset_dir / ".conversion-failed.json").write_text(json.dumps({
+                "error": message, "saved_episodes": len(converted),
+                "failed_source": _source_record(current_source, dataset_dir, len(converted))
+                if current_source is not None else None,
+            }, indent=2) + "\n")
+        return False, dataset_name, message
+
+
+def process_episode_manifest(manifest_path_str: str, output_dir_str: str,
+                             dataset_name: str, fps: int = 30, gpu_id: int = -1,
+                             drop_terminal_frame: bool = False) -> Tuple[bool, str, str]:
+    """Write a new, immutable dataset version selected from one or more H5 files."""
+    try:
+        if not dataset_name or Path(dataset_name).name != dataset_name or dataset_name in (".", ".."):
+            raise ValueError("manifest conversion requires a dataset --name without path components")
+        seed_splits, sources = load_episode_manifest(Path(manifest_path_str))
+        dataset_dir = Path(output_dir_str) / dataset_name
+        if dataset_dir.exists():
+            raise ValueError("output already exists; choose a new dataset version name")
+        if gpu_id >= 0:
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+        return _convert_episodes(sources, dataset_dir, dataset_name, fps,
+                                 drop_terminal_frame, gpu_id, seed_splits)
+    except Exception as error:
+        return False, dataset_name, f"error: {error}"
+
+
 def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
                     dataset_name: str = None, force: bool = False,
                     gpu_id: int = -1, drop_terminal_frame: bool = False) -> Tuple[bool, str, str]:
@@ -304,7 +573,11 @@ def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
     try:
         if dataset_name is None:
             dataset_name = h5_path.stem
+        if Path(dataset_name).name != dataset_name or dataset_name in (".", ".."):
+            raise ValueError("dataset name must not contain path components")
         dataset_dir = output_dir / dataset_name
+        if h5_path.resolve().is_relative_to(dataset_dir.resolve()):
+            raise ValueError("output dataset directory must not contain the source H5")
 
         # Bind GPU
         if gpu_id >= 0:
@@ -323,101 +596,19 @@ def process_h5_file(h5_path_str: str, output_dir_str: str, fps: int = 30,
             if check_dataset_complete(dataset_dir, h5_path)[0]:
                 return False, dataset_name, f"{reason}; choose a different output directory"
 
-        # Clean up incomplete
+        # Explicit --force retains its original reprocessing meaning. Ordinary
+        # retries also replace incomplete *derived* output; raw H5 files are read-only.
         if dataset_dir.exists():
-            is_complete, reason = check_dataset_complete(dataset_dir, h5_path)
-            if not is_complete:
-                cleanup_failed_dataset(dataset_dir, dataset_name)
+            cleanup_failed_dataset(dataset_dir, dataset_name)
 
-        print(f"  [{dataset_name}] [{tag}] 🔄 Starting conversion...")
-
-        # Deferred import (each subprocess needs its own import)
-        from examples.baselines.lerobot_dataset.lerobot_dataset import LeRobotDataset
-
-        with h5py.File(h5_path, 'r') as h5_file:
-            traj_names = get_traj_names(h5_file)
-            if not traj_names:
-                return False, dataset_name, "no trajectory"
-
-            # Build features
-            first_data = load_trajectory_data(h5_file, traj_names[0], drop_terminal_frame)
-            first_data['processed_depth'] = process_depth_images(first_data['depth_data'])
-            features = build_lerobot_features(first_data)
-
-            # Create dataset
-            dataset_dir.parent.mkdir(parents=True, exist_ok=True)
-            dataset = LeRobotDataset.create(
-                repo_id=dataset_name, fps=fps, root=str(dataset_dir),
-                features=features, use_videos=True, video_backend='torchcodec',
-            )
-
-            dataset.meta.info["terminal_observation"] = (
-                "dropped" if drop_terminal_frame else "duplicate_last_action"
-            )
-
-            # Process each trajectory
-            for traj_idx, traj_name in enumerate(traj_names):
-                try:
-                    if traj_idx == 0:
-                        traj_data = first_data
-                    else:
-                        traj_data = load_trajectory_data(h5_file, traj_name, drop_terminal_frame)
-                        traj_data['processed_depth'] = process_depth_images(traj_data['depth_data'])
-
-                    num_frames = traj_data['num_frames']
-                    qpos_states = np.concatenate([traj_data['qpos_left'], traj_data['qpos_right']], axis=1)
-                    qpos_actions = traj_data['actions']
-                    if not drop_terminal_frame:
-                        qpos_actions = np.vstack([qpos_actions, qpos_actions[-1:]])
-
-                    for i in range(num_frames):
-                        frame = {"task": dataset_name}
-                        for cn, ri in traj_data['rgb_data'].items():
-                            frame[f"observation.images.{cn}"] = ri[i].transpose(2, 0, 1)
-                        for cn, dr in traj_data['processed_depth'].items():
-                            frame[f"observation.images.{cn}_depth"] = dr[i]
-                        frame["observation.qpos_gripper_states"] = qpos_states[i]
-                        frame["action.qpos_gripper_actions"] = qpos_actions[i]
-                        dataset.add_frame(frame)
-
-                    dataset.save_episode()
-                    if traj_idx > 0:
-                        del traj_data; gc.collect()
-                except Exception as e:
-                    print(f"  [{dataset_name}] [{tag}] ✗ traj {traj_idx}: {e}")
-                    continue
-
-            # Set splits
-            total_episodes = len(traj_names)
-            shuffled = np.random.permutation(total_episodes).tolist()
-            train_n = int(0.95 * total_episodes)
-            dataset.meta.splits = {
-                "train": shuffled[:train_n],
-                "test": shuffled[train_n:],
-                dataset_name: list(range(total_episodes)),
-            }
-            dataset.finalize()
-
-            # Completion marker
-            with open(dataset_dir / ".complete", 'w') as f:
-                f.write(json.dumps({
-                    "completed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "episodes": total_episodes, "gpu_id": gpu_id, "fps": fps,
-                    "drop_terminal_frame": drop_terminal_frame,
-                }, indent=2))
-
-            print(f"  [{dataset_name}] [{tag}] ✅ {total_episodes} episodes")
-            return True, dataset_name, f"success: {total_episodes} episodes"
-
-    except Exception as e:
-        err = f"error: {str(e)}"
-        print(f"  [{Path(h5_path_str).stem}] ❌ {err}")
-        traceback.print_exc()
-        try:
-            cleanup_failed_dataset(Path(output_dir_str) / (dataset_name or Path(h5_path_str).stem),
-                                   Path(h5_path_str).stem)
-        except: pass
-        return False, Path(h5_path_str).stem, err
+        with h5py.File(h5_path, "r") as h5_file:
+            sources = [EpisodeSource(h5_path, int(name.removeprefix("traj_")))
+                       for name in get_traj_names(h5_file)]
+        print(f"  [{dataset_name}] [{tag}] Starting conversion...")
+        return _convert_episodes(sources, dataset_dir, dataset_name, fps,
+                                 drop_terminal_frame, gpu_id)
+    except Exception as error:
+        return False, dataset_name or h5_path.stem, f"error: {error}"
 
 
 # ╔═══════════════════════════════════════════════════════════════╗
@@ -636,7 +827,10 @@ def main():
     )
 
     # Basic arguments
-    parser.add_argument("--input", type=str, required=True, help="input H5 file or directory")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--input", type=str, help="input H5 file or directory")
+    source.add_argument("--episode-manifest", type=str,
+                        help="JSON selection of H5 episodes and fixed train/development/evaluation seed pools")
     parser.add_argument("--output-dir", type=str, required=True, help="output directory")
     parser.add_argument("--fps", type=int, default=30, help="frame rate (default 30)")
     parser.add_argument("--drop-terminal-frame", action="store_true",
@@ -664,8 +858,14 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="only list pending files")
 
     args = parser.parse_args()
+    if args.fps <= 0:
+        parser.error("--fps must be positive")
+    if args.episode_manifest and not args.name:
+        parser.error("--episode-manifest requires --name for the new dataset version")
+    if args.episode_manifest and args.force:
+        parser.error("manifest outputs are immutable; choose a new --name instead of --force")
 
-    input_path = Path(args.input)
+    input_path = Path(args.episode_manifest or args.input)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -716,21 +916,36 @@ def main():
         pass
     print(f"{'='*70}")
 
+    # ── Explicit selection across H5 files ──
+    if args.episode_manifest:
+        if args.dry_run:
+            seed_splits, sources = load_episode_manifest(input_path)
+            print(f"Selected: {len(sources)} episodes; reserved evaluation seeds: {len(seed_splits['evaluation'])}")
+            for episode in sources:
+                print(f"  {episode.split}: seed={episode.seed} {episode.h5_path}:{episode.trajectory}")
+            return 0
+        ok, _, message = process_episode_manifest(
+            str(input_path), str(output_dir), args.name, fps=args.fps,
+            gpu_id=gpu_assigner.assign(), drop_terminal_frame=args.drop_terminal_frame,
+        )
+        print(f"\nResult: {'✓' if ok else '✗'} {message}")
+        return 0 if ok else 1
+
     # ── Single file ──
     if input_path.is_file():
         if input_path.suffix != '.h5':
             print(f"error: {input_path.suffix} is not supported")
-            return
+            return 1
         gpu_id = gpu_assigner.assign()
         ok, name, msg = process_h5_file(str(input_path), str(output_dir),
                                         args.fps, args.name, args.force, gpu_id, args.drop_terminal_frame)
         print(f"\nResult: {'✓' if ok else '✗'} {msg}")
-        return
+        return 0 if ok else 1
 
     # ── Directory ──
     if not input_path.is_dir():
         print(f"error: path does not exist {input_path}")
-        return
+        return 1
 
     scheduler = ConversionScheduler(gpu_assigner, args)
 
@@ -771,7 +986,8 @@ def main():
             if ok and "already processed" not in msg: print(f"    ✓ {name}: {msg}")
 
     print(f"\n{'='*70}")
+    return 1 if fail_n else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

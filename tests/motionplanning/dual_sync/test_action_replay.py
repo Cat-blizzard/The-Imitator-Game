@@ -12,6 +12,20 @@ from mani_skill.examples.motionplanning.dual.sync.runtime_policy import DEFAULT_
 from mani_skill.examples.motionplanning.dual.sync.solve import phase_sequence
 
 
+def test_failure_report_retains_existing_collision_pair_and_step_error():
+    pair = {"object_name1": "left", "link_name1": "link7",
+            "object_name2": "scene::apple_out::shape_0"}
+    report = {"status": "rejected", "reason": "initial_collision",
+              "initial_collisions": [pair], "trace": [
+                  {"action": [0.] * 14, "error": "PhysicalFailure: contact",
+                   "elapsed_step_delta_on_error": [1]}]}
+    details = replay.failure_details("retreat", report)
+    assert details["initial_collisions"] == [pair]
+    assert details["last_event"] == {"error": "PhysicalFailure: contact",
+                                     "elapsed_step_delta_on_error": [1]}
+    assert "trace" not in details and "action" not in details["last_event"]
+
+
 @pytest.fixture
 def recording(tmp_path):
     path = tmp_path / "sync.h5"

@@ -2,6 +2,7 @@ import multiprocessing as mp
 import os
 from copy import deepcopy
 import argparse
+from typing import Any
 import gymnasium as gym
 import numpy as np
 from tqdm import tqdm
@@ -121,18 +122,47 @@ MP_SOLUTIONS = {
     "TwoRobotTransFoodL3-v1": solveTwoRobotTransFoodL3,
     "TwoRobotPutBoxL3-v1": solveTwoRobotPutBoxL3,
 }
-SYNC_TASKS = {"TwoRobotPickPillToRegions-v1"}
+SYNC_TASKS = {"TwoRobotPickPillToRegions-v1", "TwoRobotPickAppleBananaToBaskets-v1"}
+
+
+def _selected_robot(args):
+    robot = getattr(args, "robot", None)
+    return "panda_wristcam" if robot == "panda" else robot
+
+
+def _native_action_layout(raw: Any) -> list[dict[str, Any]]:
+    """Describe the live controller and physical state order without inference."""
+    return [{"key": key, "size": int(np.prod(agent.single_action_space.shape)),
+        "arm_joint_names": [joint.get_name() for joint in agent.controller.controllers["arm"].joints],
+        "state_joint_names": [joint.get_name() for joint in agent.robot.get_active_joints()],
+        "arm_coordinate_unit": "rad",
+        "gripper_coordinate_unit": str(getattr(agent, "gripper_coordinate_unit", "m")),
+        "gripper_open_action": float(getattr(agent, "gripper_open_action", 1.)),
+        "gripper_closed_action": float(getattr(agent, "gripper_closed_action", -1.))}
+        for key, agent in raw.agent.agents_dict.items()]
 
 
 def _solver_for(args):
     """Resolve the explicit mode before constructing a rendering environment."""
+    robot = _selected_robot(args)
+    if robot is not None and robot != "panda_wristcam":
+        if args.execution_mode != "sync":
+            raise ValueError("Selecting another robot requires --execution-mode sync; serial solutions use Panda")
+        from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+        get_task_profile(args.env_id, robot)
     if args.execution_mode == "sync":
         if args.env_id not in SYNC_TASKS:
             raise ValueError(
                 f"Synchronous execution is not supported for {args.env_id}. "
                 f"Supported tasks: {sorted(SYNC_TASKS)}"
             )
-        from mani_skill.examples.motionplanning.dual.sync.solve import load_policy, solve
+        from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
+        get_task_profile(args.env_id, robot or "panda_wristcam")
+        from mani_skill.examples.motionplanning.dual.sync.solve import load_policy
+        if args.env_id == "TwoRobotPickAppleBananaToBaskets-v1":
+            from mani_skill.examples.motionplanning.dual.sync.apple_banana import solve
+        else:
+            from mani_skill.examples.motionplanning.dual.sync.solve import solve
 
         if args.sync_config is not None:
             from functools import partial
@@ -174,6 +204,7 @@ def parse_args(args=None):
     parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Observation mode to use. Usually this is kept as 'none' as observations are not necesary to be stored, they can be replayed later via the mani_skill.trajectory.replay_trajectory script.")
     parser.add_argument("-n", "--num-traj", type=int, default=10, help="Number of trajectories to generate.")
     parser.add_argument("--execution-mode", choices=("serial", "sync"), default="serial", help="Use the original serial solver or the optional synchronous dual-arm solver.")
+    parser.add_argument("--robot", help="Homogeneous robot pair for supported sync tasks (default: panda_wristcam).")
     parser.add_argument("--sync-config", type=str, help="Optional JSON policy overrides for synchronous execution.")
     parser.add_argument("--seed", type=int, default=0, help="First episode seed (default 0).")
     parser.add_argument("--only-count-success", action="store_true", help="If true, generates trajectories until num_traj of them are successful and only saves the successful trajectories/videos")
@@ -223,6 +254,8 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         L0_L3_utils.set_l2_enabled(True)
     if args.l3:
         L0_L3_utils.set_l3_enabled(True)
+    robot = _selected_robot(args)
+    robot_kwargs = {"robot_uids": (robot, robot)} if robot else {}
     env = gym.make(
         env_id,
         obs_mode=args.obs_mode,
@@ -231,7 +264,8 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         sensor_configs=dict(shader_pack=args.shader),
         human_render_camera_configs=dict(shader_pack=args.shader),
         viewer_camera_configs=dict(shader_pack=args.shader),
-        sim_backend=args.sim_backend
+        sim_backend=args.sim_backend,
+        **robot_kwargs,
     )
 
     if not args.traj_name:
@@ -254,7 +288,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         output_dir=osp.join(args.record_dir, env_id, "motionplanning"),
         trajectory_name=new_traj_name, save_video=args.save_video,
         source_type="motionplanning",
-        source_desc=("synchronous MPLib dual-Panda solution" if args.execution_mode == "sync"
+        source_desc=("synchronous MPLib dual-arm solution" if args.execution_mode == "sync"
                      else "official motion planning solution from ManiSkill contributors"),
         video_fps=env.unwrapped.control_freq if args.execution_mode == "sync" else 30,
         record_reward=False,
@@ -266,7 +300,11 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         env._json_data["motion_planning"] = {
             "execution_mode": "sync",
             "control_freq": env.unwrapped.control_freq,
-            "action_order": ["panda_wristcam-0", "panda_wristcam-1"],
+            "action_order": list(env.unwrapped.agent.agents_dict),
+            "action_sizes": [int(np.prod(agent.single_action_space.shape))
+                             for agent in env.unwrapped.agent.agents],
+            "robot_uids": list(env.unwrapped.robot_uids),
+            "native_action_layout": _native_action_layout(env.unwrapped),
         }
     print(f"Motion Planning Running on {env_id}")
     pbar = tqdm(range(args.num_traj), desc=f"proc_id: {proc_id}")

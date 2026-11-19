@@ -1,4 +1,4 @@
-"""Live measured scene/finger snapshots for one dual-Panda grasp phase.
+"""Live measured scene/finger snapshots for one dual-arm grasp phase.
 
 Refresh before each control tick. Each check tests a static snapshot with the
 supplied arm targets and the last measured physical finger positions. It does
@@ -21,6 +21,19 @@ from .scene_collision import check_plane_halfspaces, export_scene_collision, sce
 
 
 FINGER_LINKS = frozenset(("panda_leftfinger", "panda_rightfinger"))
+
+
+def _finger_links(agent: Any) -> frozenset[str]:
+    names = getattr(agent, "finger_link_names", None)
+    if names is None:
+        # Panda already exposes its two actual finger links. Derive their
+        # names rather than making another embodiment inherit Panda's names.
+        links = (agent.finger1_link, agent.finger2_link)
+        names = tuple(link.get_name() for link in links)
+    names = tuple(names)
+    if not names or len(set(names)) != len(names) or any(not isinstance(n, str) or not n for n in names):
+        raise ValueError("Explicit physical finger-link names are required")
+    return frozenset(names)
 
 
 def _pose(robot: Any) -> np.ndarray:
@@ -77,6 +90,8 @@ class LiveGraspCollisionChecker:
         if any(s.base_env is not self.env for s in self.solvers):
             raise ValueError("Both solvers must share the given environment")
         self.active_robot = active_robot
+        self.finger_links = {name: _finger_links(solver.env_agent)
+                             for name, solver in zip(("left", "right"), self.solvers)}
         self.target_contact_allowed = False
         self.scope = "live_measured_scene_and_fingers_sampled_dual_arm_grasp_no_attachment_or_prediction"
         self._mapping = tuple(_mapping(s) for s in self.solvers)
@@ -107,8 +122,10 @@ class LiveGraspCollisionChecker:
                                        if self._shape_refs[name][0] == target_entity)
         if not self._target_names or any(isinstance(self._geometry[n], fcl.Plane) for n in self._target_names):
             raise ValueError("Grasp target must have finite collision shapes")
-        self.allowed_mount_contacts = frozenset((robot, "panda_link0", "scene::table::shape_0")
-                                                for robot in ("left", "right"))
+        self.allowed_mount_contacts = frozenset(
+            (name, getattr(solver.env_agent, "robot_root_link_name", solver.robot.root.get_name()),
+             "scene::table::shape_0")
+            for name, solver in zip(("left", "right"), self.solvers))
         self._mount_pose = poses.get("scene::table::shape_0")
         self._normal_names = tuple(name for name in names if not isinstance(self._geometry[name], fcl.Plane))
         normal_objects = [obj for name, obj in zip(names, objects) if name in self._normal_names]
@@ -120,7 +137,7 @@ class LiveGraspCollisionChecker:
         self._fresh = False
         self.coverage.update(scope=self.scope, target_actor=self.target_actor_name,
                              target_shape_names=sorted(self._target_names),
-                             allowed_target_links=sorted(FINGER_LINKS), active_robot=active_robot,
+                             allowed_target_links=sorted(self.finger_links[active_robot]), active_robot=active_robot,
                              plane_check_backend="conservative_bounding_sphere_halfspace",
                              plane_objects_excluded_from_native_world=True,
                              continuous_collision_detection=False, dynamic_prediction=False,
@@ -222,7 +239,7 @@ class LiveGraspCollisionChecker:
         self.refresh_count += 1
         self.coverage.update(planes=planes, refresh_count=self.refresh_count,
                              target_contact_allowed=self.target_contact_allowed,
-                             last_measured_fingers=[q[[j for j in range(9) if j not in arm]].tolist()
+                             last_measured_fingers=[q[[j for j in range(len(q)) if j not in arm]].tolist()
                                                     for q, arm in zip(measured, self.native.arm_indices)])
         for entry in self.coverage["shapes"]:
             entry["world_pose_wxyz"] = world_poses[entry["name"]]
@@ -240,7 +257,7 @@ class LiveGraspCollisionChecker:
     def assert_robot_geometry_unchanged(self) -> None:
         measured = self._measure_robots()
         for q, previous, arm in zip(measured, self._measured_qpos, self.native.arm_indices):
-            fingers = [j for j in range(9) if j not in arm]
+            fingers = [j for j in range(len(q)) if j not in arm]
             if not np.allclose(q[fingers], previous[fingers], rtol=0, atol=1e-6):
                 raise RuntimeError("Physical fingers moved since refresh")
 
@@ -256,7 +273,8 @@ class LiveGraspCollisionChecker:
         for robot, link, other in pairs:
             if (robot, link, other) in self.allowed_mount_contacts:
                 return True
-            if self.target_contact_allowed and robot == self.active_robot and link in FINGER_LINKS and other in self._target_names:
+            if (self.target_contact_allowed and robot == self.active_robot
+                    and link in self.finger_links[self.active_robot] and other in self._target_names):
                 return True
         return False
 

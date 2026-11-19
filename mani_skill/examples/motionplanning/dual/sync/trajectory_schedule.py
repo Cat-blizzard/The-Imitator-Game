@@ -1,11 +1,11 @@
-"""Option A: start both Panda trajectories together and hold each endpoint.
+"""Option A: start both arm trajectories together and hold each endpoint.
 
 This module prepares joint-position commands; it never advances an environment.
 It is not a collision checker or evidence of reaching/grasping in simulation.
 Before live execution, a separate adapter must validate current joint states,
 joint limits and the combined trajectory against the actual scene.
 
-Contract: seconds, radians, seven arm joints and one normalized gripper command
+Contract: seconds, radians, named arm joints and one normalized gripper command
 per arm. Gripper commands are constant within one phase. Source timestamps are
 preserved: only sampling onto the control clock changes. Targets are sampled at
 the END of each control interval, with endpoint holding after an arm finishes.
@@ -49,16 +49,16 @@ class ArmTrajectory:
         grip = float(self.gripper_command)
         if not isinstance(self.action_key, str) or not self.action_key:
             raise ValueError("An explicit robot action key is required")
-        if len(names) != 7 or len(set(names)) != 7 or any(
+        if not names or len(set(names)) != len(names) or any(
             not isinstance(name, str) or not name for name in names
         ):
-            raise ValueError("Specify seven unique arm joint names in controller order")
+            raise ValueError("Specify unique arm joint names in controller order")
         if times.ndim != 1 or len(times) == 0 or times[0] != 0.0:
             raise ValueError("Timestamps must be nonempty and start at zero seconds")
         if np.any(np.diff(times) <= 0):
             raise ValueError("Timestamps must increase strictly")
-        if positions.shape != (len(times), 7):
-            raise ValueError("Joint positions must have shape [timestamps, 7]")
+        if positions.shape != (len(times), len(names)):
+            raise ValueError("Joint positions must have shape [timestamps, arm joints]")
         if not math.isfinite(grip) or not -1.0 <= grip <= 1.0:
             raise ValueError("Gripper command must be finite and normalized to [-1, 1]")
         object.__setattr__(self, "joint_names", names)
@@ -79,7 +79,7 @@ class ArmTrajectory:
         """Accept a successful dry-run result only after explicit order matching.
 
         Extract planner names in result.position column order; controller names
-        are the seven arm joints, excluding the two physical finger joints.
+        are the arm joints, excluding physical finger joints.
         The official solver may return -1 on failure; that is rejected here.
         """
         if not isinstance(result, Mapping) or result.get("status") != "Success":
@@ -102,9 +102,9 @@ def plan_pose(
     solver: Any, pose: Any, *, action_key: str,
     controller_joint_names: Sequence[str],
 ) -> ArmTrajectory:
-    """Obtain a PandaArmMotionPlanningSolver trajectory without following it.
+    """Obtain a native arm-planner trajectory without following it.
 
-    The caller supplies the seven actual arm-controller joint names in action
+    The caller supplies the actual arm-controller joint names in action
     order. The native planner's output order is extracted from its move group;
     mismatches are rejected before asking the solver to plan. This adapter
     preserves the current phase gripper command rather than opening the hand.
@@ -181,7 +181,7 @@ def build_hold_schedule(
     def sample(trajectory: ArmTrajectory) -> FloatArray:
         joints = np.column_stack([
             np.interp(times, trajectory.times_s, trajectory.positions_rad[:, joint])
-            for joint in range(7)
+            for joint in range(len(trajectory.joint_names))
         ])
         return _frozen_array(np.column_stack([
             joints, np.full(count, trajectory.gripper_command)

@@ -6,6 +6,7 @@ from typing import Any, Dict, Tuple
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.agents.robots.panda.panda_wristcam import PandaWristCam
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.tasks.tabletop.dual_arm_profiles import get_task_profile
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common
 from mani_skill.utils import sapien_utils
@@ -59,7 +60,7 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
     - Both robots are static.
     """
 
-    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam"), ("piper", "piper")]
     agent: MultiAgent[Tuple[PandaWristCam, PandaWristCam]]
     video_info_whitelist = {
         "reward",
@@ -105,6 +106,13 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
         wrist_sensor: bool = False, 
         **kwargs
     ):
+        robot_uids = tuple(robot_uids)
+        if robot_uids not in self.SUPPORTED_ROBOTS:
+            raise ValueError(f"Apple/banana task supports homogeneous pairs: {self.SUPPORTED_ROBOTS}")
+        if wrist_sensor and robot_uids == ("piper", "piper"):
+            raise ValueError("Piper has no wrist camera; use the original external zed2i camera")
+        self.embodiment_profile = (get_task_profile("TwoRobotPickAppleBananaToBaskets-v1", "piper")
+                                  if robot_uids == ("piper", "piper") else None)
         self.hi_res = hi_res
         self.wrist_sensor = wrist_sensor
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -177,14 +185,22 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
-        super()._load_agent(
-            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
-        )
+        poses = ([sapien.Pose(p=m.position, q=m.quaternion)
+                  for m in self.embodiment_profile.mount_poses]
+                 if self.embodiment_profile is not None else
+                 [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])])
+        super()._load_agent(options, poses)
         self.agent.__init__(self.agent.agents, wrist_sensor=self.wrist_sensor)
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
         self.table_scene.build()
+        if self.embodiment_profile is not None:
+            for i, mount in enumerate(self.embodiment_profile.mount_poses):
+                x, y, z = mount.position
+                actors.build_box(self.scene, half_sizes=[.065, .065, (z-.002)/2],
+                    color=[.3, .3, .33, 1], name=f"mount_{i}", body_type="static",
+                    initial_pose=sapien.Pose([x, y, (z-.002)/2]))
 
         self.apple_out_pose = sapien.Pose(
             p=[self.apple_out_xy[0], self.apple_out_xy[1], 0.0],
@@ -288,6 +304,10 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            if self.embodiment_profile is not None:
+                for agent, mount in zip(self.agent.agents, self.embodiment_profile.mount_poses):
+                    agent.reset(agent.keyframes["rest"].qpos)
+                    agent.robot.set_pose(sapien.Pose(p=mount.position, q=mount.quaternion))
             if not hasattr(self, "reward_tracker"):
                 self.reward_tracker = RewardTracker(
                     REWARD_PHASES, self.num_envs, self.device

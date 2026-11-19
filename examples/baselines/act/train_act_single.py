@@ -30,7 +30,6 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -43,7 +42,8 @@ from examples.baselines.lerobot_dataset.lerobot_dataloader import (
 )
 from examples.baselines.encoders.obs_encoder import ObservationEncoder, ObsEncoderConfig
 from examples.baselines.encoders.state_encoder import StateEncoder, StateEncoderConfig
-from examples.baselines.act.act.detr.detr_vae import (
+from examples.baselines.act.single_task_io import masked_l1
+from examples.baselines.act.act.detr_video.detr_vae import (
     DETRVAE,
     build_encoder,
     build_transformer,
@@ -70,10 +70,16 @@ class TrainingArgs:
     sub_config:    str  = ""
     sim_root:      str  = "./data/sim"
     state_type:    str  = "qpos"
-    cameras:       List[str] = field(default_factory=lambda: ["cam1", "cam2"])
+    cameras:       List[str] = field(default_factory=lambda: ["zed2i"])
     include_depth: bool = False
     single_arm:    bool = False
     image_size:    List[int] = field(default_factory=lambda: [224, 224])
+    split: str = "train"
+    enable_augmentation: bool = False
+    normalization_method: str = "bounds_q99"
+    normalization_min_range: float = 0.0  # Native units; zero keeps legacy scaling.
+    video_backend: str = "torchcodec"
+    tolerance_s: float = 0.001
 
     # ── Model dims ────────────────────────────────────────────────────────────
     state_dim:           int = 18
@@ -103,6 +109,7 @@ class TrainingArgs:
     lr_backbone:        float = 1e-5
 
     # ── Training ──────────────────────────────────────────────────────────────
+    max_updates:       Optional[int] = None  # if set, overrides the epoch budget
     total_epochs:      int   = 30        # number of full passes over the dataset
     save_freq_epochs:  int   = 5         # save a checkpoint every N epochs
     batch_size:        int   = 32
@@ -188,13 +195,13 @@ class ACTSingleTaskAgent(nn.Module):
             hidden_dim=args.hidden_dim,
             num_queries=args.pred_horizon,
             action_dim=args.action_dim,
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
         )
         self.model = DETRVAE(
             backbones=None,
             transformer=build_transformer(act_cfg),
             encoder=build_encoder(act_cfg),
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
             action_dim=args.action_dim,
             num_queries=args.pred_horizon,
             video_feature_dim=1,             # dummy 1-D task feature (always zero)
@@ -223,7 +230,7 @@ class ACTSingleTaskAgent(nn.Module):
 
         obs_feat,   _ = self.obs_encoder(obs_in)           # (B, obs_latent_dim)
         state_feat, _ = self.state_encoder(state[:, :T])   # (B, state_latent_dim)
-        return torch.cat([obs_feat, state_feat], dim=-1)
+        return self.obs_proj(torch.cat([obs_feat, state_feat], dim=-1))
 
     # ------------------------------------------------------------------
     def compute_loss(self, batch: Dict) -> torch.Tensor:
@@ -236,13 +243,19 @@ class ACTSingleTaskAgent(nn.Module):
         obs_for_model = self._encode_obs(rgb, state)  # (B, hidden_dim)
         video_feature = torch.zeros(B, 1, device=self.device)
 
+        is_pad = batch.get("action_is_pad", batch.get("actions_is_pad"))
+        if is_pad is None:
+            is_pad = torch.zeros(action.shape[:2], dtype=torch.bool, device=self.device)
+        else:
+            is_pad = is_pad.to(self.device, dtype=torch.bool)
         a_hat, (mu, log_var) = self.model(
-            obs_for_model, actions=action, video_feature=video_feature
+            obs_for_model, actions=action, video_feature=video_feature, action_is_pad=is_pad
         )
 
-        # L1 reconstruction + KL
-        l1_loss = F.l1_loss(a_hat, action)
+        # Padded repeated tail labels affect neither reconstruction nor the posterior.
+        l1_loss = masked_l1(a_hat, action, is_pad)
         kl_loss = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).mean()
+        self.last_loss_terms = {"l1": float(l1_loss.detach()), "kl": float(kl_loss.detach())}
         return l1_loss + self.kl_weight * kl_loss
 
     # ------------------------------------------------------------------
@@ -259,28 +272,6 @@ class ACTSingleTaskAgent(nn.Module):
 # =============================================================================
 # Dataset / DataLoader
 # =============================================================================
-
-def _auto_detect_cameras(sim_root, dataset_file, fallback):
-    try:
-        import json as _j, os as _o
-        from examples.baselines.lerobot_dataset.lerobot_dataset import LeRobotDataset as _D
-        with open(dataset_file) as _f:
-            _c = _j.load(_f)[0]
-        _probe = _D(repo_id=_c["repo_id"],
-                    root=_o.path.join(sim_root, _c.get("root", _c["repo_id"])),
-                    delta_timestamps=None)
-        _cams = [k.replace("observation.images.", "")
-                 for k, v in _probe.meta.features.items()
-                 if k.startswith("observation.images.") and not k.endswith("_depth")
-                 and v.get("dtype") in ("image", "video")]
-        if _cams:
-            if set(_cams) != set(fallback):
-                print(f"  📷 Auto-detected cameras: {_cams}  (config had: {fallback})")
-            return _cams
-    except Exception as _e:
-        print(f"  ⚠️  Camera auto-detect failed ({_e}); using {fallback}")
-    return fallback
-
 
 def _dataset_fps(sim_root: str, dataset_file: str) -> int:
     """Use the recorded sampling rate for action-chunk timestamp offsets."""
@@ -301,12 +292,14 @@ def _dataset_fps(sim_root: str, dataset_file: str) -> int:
     return rates.pop()
 
 
-def build_dataloader(args: TrainingArgs):
-    cameras = _auto_detect_cameras(args.sim_root, args.sub_config, args.cameras)
+def build_dataloader(args: TrainingArgs, *, normalization_stats=None):
+    cameras = list(args.cameras)
+    if len(cameras) != 1 or args.include_depth:
+        raise ValueError("Single-task ACT consumes one RGB camera; select --cameras base_camera (or another recorded camera)")
     cfg = LeRobotDataConfig(
         source_type="sim",
         root=args.sim_root,
-        split="train",
+        split=args.split,
         dataset_file=args.sub_config,
         cameras=cameras,
         include_depth=args.include_depth,
@@ -316,19 +309,24 @@ def build_dataloader(args: TrainingArgs):
         horizon=args.pred_horizon,
         obs_horizon=args.obs_horizon,
         fps=_dataset_fps(args.sim_root, args.sub_config),
-        video_backend="torchcodec",
-        tolerance_s=0.05,
-        enable_augmentation=True,
+        video_backend=args.video_backend,
+        tolerance_s=args.tolerance_s,
+        enable_augmentation=args.enable_augmentation,
+        normalization_method=args.normalization_method,
+        normalization_min_range=args.normalization_min_range,
+        normalization_stats=normalization_stats,
     )
     dataset = build_lerobot_dataset(cfg)
+    if dataset.state_dim != args.state_dim or dataset.action_dim != args.action_dim:
+        raise ValueError("Configured ACT state/action dimensions differ from the dataset")
     print(f"  Dataset size: {len(dataset)} samples")
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
-        shuffle=True,
+        shuffle=args.split == "train",
         num_workers=args.num_workers,
         pin_memory=True,
-        drop_last=True,
+        drop_last=False,
     )
     return loader, dataset
 
@@ -338,6 +336,8 @@ def build_dataloader(args: TrainingArgs):
 # =============================================================================
 
 def train(args: TrainingArgs):
+    if args.split != "train":
+        raise ValueError("Optimizer updates require --split train; use build_dataloader for validation")
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -370,22 +370,26 @@ def train(args: TrainingArgs):
         {"params": other_params,    "lr": args.lr},
     ], weight_decay=args.weight_decay)
 
-    scaler = torch.amp.GradScaler("cuda")
+    scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
     losses = defaultdict(list)
 
     steps_per_epoch = len(dataloader)
-    print(f"\n🚀 Training {run_name} for {args.total_epochs} epochs "
+    if not steps_per_epoch or args.total_epochs < 1 or (args.max_updates is not None and args.max_updates < 1):
+        raise ValueError("Training requires a nonempty loader and a positive update/epoch budget")
+    epoch_budget = ((args.max_updates + steps_per_epoch - 1) // steps_per_epoch
+                    if args.max_updates is not None else args.total_epochs)
+    print(f"\n🚀 Training {run_name} for {epoch_budget} epochs "
           f"({steps_per_epoch} steps/epoch)\n")
     agent.train()
     global_step = 0
 
-    for epoch in tqdm(range(1, args.total_epochs + 1), desc="Epochs"):
+    for epoch in tqdm(range(1, epoch_budget + 1), desc="Epochs"):
         epoch_losses: List[float] = []
 
         for batch in dataloader:
             global_step += 1
             optimizer.zero_grad(set_to_none=True)
-            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+            with torch.amp.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 loss = agent.compute_loss(batch)
 
             scaler.scale(loss).backward()
@@ -395,21 +399,26 @@ def train(args: TrainingArgs):
             scaler.update()
 
             loss_val = loss.item()
+            if not np.isfinite(loss_val):
+                raise FloatingPointError(f"Non-finite training loss at update {global_step}")
             losses["loss"].append(loss_val)
             epoch_losses.append(loss_val)
 
             if global_step % args.log_freq == 0:
                 avg = np.mean(losses["loss"]); losses["loss"].clear()
                 writer.add_scalar("train/loss", avg, global_step)
-                tqdm.write(f"[E{epoch:03d}/{args.total_epochs} "
+                tqdm.write(f"[E{epoch:03d}/{epoch_budget} "
                            f"S{global_step:>8}] loss={avg:.5f}")
+
+            if args.max_updates is not None and global_step >= args.max_updates:
+                break
 
         # ── End-of-epoch bookkeeping ──────────────────────────────────────────
         epoch_avg = float(np.mean(epoch_losses)) if epoch_losses else 0.0
         writer.add_scalar("train/epoch_loss", epoch_avg, epoch)
-        tqdm.write(f"── Epoch {epoch:03d}/{args.total_epochs} avg_loss={epoch_avg:.5f}")
+        tqdm.write(f"── Epoch {epoch:03d}/{epoch_budget} avg_loss={epoch_avg:.5f}")
 
-        if epoch % args.save_freq_epochs == 0 or epoch == args.total_epochs:
+        if epoch % args.save_freq_epochs == 0 or epoch == epoch_budget:
             ckpt = output_dir / f"checkpoint_epoch_{epoch:04d}.pt"
             torch.save({
                 "epoch":            epoch,
@@ -417,6 +426,18 @@ def train(args: TrainingArgs):
                 "agent_state_dict": agent.state_dict(),
                 "optimizer":        optimizer.state_dict(),
                 "args":             vars(args),
+                "data_contract": {
+                    "fps": _dataset_fps(args.sim_root, args.sub_config),
+                    "cameras": list(args.cameras), "image_size": list(args.image_size),
+                    "rgb": "float32_CHW_0_1", "state_dim": args.state_dim,
+                    "action_dim": args.action_dim, "control_mode": "pd_joint_pos",
+                    "robot_order": "left_then_right", "normalization_method": args.normalization_method,
+                    "normalization_min_range": args.normalization_min_range,
+                    "split": args.split,
+                    "native": dataset.main_dataset.meta.info.get("native_data_contract"),
+                    "source_image_size": list(dataset.main_dataset.meta.features[
+                        f"observation.images.{args.cameras[0]}"]["shape"][-2:]),
+                },
                 "dataset_stats":    [
                     {
                         "dataset_idx": idx,
@@ -432,6 +453,10 @@ def train(args: TrainingArgs):
             }, ckpt)
             print(f"💾 Saved: {ckpt}")
 
+    summary = {"global_step": global_step, "epochs": epoch_budget,
+               "samples": len(dataset), "last_epoch_loss": epoch_avg,
+               "last_loss_terms": agent.last_loss_terms, "checkpoint": str(ckpt.resolve())}
+    (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     writer.close()
     if args.track:
         import wandb; wandb.finish()

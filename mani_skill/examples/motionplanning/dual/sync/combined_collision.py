@@ -1,4 +1,4 @@
-"""Sample both Panda arms in one independent collision world, without stepping.
+"""Sample both robot arms in one independent collision world, without stepping.
 
 Finger geometry stays at the measured factory snapshot. This does not validate
 opening/closing, carried objects, dynamics, or a complete scene. Only explicitly
@@ -59,9 +59,9 @@ class NativeDualCollisionChecker:
     def from_solvers(cls, left_solver: Any, right_solver: Any, *,
                      normal_objects: Sequence[Any] = (),
                      normal_object_names: Sequence[str] = ()) -> NativeDualCollisionChecker:
-        """Clone actual Panda models, joint orders, base poses and finger positions.
+        """Clone actual robot models, joint orders, base poses and finger positions.
 
-        The two other active joints must be the Panda's physical finger joints.
+        Other active joints must be the agent's named physical gripper joints.
         The normalized gripper command is deliberately never used as a qpos.
         """
         names = tuple(normal_object_names)
@@ -80,12 +80,13 @@ class NativeDualCollisionChecker:
             joint_names = tuple(planner.user_joint_names)
             active_names = tuple(j.get_name() for j in solver.robot.get_active_joints())
             arm_names = tuple(agent.controller.controllers["arm"].config.joint_names)
-            if (len(joint_names) != 9 or len(set(joint_names)) != 9
-                    or len(arm_names) != 7 or len(set(arm_names)) != 7
+            if (not joint_names or len(set(joint_names)) != len(joint_names)
+                    or not arm_names or len(set(arm_names)) != len(arm_names)
+                    or len(set(active_names)) != len(active_names)
                     or set(active_names) != set(joint_names)
                     or not set(arm_names).issubset(joint_names)
                     or set(joint_names) - set(arm_names) != set(agent.gripper_joint_names)):
-                raise ValueError("Expected seven arm joints and two physical Panda finger joints")
+                raise ValueError("Expected uniquely named arm and physical gripper joints")
             if not Path(planner.urdf).is_file() or not Path(planner.srdf).is_file():
                 raise ValueError("Existing URDF and SRDF are required; no files are generated")
             measured = _single(solver.robot.get_qpos(), len(active_names))
@@ -103,8 +104,8 @@ class NativeDualCollisionChecker:
             model.set_qpos(full, True)
             arm = np.array([joint_names.index(n) for n in arm_names], dtype=int)
             qlimits = _array(np.concatenate(model.get_pinocchio_model().get_joint_limits()))
-            if qlimits.shape != (9, 2):
-                raise ValueError("Unexpected native Panda joint-limit layout")
+            if qlimits.shape != (len(joint_names), 2):
+                raise ValueError("Native joint limits must match the robot joint order")
             models.append(model)
             states.append(full)
             indices.append(arm)
@@ -114,7 +115,8 @@ class NativeDualCollisionChecker:
 
     def check(self, left7: np.ndarray, right7: np.ndarray) -> list[dict[str, Any]]:
         """Set BOTH full states before querying either model; never touch an env."""
-        joints = (_vector(left7, 7), _vector(right7, 7))
+        joints = tuple(_vector(value, len(indices)) for value, indices in
+                       zip((left7, right7), self.arm_indices))
         for q, bounds in zip(joints, self.joint_limits):
             if np.any(q < bounds[:, 0] - 1e-6) or np.any(q > bounds[:, 1] + 1e-6):
                 raise ValueError("Arm qpos violates native joint limits")
@@ -149,24 +151,28 @@ def validate_schedule(schedule: Any, start_left7: Any, start_right7: Any,
     if (not math.isfinite(step) or step <= 0 or isinstance(max_samples, bool)
             or not isinstance(max_samples, int) or max_samples < 1):
         raise ValueError("Positive finite resolution and positive integer budget required")
-    starts = (_vector(start_left7, 7), _vector(start_right7, 7))
+    if len(schedule.trajectories) != 2:
+        raise ValueError("Expected two source trajectories")
+    counts = tuple(len(source.joint_names) for source in schedule.trajectories)
+    starts = tuple(_vector(value, count) for value, count in
+                   zip((start_left7, start_right7), counts))
     times = _array(schedule.target_times_s)
     commands = (_array(schedule.left_commands), _array(schedule.right_commands))
     dt = float(schedule.control_timestep_s)
     if (times.ndim != 1 or not math.isfinite(dt) or dt <= 0
             or np.any(np.diff(times) <= 0) or np.any(times <= 0)
             or not np.allclose(times, dt * np.arange(1, len(times) + 1), rtol=0, atol=1e-9)
-            or any(c.shape != (len(times), 8) for c in commands)
-            or len(schedule.trajectories) != 2):
-        raise ValueError("Expected two [control ticks,8] arrays on one positive control clock")
-    for source, start, command in zip(schedule.trajectories, starts, commands):
-        if not np.allclose(_vector(source.positions_rad[0], 7), start, rtol=0, atol=1e-6):
+            or any(c.shape != (len(times), count + 1) for c, count in zip(commands, counts))):
+        raise ValueError("Expected two arrays of named arm joints plus gripper on one control clock")
+    for source, start, command, count in zip(schedule.trajectories, starts, commands, counts):
+        if not np.allclose(_vector(source.positions_rad[0], count), start, rtol=0, atol=1e-6):
             raise ValueError("Measured start and source trajectory start differ")
         if (not math.isfinite(float(source.gripper_command))
                 or abs(float(source.gripper_command)) > 1
-                or np.any(command[:, 7] != source.gripper_command)):
+                or np.any(command[:, -1] != source.gripper_command)):
             raise ValueError("Each phase must preserve a finite normalized gripper command")
-    positions = np.vstack([np.r_[*starts], np.column_stack([c[:, :7] for c in commands])])
+    positions = np.vstack([np.r_[*starts], np.column_stack([c[:, :count] for c, count in zip(commands, counts)])])
+    split = counts[0]
     with np.errstate(over="ignore", invalid="ignore"):
         distances = np.max(np.abs(np.diff(positions, axis=0)), axis=1) / step
     if not np.isfinite(distances).all() or np.any(distances > max_samples):
@@ -184,12 +190,12 @@ def validate_schedule(schedule: Any, start_left7: Any, start_right7: Any,
     }
 
     def inspect(q: np.ndarray, time_s: float, interval: int, alpha: float) -> bool:
-        collisions = checker.check(q[:7].copy(), q[7:].copy())
+        collisions = checker.check(q[:split].copy(), q[split:].copy())
         report["sample_count"] += 1
         if collisions:
             report.update(status="collision", first_collision={
                 "time_s": time_s, "control_interval": interval, "alpha": alpha,
-                "left_qpos_rad": q[:7].tolist(), "right_qpos_rad": q[7:].tolist(),
+                "left_qpos_rad": q[:split].tolist(), "right_qpos_rad": q[split:].tolist(),
                 "collisions": collisions})
         return bool(collisions)
 

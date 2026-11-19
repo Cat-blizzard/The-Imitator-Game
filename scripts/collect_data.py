@@ -56,7 +56,10 @@ import argparse
 import psutil
 
 # Import the GPU management module (same directory)
-from gpu_manager import GPUManager, add_gpu_args, build_gpu_manager
+try:
+    from .gpu_manager import GPUManager, add_gpu_args, build_gpu_manager
+except ImportError:
+    from gpu_manager import GPUManager, add_gpu_args, build_gpu_manager
 
 
 # ═══════════════════════════════════════════════════════
@@ -701,6 +704,12 @@ def main():
     # Data directory
     parser.add_argument("--demos-dir", type=str, default="demos",
                         help="Root directory for data")
+    parser.add_argument("--robot", choices=("panda", "piper", "arx_x5", "ur5_wsg", "xarm6_robotiq"),
+                        help="Bounded synchronous collection for this pair; select one supported task with --tasks")
+    parser.add_argument("--seed-splits", help="JSON with fixed train/development/evaluation seed pools")
+    parser.add_argument("--split", choices=("train", "development"), default="train")
+    parser.add_argument("--max-attempts", type=int, default=30,
+                        help="Cumulative attempt limit for the selected robot/split")
 
     # GPU args (injected by the gpu_manager module)
     add_gpu_args(parser)
@@ -718,6 +727,14 @@ def main():
                         help="Only print status, do not run")
 
     args = parser.parse_args()
+    if args.robot is not None:
+        try:
+            from .collect_pick_place import collect
+        except ImportError:
+            from collect_pick_place import collect
+        raise SystemExit(collect(args))
+    if args.seed_splits:
+        parser.error("--seed-splits requires --robot")
     os.makedirs(args.demos_dir, exist_ok=True)
 
     # Build the GPU Manager (prints the config table)

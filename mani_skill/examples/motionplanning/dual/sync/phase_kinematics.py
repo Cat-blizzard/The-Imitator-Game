@@ -1,6 +1,6 @@
 """CPU phase limits, compact route endpoints and native TOPP parameterization.
 
-Numerical policy: seconds, seven joint radians, world XYZ metres, one
+Numerical policy: seconds, named joint radians, world XYZ metres, one
 common phase time scale, and immutable source samples. These helpers do not own
 an environment or certify physical/controller motion or collision safety.
 TOPPRA is loaded only when native curve reconstruction is requested.
@@ -56,12 +56,13 @@ def compact_set_phase_limits(solvers: Any, limits: dict[str, Any]) -> None:
     if not np.isfinite([speed, acceleration]).all() or min(speed, acceleration) <= 0:
         raise ValueError("Finite positive solver limits are required")
     for solver in solvers:
-        if len(solver.planner.move_group_joint_indices) != 7:
-            raise ValueError("Phase limits require a seven-joint move group")
+        joints = len(solver.planner.move_group_joint_indices)
+        if joints < 1:
+            raise ValueError("Phase limits require a nonempty named move group")
         solver.joint_vel_limits, solver.joint_acc_limits = speed, acceleration
-        solver.planner.joint_vel_limits = np.full(7, speed, dtype=float)
-        solver.planner.joint_acc_limits = np.full(7, acceleration, dtype=float)
-        assert solver.planner.joint_vel_limits.shape == solver.planner.joint_acc_limits.shape == (7,)
+        solver.planner.joint_vel_limits = np.full(joints, speed, dtype=float)
+        solver.planner.joint_acc_limits = np.full(joints, acceleration, dtype=float)
+        assert solver.planner.joint_vel_limits.shape == solver.planner.joint_acc_limits.shape == (joints,)
 
 def compact_route_positions(current_xyz: Any, release_xyz: Any, *, route: str) -> dict[str, Any]:
     """Return world XYZ[2,3] endpoints; yaw is merged only after safe lift.
@@ -87,7 +88,7 @@ def compact_route_positions(current_xyz: Any, release_xyz: Any, *, route: str) -
 
 def compact_kinematic_audit(result: Any, *, velocity_limit: float,
                              acceleration_limit: float) -> dict[str, Any]:
-    """Check native TOPP velocity/acceleration arrays[N,7] without retiming."""
+    """Check native TOPP velocity/acceleration arrays[N,J] without retiming."""
     if not isinstance(result, dict) or result.get("status") != "Success":
         raise ValueError("Native planner did not return a successful trajectory")
     times = np.asarray(result.get("time"), dtype=float)
@@ -95,11 +96,12 @@ def compact_kinematic_audit(result: Any, *, velocity_limit: float,
     velocities = np.asarray(result.get("velocity"), dtype=float)
     accelerations = np.asarray(result.get("acceleration"), dtype=float)
     limits = np.asarray([velocity_limit, acceleration_limit], dtype=float)
+    joints = positions.shape[1] if positions.ndim == 2 else 0
     if (times.ndim != 1 or len(times) < 2 or times[0] != 0 or np.any(np.diff(times) <= 0)
-            or any(a.shape != (len(times), 7) for a in (positions, velocities, accelerations))
+            or joints < 1 or any(a.shape != (len(times), joints) for a in (positions, velocities, accelerations))
             or not all(np.isfinite(a).all() for a in (times, positions, velocities, accelerations, limits))
             or np.any(limits <= 0)):
-        raise ValueError("Need finite time[N], position/velocity/acceleration[N,7] and positive limits")
+        raise ValueError("Need finite time[N], position/velocity/acceleration[N,J] and positive limits")
     max_v, max_a = float(np.max(np.abs(velocities))), float(np.max(np.abs(accelerations)))
     passed = max_v <= velocity_limit + 1e-6 and max_a <= acceleration_limit + 1e-6
     return {"status": "passed" if passed else "failed", "samples": len(times),
@@ -123,12 +125,13 @@ def compact_topp_reconstruction(path: Any, velocity_limits: Any, acceleration_li
     import toppra.constraint as constraint
     points = np.asarray(path, dtype=np.float64)
     velocity, acceleration = np.asarray(velocity_limits, dtype=float), np.asarray(acceleration_limits, dtype=float)
-    if (points.ndim != 2 or points.shape[1:] != (7,) or len(points) < 2
-            or velocity.shape != (7,) or acceleration.shape != (7,)
+    joints = points.shape[1] if points.ndim == 2 else 0
+    if (points.ndim != 2 or joints < 1 or len(points) < 2
+            or velocity.shape != (joints,) or acceleration.shape != (joints,)
             or not all(np.isfinite(a).all() for a in (points, velocity, acceleration))
             or min(float(velocity.min()), float(acceleration.min()), float(step)) <= 0
             or not np.isfinite(step) or not isinstance(raw_output, (tuple, list)) or len(raw_output) != 5):
-        raise ValueError("Need finite native path[N,7], positive seven-joint limits, step and raw TOPP tuple")
+        raise ValueError("Need finite native path[N,J], positive matching joint limits, step and raw TOPP tuple")
     spline = ta.SplineInterpolator(np.linspace(0, 1, len(points)), points)
     instance = algo.TOPPRA([constraint.JointVelocityConstraint(velocity),
                            constraint.JointAccelerationConstraint(acceleration)], spline,
@@ -173,8 +176,11 @@ def compact_continuous_derivative_bounds(trace: dict[str, Any]) -> dict[str, Any
     grid = np.asarray(trace["grid_s"], dtype=float)
     speeds = np.asarray(trace["grid_speed_squared"], dtype=float)
     controls = np.asarray(trace["grid_acceleration"], dtype=float)
+    joints = coefficients.shape[2] if coefficients.ndim == 3 else 0
+    sampled = np.asarray(trace.get("sample_position", np.empty((0, joints))))
     if (knots.ndim != 1 or len(knots) < 2 or grid.ndim != 1 or len(grid) < 2
-            or coefficients.shape != (4, len(knots) - 1, 7) or speeds.shape != grid.shape
+            or joints < 1 or coefficients.shape != (4, len(knots) - 1, joints) or speeds.shape != grid.shape
+            or sampled.ndim != 2 or sampled.shape[1] != joints
             or controls.shape != (len(grid) - 1,)
             or not all(np.isfinite(a).all() for a in (knots, coefficients, grid, speeds, controls))
             or np.any(np.diff(knots) <= 0) or np.any(np.diff(grid) <= 0) or np.any(speeds < 0)
@@ -182,7 +188,7 @@ def compact_continuous_derivative_bounds(trace: dict[str, Any]) -> dict[str, Any
             or not np.allclose(np.diff(speeds), 2 * controls * np.diff(grid), rtol=1e-10, atol=1e-10)):
         raise ValueError("Malformed cubic path or constant-acceleration parameterization")
     cuts = np.unique(np.r_[knots, grid])
-    max_velocity, max_acceleration = np.zeros(7), np.zeros(7)
+    max_velocity, max_acceleration = np.zeros(joints), np.zeros(joints)
     velocity_witness, acceleration_witness = {}, {}
     candidates_checked = 0
     negative_speed_roundoff = 0.
@@ -202,7 +208,7 @@ def compact_continuous_derivative_bounds(trace: dict[str, Any]) -> dict[str, Any
             ac = 2 * quadratic * x0 + u * linear
             low, high = left - knots[k], right - knots[k]
             candidates = [float(low), float(high)]
-            for axis in range(7):
+            for axis in range(joints):
                 if aa[axis] != 0.:
                     root = -ab[axis] / (2 * aa[axis])
                     if low <= root <= high:
@@ -225,7 +231,7 @@ def compact_continuous_derivative_bounds(trace: dict[str, Any]) -> dict[str, Any
             for values, maxima, witness in ((velocity, max_velocity, velocity_witness),
                                             (acceleration, max_acceleration, acceleration_witness)):
                 indices = np.abs(values).argmax(axis=0)
-                peaks = np.abs(values[indices, np.arange(7)])
+                peaks = np.abs(values[indices, np.arange(joints)])
                 if float(peaks.max()) > float(maxima.max()) or not witness:
                     axis = int(peaks.argmax()); row = int(indices[axis])
                     witness.update(joint_index=axis, path_s=float(y[row] + knots[k]),
@@ -296,7 +302,7 @@ def compact_retime_pair(results: tuple[Any, Any], traces: tuple[Any, Any], *,
 def attach_topp_capture(solver: Any) -> None:
     """Retain the latest native result and its continuous path parameterization.
 
-    Install once after constructing an ordinary Panda planner. The planner's
+    Install once after constructing a named-arm planner. The planner's
     actual TOPP result is returned unchanged; reconstruction supplies the cubic
     path/velocity data needed for analytic phase retiming. No files are written.
     """
