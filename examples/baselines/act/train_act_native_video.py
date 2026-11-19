@@ -63,6 +63,19 @@ def recorded_contract(args: TrainingArgs, dataset: Any) -> dict[str, Any]:
     }
 
 
+def robot_task_id(configs: list[dict[str, Any]], dataset: Any) -> str:
+    """Bind this single-task bridge to the actual native robot recording."""
+    if len(configs) != 1:
+        raise ValueError("Native video ACT requires one robot dataset/task per run")
+    native = dataset.main_dataset.meta.info.get("native_data_contract") or {}
+    if configs[0].get("env_id") and native.get("env_id") and configs[0]["env_id"] != native["env_id"]:
+        raise ValueError("Configured robot task differs from its recorded native task")
+    task_id = configs[0].get("env_id") or native.get("env_id")
+    if not isinstance(task_id, str) or not task_id:
+        raise ValueError("The robot dataset must identify its task to pair a human demonstration")
+    return task_id
+
+
 def train(args: TrainingArgs) -> None:
     """Optimize the train split; human clips provide conditions, robot actions labels."""
     if args.split != "train" or not args.human_manifest:
@@ -82,7 +95,7 @@ def train(args: TrainingArgs) -> None:
 
     _, base_dataset = build_dataloader(args)
     configs = json.loads(Path(args.sub_config).read_text(encoding="utf-8"))
-    task_id = configs[0].get("env_id") if len(configs) == 1 else None
+    task_id = robot_task_id(configs, base_dataset)
     dataset = NativeVideoDataset(base_dataset, args.human_manifest, role="train",
                                  image_size=tuple(args.image_size), video_backend=args.video_backend,
                                  task_id=task_id)

@@ -4,7 +4,8 @@ The native-video ACT entry pairs human demonstrations with the selected robot's
 RGB, physical joint positions and native action labels. It reuses the official
 video-conditioned ACT network and frozen DINOv2 task encoder, together with the
 native data converter, normalization and seeded rollout used by the single-task
-baseline. A separate policy is trained for each embodiment.
+baseline. Each invocation pairs one robot dataset/task with its human manifest.
+A separate policy is trained for each embodiment.
 
 The initial **L0 engineering pilot** uses ARX X5 on
 `TwoRobotPickPillToRegions-v1`: twenty robot training trajectories, three robot
