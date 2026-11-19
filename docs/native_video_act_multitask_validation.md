@@ -117,12 +117,122 @@ simulator episodes. A cross-task swap measures input sensitivity; it does not
 show that the alternate goal is executable in that scene or establish a causal
 effect on success.
 
-The next development step is to diagnose pill failures and compare checkpoints
-on fixed development cases before setting a larger training budget. The forty
-reported episodes are now consumed evaluation cases; further choices should use
-development evidence, followed by a separately frozen fresh evaluation batch.
+The forty reported episodes are now consumed evaluation cases. The development
+comparison below uses the separately reserved development robot/human splits.
 A demonstration-following experiment additionally needs multiple valid goals
 under the same initial scene. Full task and L0–L3 coverage remain open.
+
+## Development diagnosis and checkpoint comparison
+
+The follow-up uses source `e4bd5212c577b751499d6e36443e2354b4dac766`, whose
+runtime is unchanged from `376c5ec` (the intervening commit changes documentation).
+Both conditions' existing 3,000/6,000-update checkpoints run on pill seeds
+7000–7002 and basket seeds 22000–22002, with human development episode 4.
+All **24 allocated episodes / 4,800 steps** complete, with zero interface errors.
+For each task/seed, all four initial physical states and initial public RGB/qpos
+match bitwise (six scene/seed cases, eighteen comparisons). The prediction horizon,
+normalizer, 200-step budget and eight executed actions remain unchanged.
+
+| Condition | Updates | Pill development final success | Basket development final success |
+| --- | ---: | ---: | ---: |
+| Human video | 3,000 | 0/3 | 3/3 |
+| Human video | 6,000 | 0/3 | 3/3 |
+| Constant zero condition | 3,000 | 0/3 | 2/3 |
+| Constant zero condition | 6,000 | 0/3 | 3/3 |
+
+Video pill behavior progresses despite unchanged final success: at 3,000
+updates neither arm grasps in any development episode. At 6,000, seed7001
+grasps with both arms and places the right object; seed7002 briefly grasps with
+the left arm, while seed7000 never satisfies either grasp predicate. The left
+object loses its grasp predicate outside the region at step134 in seed7001 and
+steps106/110 in seed7002, while its gripper command still requests closure.
+These measurements distinguish a transient grasp from sustained possession;
+they do not identify the mechanical cause of contact loss.
+
+The previous consumed-test records show the same distinction: six of the eight
+video pill failures lose a left grasp outside the region, and two never observe
+a right grasp. The constant-condition test policies remain near their initial
+poses, moving each TCP by only about 10–14 mm. Thus a uniform shortage of the
+200-step budget does not explain all failures. The actual 23 source expert
+episodes reach official success at action steps138–141. Their H5 actions/qpos
+were checked against the converted rows when establishing this timing.
+
+### Starting motion and the executed query window
+
+Both tasks' forty training trajectories begin with ten identical rest actions
+and eleven identical qpos observations. Pill does not have an unusually large
+static-data share: repeated adjacent actions are 30.47% in pill and 31.75% in
+baskets; future padding is 3.879% and 3.941%, correctly excluded from L1.
+The selected training statistics, padding and routing audit finds no interface
+error requiring a retraining fix.
+
+Offline inference on the six real development trajectories uses saved public
+RGB/qpos and the actual zero-CVAE-latent `get_action`; future expert actions are
+comparison targets only. Across pill initial observations, video6000 predicts
+maximum arm deviations from rest of **0.0222–0.0230 rad in queries1–8**, versus
+**0.2148–0.2215 rad in queries9–16**. Constant6000 shows the same tendency
+(about 0.0284 versus 0.165 rad). Repeatedly executing the first half can therefore
+omit much of the predicted starting motion. Similar observations during the
+waiting prefix produce similar chunks; the single-frame policy has no elapsed
+time input. Baskets also show this pattern and can succeed, so the prefix alone
+does not establish the cause of failure.
+
+A subsequent, separately frozen development intervention changes only
+`execute_steps` from 8 to 16 for both 6,000-update pill models on the same three
+seeds. All **six episodes / 1,200 steps** complete, retaining the 200-step limit.
+Both final scores remain **0/3**. The constant model now observes right grasps
+and completed right placements in all three cases, plus left grasps in two;
+with eight executed steps it grasps neither side. Its start-state stagnation is
+therefore sensitive to the executed window. Left-object loss or missed grasp
+still prevents success. The video model also retains its grasp/placement
+failures. This intervention supports a control-schedule contribution to the
+constant model's stagnation, without demonstrating that sixteen steps is the
+best setting or that the static prefix caused it. The default remains eight;
+the forty original evaluation outcomes are unchanged.
+
+Each paired window comparison uses the same initial physical/public state,
+checkpoint and human condition; the first eight actual actions are bitwise
+equal. With sixteen executed actions, both constant-model TCPs move more than
+5 cm from their initial poses by observation16 in all three cases; they never
+reach that displacement with eight executed actions. These motion summaries
+are descriptive measurements, not additional physical acceptance gates.
+
+Changing the six H31 clips at one fixed development initial observation does
+not produce large starting differences: the video6000 chunks differ by at most
+0.000554 rad in arm targets. This does not support the hypothesis that the
+development clip alone causes the observed initial stagnation. Episode5 in
+this descriptive check is already consumed test material and is not used for
+checkpoint selection.
+
+### Training-budget decision
+
+Both training loss and actual inference error on real development observations
+improve from 3,000 to 6,000 updates. Pill mean absolute arm prediction error
+over the first eight queries is:
+
+| Condition | Updates | Starting observations, frames0/5/9/10/15/20 | Later observations, frames80/90/100/120/140 |
+| --- | ---: | ---: | ---: |
+| Human video | 3,000 | 0.03266 rad | 0.02797 rad |
+| Human video | 6,000 | 0.01339 rad | 0.01952 rad |
+| Constant zero condition | 3,000 | 0.02620 rad | 0.02051 rad |
+| Constant zero condition | 6,000 | 0.02027 rad | 0.01342 rad |
+
+These are comparisons at expert observations, not closed-loop success or
+posterior-conditioned training loss. The constant model's low later error also
+shows why offline error alone cannot choose the successful controller.
+
+The next bounded training plan is **12,000 total updates per condition**, keeping
+the robot/human data, architecture, sampling, loss and default eight-step
+execution fixed, with development checks at 9,000 and 12,000. This doubles the
+pilot budget to test whether the observed fitting and grasp-stage progress
+continues; it is not a convergence target. No new training was run during this
+diagnosis. The current trainer has no resume entry or complete mid-epoch/RNG
+recovery record: a fresh seed1 run to 12,000 with 3,000-step snapshots provides
+the straightforward controlled comparison. Loading only model weights must not
+be described as an exact continuation. If further training gives no sustained
+development improvement, test the initial-wait sampling or another grasp-focused
+change separately before scaling data. Execution-window changes remain a
+separate factor. Freeze a fresh final evaluation batch after making those choices.
 
 ## Retained evidence
 
@@ -131,7 +241,11 @@ Raw evidence stays outside Git under
 the frozen protocol, source/input hashes, collection attempts, original H5 and
 videos, replay and conversion receipts, training logs and both checkpoints,
 all forty rollout records, and the paired-state, normalizer, action-recording
-and offline-intervention audits. The compact JSON beside this report preserves
+and offline-intervention audits. The `development-diagnosis/` subdirectory
+retains both development protocols, all thirty development rollouts and videos,
+paired-state and motion audits, data/loss statistics, and offline chunk arrays.
+The initial offline-loader metadata error and its successful corrected run are
+retained separately. The compact JSON beside this report preserves
 portable identities and per-seed outcomes; datasets and weights are not included
 in the fork. Original ARX single-task results remain in
 [their separate validation report](native_video_act_validation.md).

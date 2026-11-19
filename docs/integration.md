@@ -195,6 +195,14 @@ identities and machine-readable results.
   condition swapping changes video-model output and preserves constant-model
   output. The latest applicable CPU suite
   passes 603 tests. See [the two-task report](native_video_act_multitask_validation.md).
+- [x] Compare existing 3,000/6,000-update checkpoints on both tasks' reserved
+  development seeds, using development human clips: twenty-four episodes, zero
+  interface errors, all four initial-state groups equal. Pill final success
+  stays 0/3, while video grasp/transport stages and offline inference error
+  improve. A separate six-case 8-to-16 execution-window intervention lets the
+  constant policy start and place right objects, but both pill models remain
+  0/3. The default stays eight steps. Start-state stagnation and left grasp loss
+  remain distinct development targets; see the report's development diagnosis.
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -216,10 +224,18 @@ identities and machine-readable results.
      model and matched zero-condition baseline; retain all forty outcomes.
    - [x] Verify offline video-condition sensitivity and A-to-B-to-A cache
      restoration. This intervention does not establish goal semantics.
-   - [ ] Diagnose pill approach/grasp and transport/placement failures on fixed
-     development cases. Compare development checkpoints before deciding further
-     training/data budgets. Reserve a new final batch after those choices;
-     do not tune on the forty reported evaluation episodes.
+   - [x] Diagnose fixed development pill cases, compare existing checkpoints and
+     test the executed query window separately. Confirm static-prefix behavior,
+     left grasp loss and continuing inference-error improvement, without finding
+     an interface error requiring a data/model repair.
+   - [ ] Run the next bounded training comparison: 12,000 total updates per
+     condition, checking 9,000/12,000 on the same development splits. Keep the
+     current data, model and default execution configuration fixed. The trainer
+     has no exact-resume entry, so use a fresh matched seed1 run or implement
+     proper continuation before calling it a resume. If progress stalls, test
+     initial-wait sampling or another grasp-focused change as a separate factor.
+     Freeze fresh final seeds after selection; do not tune on the forty reported
+     evaluation episodes.
    - [ ] Test demonstration following with the same valid initial scene and
      multiple executable goals. Different task scenes and cross-task video swaps
      do not establish a reliable video benefit or semantic necessity.

@@ -504,5 +504,1042 @@
     "The two task scenes differ, so success and the offline video-sensitivity check do not by themselves show that video semantics are necessary.",
     "Failure stages summarize sampled task predicates; they do not by themselves establish a unique physical cause.",
     "Large checkpoints, videos, trajectories and raw world arrays are retained under the evidence root and are not embedded in this record."
-  ]
+  ],
+  "development_diagnosis": {
+    "source_commit": "e4bd5212c577b751499d6e36443e2354b4dac766",
+    "runtime_same_as_original_source": true,
+    "evidence_subdirectory": "development-diagnosis",
+    "evidence_sha256": {
+      "protocol.json": "681a5993c54e97a061f86a3d09fbae8810c0be690b8ac134e5ba6cdcd5a3935a",
+      "execution-window-protocol.json": "2fd9f9f3e9595d3d785bab2ff89b50774008c627bed271c96a4910c24484ce3c",
+      "development-comparison.json": "7dd030f8ce19661626be607e0bf4ec8cd255e4e2da5e8ab042c414de051151e0",
+      "execution-window-comparison.json": "e535dfb4a59a73e0c28e17f707306268808dfdcf7e0dd76c6ec5803c45eff90c",
+      "training-data-audit.json": "612fa03817371986bc7af1a5435a4d8867b0e8395a6ee5b96fed573736365eb9",
+      "recorded-pill-diagnosis.json": "e59c6d1217c9371fe00205610edf836815e12c4e9149bdd486211095e1982fb2",
+      "offline-chunk-diagnosis.json": "de29cd62707aafe48e981a02908da92710e329fc73f25b77edcd8a5d6db9b3aa",
+      "offline-chunk-late-phase-diagnosis.json": "07bbe7d4caa6ee38fdeda777559a1e3136a0cdf7d21fb57fbafbbf2eb86e1a27",
+      "offline-observation-ambiguity.json": "f0989e94172921aa7acd0df0a08cb557f18672914d5be58b27488910765aaa94",
+      "video-receipt.json": "8d1179079ef7778cc14c20e5be493f4ae5ec18b3206f74958a9cf473c3c63c3c",
+      "constant-receipt.json": "3c6af083f9eb2a75516d43b257040c382bd2351b072b3ad727110536a3fe6d6e",
+      "video-execute16-receipt.json": "17b621357090b7894652e8af8dfc092af51fd1069afe42a78f689628551c3388",
+      "constant-execute16-receipt.json": "f817d9ce4d6d019c2af901eb268a2a8efe1518347731d9b2cf231af12e655663"
+    },
+    "human_role": "development",
+    "human_episode": 4,
+    "checkpoint_comparison": {
+      "episodes": 24,
+      "control_steps": 4800,
+      "interface_errors": 0,
+      "execute_steps": 8,
+      "per_task_reserved_seeds": {
+        "pill": [
+          7000,
+          7001,
+          7002
+        ],
+        "basket": [
+          22000,
+          22001,
+          22002
+        ]
+      },
+      "initial_state_audit": {
+        "task_seed_cases": 6,
+        "comparisons": 18,
+        "all_bitwise_equal": true
+      },
+      "results": [
+        {
+          "condition": "video",
+          "updates": 3000,
+          "task": "pill",
+          "episodes": 3,
+          "success_at_end": 0,
+          "timeouts": 3,
+          "cases": [
+            {
+              "seed": 7000,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7001,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7002,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "condition": "video",
+          "updates": 3000,
+          "task": "basket",
+          "episodes": 3,
+          "success_at_end": 3,
+          "timeouts": 0,
+          "cases": [
+            {
+              "seed": 22000,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 83,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 83,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22001,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 77,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 77,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22002,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 83,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 83,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "condition": "video",
+          "updates": 6000,
+          "task": "pill",
+          "episodes": 3,
+          "success_at_end": 0,
+          "timeouts": 3,
+          "cases": [
+            {
+              "seed": 7000,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7001,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "placement_not_successful",
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 79,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": [
+                    134
+                  ]
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 90,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7002,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 97,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": [
+                    106,
+                    110
+                  ]
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "condition": "video",
+          "updates": 6000,
+          "task": "basket",
+          "episodes": 3,
+          "success_at_end": 3,
+          "timeouts": 0,
+          "cases": [
+            {
+              "seed": 22000,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 66,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 66,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22001,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 66,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 66,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22002,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 65,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 66,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "condition": "constant",
+          "updates": 3000,
+          "task": "pill",
+          "episodes": 3,
+          "success_at_end": 0,
+          "timeouts": 3,
+          "cases": [
+            {
+              "seed": 7000,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7001,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7002,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "condition": "constant",
+          "updates": 3000,
+          "task": "basket",
+          "episodes": 3,
+          "success_at_end": 2,
+          "timeouts": 1,
+          "cases": [
+            {
+              "seed": 22000,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 74,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 75,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22001,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 74,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 75,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22002,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "transport_or_release_incomplete",
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 75,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 75,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "condition": "constant",
+          "updates": 6000,
+          "task": "pill",
+          "episodes": 3,
+          "success_at_end": 0,
+          "timeouts": 3,
+          "cases": [
+            {
+              "seed": 7000,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7001,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 7002,
+              "official_success_at_end": false,
+              "official_success_once": false,
+              "timeout": true,
+              "failure_stage": "grasp_not_observed",
+              "arms": {
+                "left": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": false,
+                  "first_grasp_step": null,
+                  "final_placed_and_ungrasped": false,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "condition": "constant",
+          "updates": 6000,
+          "task": "basket",
+          "episodes": 3,
+          "success_at_end": 3,
+          "timeouts": 0,
+          "cases": [
+            {
+              "seed": 22000,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 66,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 66,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22001,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 74,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 74,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            },
+            {
+              "seed": 22002,
+              "official_success_at_end": true,
+              "official_success_once": true,
+              "timeout": false,
+              "failure_stage": null,
+              "arms": {
+                "left": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 67,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                },
+                "right": {
+                  "ever_grasped": true,
+                  "first_grasp_step": 67,
+                  "final_placed_and_ungrasped": true,
+                  "grasp_to_ungrasped_outside_region_steps": []
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "data_audit": {
+      "initial_identical_action_rows_both_tasks": 10,
+      "initial_identical_qpos_rows_both_tasks": 11,
+      "conclusion": "No task-routing, train-only normalizer or padding error found; both tasks have a static prefix, which alone cannot establish the cause of failure."
+    },
+    "offline_inference": {
+      "new_simulator_episodes": 0,
+      "new_training_updates": 0,
+      "starting_observation_indices": [
+        0,
+        5,
+        9,
+        10,
+        15,
+        20
+      ],
+      "later_observation_indices": [
+        80,
+        90,
+        100,
+        120,
+        140
+      ],
+      "starting_chunks": 144,
+      "later_chunks": 120,
+      "method": "Actual get_action with zero CVAE latent on real expert development public RGB/qpos; expert future actions are comparison targets only. Not posterior-conditioned training loss.",
+      "pill_first8_arm_mae_rad": {
+        "video_003000": {
+          "starting_arm_mae_rad": 0.0326564269114477,
+          "late_phase_arm_mae_rad": 0.027967385834532385
+        },
+        "video_006000": {
+          "starting_arm_mae_rad": 0.013386913161024562,
+          "late_phase_arm_mae_rad": 0.019519018080343127
+        },
+        "constant_003000": {
+          "starting_arm_mae_rad": 0.026203552938609646,
+          "late_phase_arm_mae_rad": 0.020507476288001196
+        },
+        "constant_006000": {
+          "starting_arm_mae_rad": 0.0202738370788643,
+          "late_phase_arm_mae_rad": 0.013420878694581381
+        }
+      },
+      "clip_intervention_scope": "H31 episodes0-5 at the same development seed7000 initial observation; episode5 is already consumed test material and is not used for checkpoint selection.",
+      "interpretation": "Later initial chunk queries predict more starting motion; similar first-frame outputs across six clips do not support an ep4-only explanation. Offline error does not establish rollout success."
+    },
+    "execution_window_intervention": {
+      "episodes": 6,
+      "control_steps": 1200,
+      "interface_errors": 0,
+      "only_changed_factor": "execute_steps 8 to16 on existing6000 checkpoints, same development seeds/human clip and original200-step horizon",
+      "all_initial_states_bitwise_equal": true,
+      "all_first8_actions_bitwise_equal": true,
+      "cases": [
+        {
+          "condition": "video",
+          "seed": 7000,
+          "same_checkpoint_and_human": true,
+          "same_initial_states": true,
+          "first8_actions_bitwise_equal": true,
+          "execute8": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              },
+              "right": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 35,
+              "right": 35
+            }
+          },
+          "execute16": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              },
+              "right": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 15,
+              "right": 15
+            }
+          }
+        },
+        {
+          "condition": "video",
+          "seed": 7001,
+          "same_checkpoint_and_human": true,
+          "same_initial_states": true,
+          "first8_actions_bitwise_equal": true,
+          "execute8": {
+            "official_success_at_end": false,
+            "failure_stage": "placement_not_successful",
+            "arms": {
+              "left": {
+                "ever_grasped": true,
+                "first_grasp_step": 79,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": [
+                  134
+                ]
+              },
+              "right": {
+                "ever_grasped": true,
+                "first_grasp_step": 90,
+                "final_placed_and_ungrasped": true,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 23,
+              "right": 24
+            }
+          },
+          "execute16": {
+            "official_success_at_end": false,
+            "failure_stage": "placement_not_successful",
+            "arms": {
+              "left": {
+                "ever_grasped": true,
+                "first_grasp_step": 68,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": [
+                  100
+                ]
+              },
+              "right": {
+                "ever_grasped": true,
+                "first_grasp_step": 82,
+                "final_placed_and_ungrasped": true,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 15,
+              "right": 15
+            }
+          }
+        },
+        {
+          "condition": "video",
+          "seed": 7002,
+          "same_checkpoint_and_human": true,
+          "same_initial_states": true,
+          "first8_actions_bitwise_equal": true,
+          "execute8": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": true,
+                "first_grasp_step": 97,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": [
+                  106,
+                  110
+                ]
+              },
+              "right": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 31,
+              "right": 32
+            }
+          },
+          "execute16": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": true,
+                "first_grasp_step": 70,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": [
+                  97,
+                  103
+                ]
+              },
+              "right": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 15,
+              "right": 15
+            }
+          }
+        },
+        {
+          "condition": "constant",
+          "seed": 7000,
+          "same_checkpoint_and_human": true,
+          "same_initial_states": true,
+          "first8_actions_bitwise_equal": true,
+          "execute8": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              },
+              "right": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": null,
+              "right": null
+            }
+          },
+          "execute16": {
+            "official_success_at_end": false,
+            "failure_stage": "placement_not_successful",
+            "arms": {
+              "left": {
+                "ever_grasped": true,
+                "first_grasp_step": 70,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": [
+                  98
+                ]
+              },
+              "right": {
+                "ever_grasped": true,
+                "first_grasp_step": 81,
+                "final_placed_and_ungrasped": true,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 16,
+              "right": 16
+            }
+          }
+        },
+        {
+          "condition": "constant",
+          "seed": 7001,
+          "same_checkpoint_and_human": true,
+          "same_initial_states": true,
+          "first8_actions_bitwise_equal": true,
+          "execute8": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              },
+              "right": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": null,
+              "right": null
+            }
+          },
+          "execute16": {
+            "official_success_at_end": false,
+            "failure_stage": "placement_not_successful",
+            "arms": {
+              "left": {
+                "ever_grasped": true,
+                "first_grasp_step": 65,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": [
+                  98
+                ]
+              },
+              "right": {
+                "ever_grasped": true,
+                "first_grasp_step": 75,
+                "final_placed_and_ungrasped": true,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 16,
+              "right": 16
+            }
+          }
+        },
+        {
+          "condition": "constant",
+          "seed": 7002,
+          "same_checkpoint_and_human": true,
+          "same_initial_states": true,
+          "first8_actions_bitwise_equal": true,
+          "execute8": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              },
+              "right": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": null,
+              "right": null
+            }
+          },
+          "execute16": {
+            "official_success_at_end": false,
+            "failure_stage": "grasp_not_observed",
+            "arms": {
+              "left": {
+                "ever_grasped": false,
+                "first_grasp_step": null,
+                "final_placed_and_ungrasped": false,
+                "grasp_to_ungrasped_outside_region_steps": []
+              },
+              "right": {
+                "ever_grasped": true,
+                "first_grasp_step": 81,
+                "final_placed_and_ungrasped": true,
+                "grasp_to_ungrasped_outside_region_steps": []
+              }
+            },
+            "tcp_first_gt_5cm_observation_index": {
+              "left": 16,
+              "right": 16
+            }
+          }
+        }
+      ],
+      "interpretation": "Constant policy starts and places the right object in all3, while left loss/missed grasp prevents final success; both conditions remain0/3. Execution window contributes to stagnation. This does not prove the stationary prefix is causal or that16 is optimal."
+    },
+    "next_training_plan": {
+      "status": "planned_not_run",
+      "total_updates_per_condition": 12000,
+      "development_checks": [
+        9000,
+        12000
+      ],
+      "snapshot_interval_updates": 3000,
+      "conditions": [
+        "video",
+        "constant"
+      ],
+      "keep_fixed": [
+        "data and human splits",
+        "model and loss",
+        "sampling",
+        "default execute_steps8",
+        "episode limit200"
+      ],
+      "start": "Fresh matched seed1 runs are the straightforward controlled option; current trainer has no exact-resume entry or complete mid-epoch/RNG recovery state.",
+      "budget_reason": "Double the pilot budget to test whether measured fitting and grasp-stage progress continue; not a convergence estimate.",
+      "final_evaluation": "Freeze fresh final cases after development selection; preserve all previous40 final cases unchanged."
+    }
+  }
 }
