@@ -759,7 +759,7 @@ class _CameraEncoderThread(threading.Thread):
                 img_downsampled = auto_downsample_height_width(img_chw)
                 # Reshape CHW to (H*W, C) for per-channel stats
                 channels = img_downsampled.shape[0]
-                img_for_stats = img_downsampled.transpose(1, 2, 0).reshape(-1, channels)
+                img_for_stats = img_downsampled.transpose(1, 2, 0).reshape(-1, channels).astype(np.float64)
                 stats_tracker.update(img_for_stats)
 
                 frame_count += 1
