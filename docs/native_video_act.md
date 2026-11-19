@@ -374,6 +374,15 @@ sixteen is not uniformly faster. Generic defaults, the historical commands
 above and the earlier 80-episode record retain eight-action execution. No weights
 are retrained. See the report for paired timings, retained failures and limits.
 
+A subsequent C.6-inspired demonstration-swap diagnostic reuses the eighty
+aligned execute16 records and adds 160 cross-task/unrelated-video episodes on
+the same scenes. Every model/condition/task cell remains 20/20, with zero
+interface errors. Video latents and first actions change in all eighty video
+pairs; the independently trained constant policy's complete trajectories stay
+exactly equal. Video therefore affects behavior, but this pilot does not show
+that correct video is needed for task success. See the report for the official
+protocol reference, fixed inputs and scope; this is not new-scene test evidence.
+
 Piper supports two original L0 tasks through the shared expert and learning
 entries:
 
@@ -458,5 +467,7 @@ attempt and report interface failures separately from completed policy failures.
 Six thousand updates is a fixed engineering budget, not a convergence claim.
 The two scenes expose task identity through the robot observation; comparing
 the two conditioning modes measures this pilot's outcome but does not by itself
-establish semantic goal-following from video. That question needs the same valid
-robot initial state with multiple executable demonstrated goals.
+establish semantic goal-following from video. TIG's C.6 wrong-demonstration
+diagnostic can retain the original scene and score; it does not require a
+scene with multiple valid goals. Testing selection among multiple executable
+goals in one scene is a stronger optional study requiring suitable paired data.

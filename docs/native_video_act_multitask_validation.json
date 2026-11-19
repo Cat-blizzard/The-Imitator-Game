@@ -6682,6 +6682,3106 @@
       "One training seed,20 scenes/task. All allocations retained, no retries, new training or runtime/physics/scoring change."
     ],
     "next_step": "Design a same-scene multiple-executable-goal demonstration-following comparison. No additional run started."
+  },
+  "demonstration_swap_9k": {
+    "record_type": "C.6-inspired two-task L0 development diagnostic, not full official reproduction",
+    "source_commit": "158ac37f9e61476c0a6d1dc93d3d97155e0a538e",
+    "runtime_unchanged_since": "376c5ecce1b6cf4cc8c8ef1ba8dfe449acc9f904",
+    "official_sources": {
+      "paper": "https://arxiv.org/html/2608.22301v1",
+      "sections": [
+        "Appendix C.6",
+        "Table 10"
+      ],
+      "repository": "https://github.com/imitator-game/The-Imitator-Game",
+      "repository_commit": "3193957e3b0187d086e44d79e0e4af9845fbd4fd",
+      "task_mapping_path": "examples/baselines/lerobot_dataset/task_mapping.json",
+      "protocol_relation": "Keep robot scene and original-task scoring; replace human video. Same-scene multiple valid goals are not required. Pilot tasks/replacements differ from the original C.6 experiment."
+    },
+    "evidence_root": "$WORKSPACE_ROOT/infrastructure/validation/native-video-act-multitask-20261119/goal-following-20261119",
+    "evidence_sha256": {
+      "swap-protocol.json": "688e501cb54d03b18dcd4d850501df32d7be879206556c28aa3ebdd5c92a6a97",
+      "swap-preflight.json": "1e2a661781729a88f5adf71530df348c13d49bf1668a4db0c194298bd87de274",
+      "paper-protocol-audit.json": "bf9753d4fe4dc1e17fcb9fce84f32943d7e6c4c8069bd2b46fa1b622d7d430fe",
+      "data-goal-audit.json": "c1f49fe641fdd768dae58a7a246f88503c66dcb4ee8bc7ca957aad9c3e199cd5",
+      "human-swap-manifest.json": "5008155af148ca3c5a7df76fa8fdf7c0d020932fac98693ad31e68cf297fdba8",
+      "swap-results.json": "033cf7c672cf96b60eeaa356668b36b664d3e9ad0d81e78be40f52a319efa892",
+      "swap-independent-result-audit.json": "10a8acde754bdab61742290fc336a715f251b4a28aaebcb064aae842182a9486",
+      "first-action-condition-differences.json": "71f1d55a0386b8d3868b637b525c1894664d852325ff0224cf4782813845b494",
+      "evaluation-video-receipt.json": "fb4c70ce3fbc83b2a83c4ba453ad3225fc7bcf5d287e45c2f8443aa81cc20b69",
+      "evaluation-constant-receipt.json": "dc53568f4175c634792a3086dba68091734a190eae6a48ab29878f4f80add62f"
+    },
+    "protocol": {
+      "scene_seeds_per_task": [
+        25000,
+        25001,
+        25002,
+        25003,
+        25004,
+        25005,
+        25006,
+        25007,
+        25008,
+        25009,
+        25010,
+        25011,
+        25012,
+        25013,
+        25014,
+        25015,
+        25016,
+        25017,
+        25018,
+        25019
+      ],
+      "new_episodes": 160,
+      "retained_aligned_episodes": 80,
+      "total_comparison_records": 240,
+      "new_control_steps": 32000,
+      "retained_control_steps": 16000,
+      "total_comparison_control_steps": 48000,
+      "baseline_reruns": 0,
+      "allocations_each_run_once": true,
+      "checkpoint_updates": 9000,
+      "checkpoint_sha256": {
+        "video": "b8cdd0a08bf4a21b57ba4a8c28bdce52b39901fb1d9b6fbb0d2a223f1d51a390",
+        "constant": "61d9cf3782f7fc405bdb135994b3f72a9cca132ff2975eb4ceb140ba33542eef"
+      },
+      "predict_steps": 16,
+      "execute_steps": 16,
+      "control_hz": 20,
+      "physics_hz": 100,
+      "max_episode_steps": 200,
+      "aligned_reference_key": "execution_window_9k_fresh_scene_regression",
+      "conditions": {
+        "aligned": {
+          "pill": "human_H31_ep4_development",
+          "basket": "human_H8_ep4_development"
+        },
+        "cross": {
+          "pill": "human_H8_ep4_development",
+          "basket": "human_H31_ep4_development"
+        },
+        "unrelated": {
+          "pill": "human_H29_ep4_development",
+          "basket": "human_H29_ep4_development"
+        }
+      },
+      "unrelated_clip_note": "H29 maps to OpenBox; inspected episode4 shows opening transparent packaging/container material. This condition is outside the two-task training support.",
+      "constant_control": "Separately trained zero-condition policy, not removal of video from the same video model.",
+      "unchanged": [
+        "checkpoints",
+        "native profiles",
+        "training-only normalizers",
+        "robot RGB/qpos",
+        "physics",
+        "action clamp",
+        "success predicates",
+        "termination"
+      ],
+      "retraining": false,
+      "checkpoint_reselection": false
+    },
+    "results": {
+      "video": {
+        "aligned": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          }
+        },
+        "cross": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          }
+        },
+        "unrelated": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          }
+        }
+      },
+      "constant": {
+        "aligned": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          }
+        },
+        "cross": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          }
+        },
+        "unrelated": {
+          "pill": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          },
+          "basket": {
+            "episodes": 20,
+            "successes": 20,
+            "success_once": 20,
+            "sr": 1.0,
+            "wilson95": [
+              0.838874841947188,
+              0.9999999999999999
+            ],
+            "timeouts": 0,
+            "interface_errors": 0
+          }
+        }
+      }
+    },
+    "macro_task_sr": {
+      "video": {
+        "aligned": 1.0,
+        "cross": 1.0,
+        "unrelated": 1.0
+      },
+      "constant": {
+        "aligned": 1.0,
+        "cross": 1.0,
+        "unrelated": 1.0
+      }
+    },
+    "original_task_SR_drop_vs_aligned": {
+      "video": {
+        "cross": {
+          "pill": 0.0,
+          "basket": 0.0
+        },
+        "unrelated": {
+          "pill": 0.0,
+          "basket": 0.0
+        }
+      },
+      "constant": {
+        "cross": {
+          "pill": 0.0,
+          "basket": 0.0
+        },
+        "unrelated": {
+          "pill": 0.0,
+          "basket": 0.0
+        }
+      }
+    },
+    "paired_outcomes": {
+      "video": {
+        "cross": {
+          "pill": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          },
+          "basket": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          }
+        },
+        "unrelated": {
+          "pill": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          },
+          "basket": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          }
+        }
+      },
+      "constant": {
+        "cross": {
+          "pill": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          },
+          "basket": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          }
+        },
+        "unrelated": {
+          "pill": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          },
+          "basket": {
+            "both_success": 20,
+            "aligned_only": 0,
+            "replacement_only": 0,
+            "both_failure": 0
+          }
+        }
+      }
+    },
+    "per_new_episode_outcomes": [
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 134
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 134
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 126
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 137
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 135
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 134
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 124
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 126
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "video",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 136
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 139
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 139
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 139
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 144
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 139
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 138
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 139
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "video",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": false,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 139
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "cross",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 139
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 143
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 140
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 141
+      },
+      {
+        "mode": "constant",
+        "task": "pill",
+        "condition": "unrelated",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 142
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 129
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 130
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 127
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 129
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 130
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 134
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 126
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 129
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "cross",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 130
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25000,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25001,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25002,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 129
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25003,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25004,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 130
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25005,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 127
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25006,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25007,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25008,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 129
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25009,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 130
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25010,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25011,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 134
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25012,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25013,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 131
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25014,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 128
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25015,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 132
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25016,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 126
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25017,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 133
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25018,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 129
+      },
+      {
+        "mode": "constant",
+        "task": "basket",
+        "condition": "unrelated",
+        "seed": 25019,
+        "aligned_success": true,
+        "swap_success": true,
+        "task_z_equal_aligned": true,
+        "initial_bitwise_equal": true,
+        "first_success_step": 130
+      }
+    ],
+    "initial_state_audit": {
+      "records": 240,
+      "distinct_task_seed_scenes": 40,
+      "all_initial_world_public_RGB_qpos_bitwise_equal": true,
+      "records_scope": "Each of six mode/condition records compared to video-aligned S0 in its identical task/seed scene."
+    },
+    "constant_invariance": {
+      "pairs": 80,
+      "all_effective_conditions_identical": true,
+      "all_actions_bitwise_equal": true,
+      "all_recorded_H5_trajectory_arrays_bitwise_equal": true,
+      "all_events_equal": true
+    },
+    "conditioning_identities": {
+      "video": {
+        "aligned": {
+          "pill": {
+            "human_demo_id_counts": {
+              "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864": 20
+            },
+            "task_z_sha256_counts": {
+              "3bb23bda6940413c3d20582557e37aee3e822eb8b248439c74c929a9095a52b0": 20
+            },
+            "task_z_norms": [
+              15.844696044921875
+            ],
+            "human_manifest_id": "human_H31_ep4_development"
+          },
+          "basket": {
+            "human_demo_id_counts": {
+              "clip-sha256:de8418945983abdd3aad756fee8bd5596910e48f9c7114ca5d5ccb287e457fc7": 20
+            },
+            "task_z_sha256_counts": {
+              "0ffaebc3b7f10a532520abcbf0503f14e79e4d71101368f86a8adc93c974872e": 20
+            },
+            "task_z_norms": [
+              15.824984550476074
+            ],
+            "human_manifest_id": "human_H8_ep4_development"
+          }
+        },
+        "cross": {
+          "pill": {
+            "human_demo_id_counts": {
+              "clip-sha256:de8418945983abdd3aad756fee8bd5596910e48f9c7114ca5d5ccb287e457fc7": 20
+            },
+            "task_z_sha256_counts": {
+              "0ffaebc3b7f10a532520abcbf0503f14e79e4d71101368f86a8adc93c974872e": 20
+            },
+            "task_z_norms": [
+              15.824984550476074
+            ],
+            "human_manifest_id": "human_H8_ep4_development"
+          },
+          "basket": {
+            "human_demo_id_counts": {
+              "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864": 20
+            },
+            "task_z_sha256_counts": {
+              "3bb23bda6940413c3d20582557e37aee3e822eb8b248439c74c929a9095a52b0": 20
+            },
+            "task_z_norms": [
+              15.844696044921875
+            ],
+            "human_manifest_id": "human_H31_ep4_development"
+          }
+        },
+        "unrelated": {
+          "pill": {
+            "human_demo_id_counts": {
+              "clip-sha256:f9426b7da115fe075b97cdef2dc0f91652b897405551015a65b91805e32679cb": 20
+            },
+            "task_z_sha256_counts": {
+              "e4b2a12b0c6aeb5ce067c4a0120017ed7647d3836ce7bfd4b06f7ad050e783af": 20
+            },
+            "task_z_norms": [
+              15.830172538757324
+            ],
+            "human_manifest_id": "human_H29_ep4_development"
+          },
+          "basket": {
+            "human_demo_id_counts": {
+              "clip-sha256:f9426b7da115fe075b97cdef2dc0f91652b897405551015a65b91805e32679cb": 20
+            },
+            "task_z_sha256_counts": {
+              "e4b2a12b0c6aeb5ce067c4a0120017ed7647d3836ce7bfd4b06f7ad050e783af": 20
+            },
+            "task_z_norms": [
+              15.830172538757324
+            ],
+            "human_manifest_id": "human_H29_ep4_development"
+          }
+        }
+      },
+      "constant": {
+        "aligned": {
+          "pill": {
+            "human_demo_id_counts": {
+              "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864": 20
+            },
+            "task_z_sha256_counts": {
+              "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef": 20
+            },
+            "task_z_norms": [
+              0.0
+            ],
+            "human_manifest_id": "human_H31_ep4_development"
+          },
+          "basket": {
+            "human_demo_id_counts": {
+              "clip-sha256:de8418945983abdd3aad756fee8bd5596910e48f9c7114ca5d5ccb287e457fc7": 20
+            },
+            "task_z_sha256_counts": {
+              "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef": 20
+            },
+            "task_z_norms": [
+              0.0
+            ],
+            "human_manifest_id": "human_H8_ep4_development"
+          }
+        },
+        "cross": {
+          "pill": {
+            "human_demo_id_counts": {
+              "clip-sha256:de8418945983abdd3aad756fee8bd5596910e48f9c7114ca5d5ccb287e457fc7": 20
+            },
+            "task_z_sha256_counts": {
+              "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef": 20
+            },
+            "task_z_norms": [
+              0.0
+            ],
+            "human_manifest_id": "human_H8_ep4_development"
+          },
+          "basket": {
+            "human_demo_id_counts": {
+              "clip-sha256:edd1b4f5491319d9ed59b2c37ea7a3370ffd5e478c3c5ba0cbb2d6d090111864": 20
+            },
+            "task_z_sha256_counts": {
+              "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef": 20
+            },
+            "task_z_norms": [
+              0.0
+            ],
+            "human_manifest_id": "human_H31_ep4_development"
+          }
+        },
+        "unrelated": {
+          "pill": {
+            "human_demo_id_counts": {
+              "clip-sha256:f9426b7da115fe075b97cdef2dc0f91652b897405551015a65b91805e32679cb": 20
+            },
+            "task_z_sha256_counts": {
+              "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef": 20
+            },
+            "task_z_norms": [
+              0.0
+            ],
+            "human_manifest_id": "human_H29_ep4_development"
+          },
+          "basket": {
+            "human_demo_id_counts": {
+              "clip-sha256:f9426b7da115fe075b97cdef2dc0f91652b897405551015a65b91805e32679cb": 20
+            },
+            "task_z_sha256_counts": {
+              "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef": 20
+            },
+            "task_z_norms": [
+              0.0
+            ],
+            "human_manifest_id": "human_H29_ep4_development"
+          }
+        }
+      }
+    },
+    "video_action_sensitivity": {
+      "cross": {
+        "pill": {
+          "pairs": 20,
+          "pairs_with_same_effective_condition": 0,
+          "pairs_with_any_action_difference": 20,
+          "pairs_with_first_action_step_different": 20,
+          "paired_original_success_timing": {
+            "paired_final_successes": 20,
+            "deltas": [
+              {
+                "seed": 25000,
+                "replacement_minus_aligned_steps": 4
+              },
+              {
+                "seed": 25001,
+                "replacement_minus_aligned_steps": 3
+              },
+              {
+                "seed": 25002,
+                "replacement_minus_aligned_steps": 2
+              },
+              {
+                "seed": 25003,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25004,
+                "replacement_minus_aligned_steps": 4
+              },
+              {
+                "seed": 25005,
+                "replacement_minus_aligned_steps": 2
+              },
+              {
+                "seed": 25006,
+                "replacement_minus_aligned_steps": 5
+              },
+              {
+                "seed": 25007,
+                "replacement_minus_aligned_steps": 6
+              },
+              {
+                "seed": 25008,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25009,
+                "replacement_minus_aligned_steps": 2
+              },
+              {
+                "seed": 25010,
+                "replacement_minus_aligned_steps": -4
+              },
+              {
+                "seed": 25011,
+                "replacement_minus_aligned_steps": -6
+              },
+              {
+                "seed": 25012,
+                "replacement_minus_aligned_steps": 0
+              },
+              {
+                "seed": 25013,
+                "replacement_minus_aligned_steps": 14
+              },
+              {
+                "seed": 25014,
+                "replacement_minus_aligned_steps": 4
+              },
+              {
+                "seed": 25015,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25016,
+                "replacement_minus_aligned_steps": 4
+              },
+              {
+                "seed": 25017,
+                "replacement_minus_aligned_steps": -1
+              },
+              {
+                "seed": 25018,
+                "replacement_minus_aligned_steps": 5
+              },
+              {
+                "seed": 25019,
+                "replacement_minus_aligned_steps": 2
+              }
+            ],
+            "median_delta_steps": 2.0,
+            "mean_delta_steps": 2.45,
+            "scope": "First original-task success time, conditional on both final successes; no failure imputation."
+          }
+        },
+        "basket": {
+          "pairs": 20,
+          "pairs_with_same_effective_condition": 0,
+          "pairs_with_any_action_difference": 20,
+          "pairs_with_first_action_step_different": 20,
+          "paired_original_success_timing": {
+            "paired_final_successes": 20,
+            "deltas": [
+              {
+                "seed": 25000,
+                "replacement_minus_aligned_steps": 12
+              },
+              {
+                "seed": 25001,
+                "replacement_minus_aligned_steps": 12
+              },
+              {
+                "seed": 25002,
+                "replacement_minus_aligned_steps": 12
+              },
+              {
+                "seed": 25003,
+                "replacement_minus_aligned_steps": 9
+              },
+              {
+                "seed": 25004,
+                "replacement_minus_aligned_steps": 12
+              },
+              {
+                "seed": 25005,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25006,
+                "replacement_minus_aligned_steps": 7
+              },
+              {
+                "seed": 25007,
+                "replacement_minus_aligned_steps": 13
+              },
+              {
+                "seed": 25008,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25009,
+                "replacement_minus_aligned_steps": 10
+              },
+              {
+                "seed": 25010,
+                "replacement_minus_aligned_steps": 14
+              },
+              {
+                "seed": 25011,
+                "replacement_minus_aligned_steps": 10
+              },
+              {
+                "seed": 25012,
+                "replacement_minus_aligned_steps": 14
+              },
+              {
+                "seed": 25013,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25014,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25015,
+                "replacement_minus_aligned_steps": 12
+              },
+              {
+                "seed": 25016,
+                "replacement_minus_aligned_steps": 12
+              },
+              {
+                "seed": 25017,
+                "replacement_minus_aligned_steps": 9
+              },
+              {
+                "seed": 25018,
+                "replacement_minus_aligned_steps": 14
+              },
+              {
+                "seed": 25019,
+                "replacement_minus_aligned_steps": 12
+              }
+            ],
+            "median_delta_steps": 12.0,
+            "mean_delta_steps": 11.4,
+            "scope": "First original-task success time, conditional on both final successes; no failure imputation."
+          }
+        }
+      },
+      "unrelated": {
+        "pill": {
+          "pairs": 20,
+          "pairs_with_same_effective_condition": 0,
+          "pairs_with_any_action_difference": 20,
+          "pairs_with_first_action_step_different": 20,
+          "paired_original_success_timing": {
+            "paired_final_successes": 20,
+            "deltas": [
+              {
+                "seed": 25000,
+                "replacement_minus_aligned_steps": -1
+              },
+              {
+                "seed": 25001,
+                "replacement_minus_aligned_steps": 0
+              },
+              {
+                "seed": 25002,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25003,
+                "replacement_minus_aligned_steps": -1
+              },
+              {
+                "seed": 25004,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25005,
+                "replacement_minus_aligned_steps": 0
+              },
+              {
+                "seed": 25006,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25007,
+                "replacement_minus_aligned_steps": 2
+              },
+              {
+                "seed": 25008,
+                "replacement_minus_aligned_steps": -3
+              },
+              {
+                "seed": 25009,
+                "replacement_minus_aligned_steps": -1
+              },
+              {
+                "seed": 25010,
+                "replacement_minus_aligned_steps": -5
+              },
+              {
+                "seed": 25011,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25012,
+                "replacement_minus_aligned_steps": -2
+              },
+              {
+                "seed": 25013,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25014,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25015,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25016,
+                "replacement_minus_aligned_steps": -1
+              },
+              {
+                "seed": 25017,
+                "replacement_minus_aligned_steps": -10
+              },
+              {
+                "seed": 25018,
+                "replacement_minus_aligned_steps": 1
+              },
+              {
+                "seed": 25019,
+                "replacement_minus_aligned_steps": 3
+              }
+            ],
+            "median_delta_steps": 0.5,
+            "mean_delta_steps": -0.55,
+            "scope": "First original-task success time, conditional on both final successes; no failure imputation."
+          }
+        },
+        "basket": {
+          "pairs": 20,
+          "pairs_with_same_effective_condition": 0,
+          "pairs_with_any_action_difference": 20,
+          "pairs_with_first_action_step_different": 20,
+          "paired_original_success_timing": {
+            "paired_final_successes": 20,
+            "deltas": [
+              {
+                "seed": 25000,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25001,
+                "replacement_minus_aligned_steps": 15
+              },
+              {
+                "seed": 25002,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25003,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25004,
+                "replacement_minus_aligned_steps": 14
+              },
+              {
+                "seed": 25005,
+                "replacement_minus_aligned_steps": 10
+              },
+              {
+                "seed": 25006,
+                "replacement_minus_aligned_steps": 6
+              },
+              {
+                "seed": 25007,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25008,
+                "replacement_minus_aligned_steps": 14
+              },
+              {
+                "seed": 25009,
+                "replacement_minus_aligned_steps": 9
+              },
+              {
+                "seed": 25010,
+                "replacement_minus_aligned_steps": 12
+              },
+              {
+                "seed": 25011,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25012,
+                "replacement_minus_aligned_steps": 15
+              },
+              {
+                "seed": 25013,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25014,
+                "replacement_minus_aligned_steps": 10
+              },
+              {
+                "seed": 25015,
+                "replacement_minus_aligned_steps": 11
+              },
+              {
+                "seed": 25016,
+                "replacement_minus_aligned_steps": 13
+              },
+              {
+                "seed": 25017,
+                "replacement_minus_aligned_steps": 8
+              },
+              {
+                "seed": 25018,
+                "replacement_minus_aligned_steps": 14
+              },
+              {
+                "seed": 25019,
+                "replacement_minus_aligned_steps": 11
+              }
+            ],
+            "median_delta_steps": 11.0,
+            "mean_delta_steps": 11.4,
+            "scope": "First original-task success time, conditional on both final successes; no failure imputation."
+          }
+        }
+      }
+    },
+    "same_initial_observation_first_action": {
+      "pairs": 80,
+      "all_video_first_actions_different": true,
+      "results": {
+        "cross": {
+          "pill": {
+            "pairs": 20,
+            "max_abs_difference_by_coordinate": [
+              0.0034556128084659576,
+              0.002028942108154297,
+              0.01920217275619507,
+              2.9905233532190323e-05,
+              0.02860930562019348,
+              0.003574637696146965,
+              0.0,
+              0.007562756538391113,
+              0.0029915571212768555,
+              0.006048619747161865,
+              2.3447093553841114e-05,
+              0.03990164399147034,
+              0.005754590034484863,
+              0.0
+            ],
+            "mean_abs_difference_by_coordinate": [
+              0.002906271070241928,
+              0.0009759783744812012,
+              0.018382543325424196,
+              2.881297841668129e-05,
+              0.02696654126048088,
+              0.0027448780834674834,
+              0.0,
+              0.007197874784469605,
+              0.0020362108945846556,
+              0.0055640310049057005,
+              2.1935952827334403e-05,
+              0.03793064430356026,
+              0.0051943838596344,
+              0.0
+            ],
+            "max_arm_joint_difference_rad": 0.03990164399147034,
+            "max_gripper_difference_normalized_command": 0.0
+          },
+          "basket": {
+            "pairs": 20,
+            "max_abs_difference_by_coordinate": [
+              0.001442035660147667,
+              0.006029844284057617,
+              0.01822793483734131,
+              2.9706221539527178e-05,
+              0.03611496090888977,
+              0.0019997302442789078,
+              0.0,
+              0.002286374568939209,
+              0.002526581287384033,
+              0.0036701560020446777,
+              4.949350841343403e-05,
+              0.04991447925567627,
+              0.001730203628540039,
+              0.0
+            ],
+            "mean_abs_difference_by_coordinate": [
+              0.0009442427195608616,
+              0.005337247252464294,
+              0.01696895658969879,
+              2.7681319625116885e-05,
+              0.03297112286090851,
+              0.0015566556714475155,
+              0.0,
+              0.0020208507776260376,
+              0.0019929200410842896,
+              0.0034245193004608155,
+              4.51724452432245e-05,
+              0.04587907791137695,
+              0.00120832622051239,
+              0.0
+            ],
+            "max_arm_joint_difference_rad": 0.04991447925567627,
+            "max_gripper_difference_normalized_command": 0.0
+          }
+        },
+        "unrelated": {
+          "pill": {
+            "pairs": 20,
+            "max_abs_difference_by_coordinate": [
+              0.0006814822554588318,
+              0.00040036439895629883,
+              0.0009086728096008301,
+              1.569103915244341e-06,
+              0.0005991309881210327,
+              0.0006371922791004181,
+              0.0,
+              0.001035928726196289,
+              0.0006260275840759277,
+              0.0005545616149902344,
+              6.183981895446777e-07,
+              0.00135841965675354,
+              0.0007902383804321289,
+              0.0
+            ],
+            "mean_abs_difference_by_coordinate": [
+              0.0006537813693284989,
+              0.0003319352865219116,
+              0.000846564769744873,
+              1.5108700608834624e-06,
+              0.0004951678216457367,
+              0.0006094214506447316,
+              0.0,
+              0.0010000109672546388,
+              0.000555446743965149,
+              0.000505375862121582,
+              5.346781108528376e-07,
+              0.0012157253921031951,
+              0.0007571756839752197,
+              0.0
+            ],
+            "max_arm_joint_difference_rad": 0.00135841965675354,
+            "max_gripper_difference_normalized_command": 0.0
+          },
+          "basket": {
+            "pairs": 20,
+            "max_abs_difference_by_coordinate": [
+              0.0014435704797506332,
+              0.005825221538543701,
+              0.016233325004577637,
+              2.6171794161200523e-05,
+              0.032156020402908325,
+              0.0019206050783395767,
+              0.0,
+              0.002330303192138672,
+              0.002401888370513916,
+              0.0030845999717712402,
+              4.39200084656477e-05,
+              0.04411262273788452,
+              0.0018392205238342285,
+              0.0
+            ],
+            "mean_abs_difference_by_coordinate": [
+              0.0009272037073969841,
+              0.005166855454444885,
+              0.014931198954582215,
+              2.4031416978687047e-05,
+              0.02897118777036667,
+              0.0014884364791214466,
+              0.0,
+              0.0020658701658248903,
+              0.001891264319419861,
+              0.002894771099090576,
+              3.9395358180627225e-05,
+              0.03998587280511856,
+              0.001285642385482788,
+              0.0
+            ],
+            "max_arm_joint_difference_rad": 0.04411262273788452,
+            "max_gripper_difference_normalized_command": 0.0
+          }
+        }
+      },
+      "scope": "First executed action only, same initial public observation. Later rollout differences include changed state and motion phase."
+    },
+    "action_audit_all240": {
+      "all_finite": true,
+      "all_clamp_and_H5_bitwise": true,
+      "arm_clipped_coordinates": 0,
+      "max_gripper_excess_normalized_command": 0.07694065570831299,
+      "coordinate_limits": [
+        {
+          "index": 0,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint1",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.618000030517578,
+          "high": 2.618000030517578,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.051392812281847,
+          "requested_max": 1.304444670677185,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 1,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint2",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": 0.0,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": 0.7635272145271301,
+          "requested_max": 2.440699577331543,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 2,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint3",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.697000026702881,
+          "high": 2.697000026702881,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.6946964263916016,
+          "requested_max": -0.27504873275756836,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 3,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint4",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.8320000171661377,
+          "high": 1.8320000171661377,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.000872541859280318,
+          "requested_max": 0.0012497904244810343,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 4,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint5",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.2200000286102295,
+          "high": 1.2200000286102295,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.25539031624794006,
+          "requested_max": 1.093721628189087,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 5,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "joint6",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -3.140000104904175,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.047343261539936066,
+          "requested_max": 1.299970030784607,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 6,
+          "robot_key": "piper-0",
+          "side": "left",
+          "name": "gripper",
+          "kind": "gripper",
+          "unit": "normalized_controller_command",
+          "low": -1.0,
+          "high": 1.0,
+          "lower_clip_count": 1614,
+          "upper_clip_count": 17592,
+          "total_clip_count": 19206,
+          "requested_min": -1.076940655708313,
+          "requested_max": 1.0230638980865479,
+          "max_abs_excess_on_clipped": 0.07694065570831299
+        },
+        {
+          "index": 7,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint1",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.618000030517578,
+          "high": 2.618000030517578,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.33173406124115,
+          "requested_max": 0.027080953121185303,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 8,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint2",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": 0.0,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": 0.7502800226211548,
+          "requested_max": 2.49414324760437,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 9,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint3",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -2.697000026702881,
+          "high": 2.697000026702881,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.6156268119812012,
+          "requested_max": -0.24798238277435303,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 10,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint4",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.8320000171661377,
+          "high": 1.8320000171661377,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.001088299904949963,
+          "requested_max": 0.00226835859939456,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 11,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint5",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -1.2200000286102295,
+          "high": 1.2200000286102295,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -0.3686928153038025,
+          "requested_max": 1.0629241466522217,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 12,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "joint6",
+          "kind": "arm_joint",
+          "unit": "rad",
+          "low": -3.140000104904175,
+          "high": 3.140000104904175,
+          "lower_clip_count": 0,
+          "upper_clip_count": 0,
+          "total_clip_count": 0,
+          "requested_min": -1.3211244344711304,
+          "requested_max": 0.023530542850494385,
+          "max_abs_excess_on_clipped": 0
+        },
+        {
+          "index": 13,
+          "robot_key": "piper-1",
+          "side": "right",
+          "name": "gripper",
+          "kind": "gripper",
+          "unit": "normalized_controller_command",
+          "low": -1.0,
+          "high": 1.0,
+          "lower_clip_count": 546,
+          "upper_clip_count": 11995,
+          "total_clip_count": 12541,
+          "requested_min": -1.0588736534118652,
+          "requested_max": 1.0305802822113037,
+          "max_abs_excess_on_clipped": 0.058873653411865234
+        }
+      ]
+    },
+    "independent_audit": {
+      "passed": true,
+      "self_test_passed": true,
+      "frozen_reference_files_reverified": 90,
+      "all12_task_group_metrics_and6_macro_rates_match": true,
+      "all240_official_event_and_action_audits_passed": true
+    },
+    "data_goal_audit_scope": {
+      "robot_training_episodes": 40,
+      "human_terminal_frames": {
+        "H31": 55,
+        "H8": 60
+      },
+      "selected_human_clips_start_middle_end": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "finding": "Fixed designated robot goals; no opposite goal pairing identified in inspected human terminal/selected frames. Not exhaustive per-frame annotation or a claim about the full IG dataset.",
+      "not_required_for_C6_swap": true
+    },
+    "interpretation": [
+      "Video latent and first actions change in all80 replacement pairs: behavior is condition-sensitive.",
+      "No original-task SR drop under either replacement; this pilot does not show correct-video necessity or an SR benefit.",
+      "Full constant trajectory invariance supports the negative control; it does not identify the video policy internal mechanism.",
+      "No semantic replacement-goal selection or full TIG reproduction claim.",
+      "Consumed scene seeds and known development clips; one training seed, two L0 tasks, H29 conditioning OOD. Not a fresh independent test or new-human generalization.",
+      "No runtime, physics, reward, termination or training change."
+    ],
+    "next_step": "Retain the null SR result and prepare the supported infrastructure deliverable. Same-scene multi-goal data/learning is an optional stronger research extension, not a TIG evaluation prerequisite or release gate."
   }
-
 }

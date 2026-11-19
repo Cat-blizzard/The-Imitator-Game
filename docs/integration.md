@@ -238,6 +238,13 @@ identities and machine-readable results.
   regresses, although constant basket's median first success is six steps later.
   Execute16 is preferred for these pilot policies; generic defaults and the
   earlier eighty-episode result stay unchanged.
+- [x] Check the official paper/repository and complete a C.6-inspired video-swap
+  diagnostic: reuse eighty aligned execute16 records and add 160 cross-task or
+  unrelated-video episodes with fixed scenes/weights/scoring. All twelve cells
+  are 20/20, with zero interface errors. Video latent/first action changes in
+  all eighty pairs; constant complete trajectories stay exact. Correct video
+  has no observed SR benefit here. This does not require alternative valid
+  goals in one scene and is not a full C.6 benchmark reproduction.
 - [x] Extract and push four standalone fixes to the fork:
   `fix/image-statistics`, `fix/video-frame-alignment`, `fix/act-dataset-fps` and
   `fix/act-single-interfaces`. The ACT interface fix is based directly on the
@@ -246,8 +253,10 @@ identities and machine-readable results.
 
 ## Next implementation priorities
 
-1. **P0: improve and validate the two-task learning result.** The Piper pilot
-   now connects pill and apple/banana baskets to one model using human_H31/H8.
+1. **P0: retain the completed two-task learning and demonstration checks.**
+   The Piper pilot connects pill and apple/banana baskets to one model using
+   human_H31/H8. The learning loop and bounded diagnostics are complete;
+   a stronger video goal-selection claim remains unestablished.
 
    - [x] Freeze splits and collect/convert basket data. The combined robot set
      has forty training episodes (7,673 frames) and six development episodes
@@ -288,9 +297,15 @@ identities and machine-readable results.
      success regresses. Preserve the earlier80 outcomes and unrerun video
      approach failures. Execute16 is preferred for this pilot, with the basket
      timing tradeoff reported; no retraining or generic default change occurs.
-   - [ ] Test demonstration following with the same valid initial scene and
-     multiple executable goals. Different task scenes and cross-task video swaps
-     do not establish a reliable video benefit or semantic necessity.
+   - [x] Follow TIG C.6's intervention logic: keep original scenes and scoring,
+     replace the demonstration and verify actual effective conditions/actions.
+     The 160 new plus 80 retained records all succeed; both audits pass. Video
+     changes behavior but correct-video necessity for SR is not shown here.
+   - [ ] Optional research extension: pair different executable goals in the
+     same scene with corresponding human/robot data, then test goal selection.
+     This is not an official TIG eligibility rule or an infrastructure release
+     gate. Do not extend training merely to compensate for the present null SR
+     result; decide the claimed learning capability and data design first.
 
 2. **P1: maintain supported routes and investigate xArm6101.** Its placement
    reaches only 9/20 stable observations before the original action budget ends,

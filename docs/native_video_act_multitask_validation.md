@@ -618,6 +618,97 @@ select different executable goals in the **same scene**. The current batch uses
 known development clips and does not establish new-video generalization or a
 full TIG result. No additional training or rollout batch is started here.
 
+## 9k demonstration-swap diagnostic following TIG C.6
+
+TIG's [paper, Appendix C.6 and Table 10](https://arxiv.org/html/2608.22301v1)
+replaces the human demonstration with another task's video while retaining the
+robot scene and scoring the original task. This diagnostic does not require
+two valid alternative goals in one scene. The previously proposed same-scene
+multiple-goal experiment is a stronger optional study, not an official TIG
+evaluation prerequisite. The official repository was checked at
+`3193957e3b0187d086e44d79e0e4af9845fbd4fd`; its
+[task mapping](https://github.com/imitator-game/The-Imitator-Game/blob/3193957e3b0187d086e44d79e0e4af9845fbd4fd/examples/baselines/lerobot_dataset/task_mapping.json)
+maps H31 to pill, H8 to baskets and H29 to OpenBox. The existing explicit
+`--human-demo-id` override supplies the replacement clip; no runtime change is
+needed for this experiment.
+
+At source `158ac37f9e61476c0a6d1dc93d3d97155e0a538e`, the frozen pilot protocol
+adds **160 episodes / 32,000 control steps**, reusing the **80 aligned execute16
+episodes** above without rerunning them. The comparison therefore contains
+**240 records / 48,000 control steps**, not 240 new episodes. Each new allocation
+runs once. The two fixed 9k checkpoints, scene seeds 25000–25019 per task,
+native profiles, train-only normalizers, public RGB/qpos, predict16/execute16,
+20/100 Hz rates, 200-step horizon and original official success remain fixed.
+There is no retraining, reselection, retry or score/termination change.
+
+The aligned condition uses each task's development episode4. The cross
+condition swaps H31 and H8: another trained task family with similar
+pick-and-place structure. The unrelated condition supplies H29 episode4 to
+both tasks. H29 maps to OpenBox, but visual review of this specific clip shows
+opening transparent packaging/container material. H29 is outside the two-task
+policy's training conditions. These are pilot replacements, not the paper's
+exact five-task replacement list.
+
+| Policy | Human demonstration | Pill final success | Basket final success | Macro final success |
+| --- | --- | ---: | ---: | ---: |
+| Video, 9k | Aligned H31 / H8 | 20/20 | 20/20 | 100% |
+| Video, 9k | Cross H8 / H31 | 20/20 | 20/20 | 100% |
+| Video, 9k | Unrelated H29 / H29 | 20/20 | 20/20 | 100% |
+| Constant zero, 9k | Aligned H31 / H8 | 20/20 | 20/20 | 100% |
+| Constant zero, 9k | Cross H8 / H31 | 20/20 | 20/20 | 100% |
+| Constant zero, 9k | Unrelated H29 / H29 | 20/20 | 20/20 | 100% |
+
+Once-success equals final success in every case. There are zero timeouts and
+zero interface errors; original-task SR drops by zero under either replacement.
+Each 20/20 cell has a Wilson 95% interval of approximately [83.9%, 100%].
+All 240 records match their task/seed reference initial world state and public
+RGB/qpos bitwise. All actions are finite, recorded clamp/execution/H5 actions
+agree exactly, and arm-coordinate clipping is zero. Maximum normalized gripper
+excess across the comparison is 0.0769407, handled by the unchanged clamp.
+The independent raw-result audit passes and agrees with every task/macro SR;
+the ninety frozen reference files retain their preflight hashes.
+
+The intervention reaches the policy. All eighty video replacement pairs have
+a different effective latent and a different first executed action at the
+same initial observation. All eighty constant pairs retain the same zero
+latent, all 200 executed actions, every recorded H5 trajectory array including
+201 state/RGB/qpos frames, and official event sequences exactly. Constant is a
+separately trained negative control, not video removal from the video policy.
+
+| Video intervention | Task | Maximum first-action arm difference (rad) | Median first-success delay (steps) |
+| --- | --- | ---: | ---: |
+| Cross | Pill | 0.03990 | +2 |
+| Cross | Baskets | 0.04991 | +12 |
+| Unrelated H29 | Pill | 0.001358 | +0.5 |
+| Unrelated H29 | Baskets | 0.04411 | +11 |
+
+First-action gripper differences are zero. The delay compares replacement
+minus aligned first official success on all twenty paired successes per cell.
+Later action differences also include changed observations and motion timing;
+their full-rollout maxima are not a same-observation conditioning effect.
+
+**The video affects behavior, but correct demonstration is not shown necessary
+for original-task success in these two L0 scenes.** There is no observed SR
+benefit from correct video in this batch and no evidence here of selecting the
+replacement video's goal. The constant policy's success shows that the robot
+scene can support task completion; it does not identify the video policy's
+internal decision mechanism. A claim that the video is completely ignored is
+also contradicted by the first-action intervention.
+
+This uses consumed scene seeds, known development clips, one training seed and
+two L0 tasks. It is a C.6-inspired development diagnostic, not an independent
+new-scene test, new-human-video generalization, the paper's 45-task/four-level
+experiment or a full official benchmark reproduction. No interface defect
+requiring a repair or retraining is identified. Same-scene alternative-goal
+training/evaluation remains optional work for a stronger goal-selection claim.
+
+The bounded local data audit finds the existing forty robot training episodes
+use their designated goals. Terminal frames from all 55 H31 and 60 H8 human
+episodes, plus start/middle/end frames for selected clips, reveal no opposite
+goal pairing for this pilot. This is not exhaustive temporal annotation of
+those videos or a claim about all IG data. The official C.6 intervention above
+does not depend on finding such alternative-goal data.
+
 ## Retained evidence
 
 Raw evidence stays outside Git under
@@ -653,6 +744,15 @@ The `execution-window-9k-fresh-20261119/` directory retains the new preflight an
 frozen protocol, both launcher receipts, all 160 trajectories/videos and action
 diagnostics, `paired-results.json`, compact stage comparisons with the two
 failed/improved pairs, and `independent-result-audit.json`.
+The `goal-following-20261119/` directory retains the pinned paper/repository and
+local data-goal audits, human frame contact sheets, frozen swap protocol and
+preflight, replacement manifest, both launcher receipts, all 160 new
+trajectories/videos and action diagnostics, `swap-results.json`,
+`swap-independent-result-audit.json` and `first-action-condition-differences.json`.
+The aligned eighty records remain under `execution-window-9k-fresh-20261119/`.
+All external helper self-tests and actual audit runs are retained; the
+independent audit's first attempt stopped only because the main summary had
+not yet been written, then completed after it appeared, without another rollout.
 The compact JSON beside this report preserves
 portable identities and per-seed outcomes; datasets and weights are not included
 in the fork. Original ARX single-task results remain in
