@@ -1,7 +1,8 @@
 """Replay a recorded shared pick/place episode using only its native actions.
 
-Restore S0 once. Planning models provide measured collision checks, never new
-plans or corrective actions. State differences are telemetry, not task success.
+Preserve an exact seeded reset, otherwise restore S0 once. Planning models
+provide measured collision checks, never new plans or corrective actions.
+State differences are telemetry, not task success.
 """
 from __future__ import annotations
 

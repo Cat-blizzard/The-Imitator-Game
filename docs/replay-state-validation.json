@@ -1,0 +1,886 @@
+{
+  "date": "2026-11-19",
+  "scope": "bounded original-task infra development regression; not benchmark scoring",
+  "runtime_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+  "repair": "preserve an exact seeded reset; otherwise use the previous one-time S0 restoration",
+  "unmodified_protocol": {
+    "official_horizon": 200,
+    "control_hz": 20,
+    "physics_hz": 100,
+    "actions": "original saved actions; no additions or later state writes",
+    "quality_and_collision_thresholds": "unchanged"
+  },
+  "causal_control": {
+    "seed": 541,
+    "original_actions": 171,
+    "original_states": 172,
+    "reset_S0_exact": true,
+    "redundant_setter_fixed_root_z_shift_m": 1.4901161193847656e-08,
+    "baseline_stable_steps": 18,
+    "control_stable_steps": 20,
+    "control_all_states_exact": true
+  },
+  "automated_tests": {
+    "passed": 528,
+    "failed": 0,
+    "warnings": 17,
+    "new_initialization_cases": 17,
+    "scope": [
+      "tests/motionplanning/dual_sync",
+      "tests/baselines",
+      "tests/agents",
+      "tests/test_embodiment_smoke.py"
+    ]
+  },
+  "archival_production_replays": [
+    {
+      "case": "fixed-541",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 541,
+      "actions": 171,
+      "states": 172,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 18.00260403379798,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-542",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 542,
+      "actions": 183,
+      "states": 184,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 16.93501985981129,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-panda-pill",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 6000,
+      "actions": 162,
+      "states": 163,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 16.574989747954533,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-piper-pill",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 6000,
+      "actions": 193,
+      "states": 194,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 13.047338052885607,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-arx-pill",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 6000,
+      "actions": 194,
+      "states": 195,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 14.15131114399992,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-ur5-pill",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 6000,
+      "actions": 184,
+      "states": 185,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 14.863495932193473,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-xarm-pill",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 9300,
+      "actions": 190,
+      "states": 191,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 17.871665603015572,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-piper-baskets",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 450,
+      "actions": 191,
+      "states": 192,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": true,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 0.0,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 46.62209195783362,
+      "independent_actions_exact": true
+    },
+    {
+      "case": "fixed-shared-piper401",
+      "source_commit": "c17c461232c656d112c065ed1a4bb517a60cc594",
+      "seed": 401,
+      "actions": 261,
+      "states": 262,
+      "actions_exact": true,
+      "all_T_plus_1_states_exact": false,
+      "initializer": {
+        "method": "seeded_reset",
+        "state_write_count": 0
+      },
+      "actual_setter_calls": 0,
+      "passed": true,
+      "official_success": true,
+      "final_stable_steps": 20,
+      "max_abs_state_error": 2.6267634630203247,
+      "inputs_unchanged": true,
+      "exit_code": 0,
+      "wall_seconds": 11.848419648827985,
+      "independent_actions_exact": true
+    }
+  ],
+  "known_negative": {
+    "whole_report_equal": false,
+    "difference_paths": [
+      "/physics/forbidden_contacts/length",
+      "/physics/max_held_position_slip_m/0",
+      "/physics/max_held_position_slip_m/1",
+      "/physics/max_held_rotation_slip_rad/0",
+      "/physics/max_held_rotation_slip_rad/1",
+      "/initialization"
+    ],
+    "old_forbidden_contacts_equal": false,
+    "negative_rejected": true,
+    "execution": {
+      "status": "failed",
+      "reason": "RuntimeError: release: step_or_measurement_failed"
+    },
+    "official": {
+      "success": true,
+      "elapsed_steps": 150,
+      "within_horizon": true,
+      "truncated": false
+    },
+    "recorded_actions": 194,
+    "executed_actions": 150,
+    "events": 1,
+    "substeps": [
+      748
+    ],
+    "reasons": [
+      "forbidden_robot_contact"
+    ],
+    "historical_result": "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/integration-20261119/legacy-negative-piper450/native-event-negative.json",
+    "initialization": {
+      "method": "seeded_reset",
+      "state_write_count": 0
+    },
+    "historical_events": 2,
+    "historical_substeps": [
+      749,
+      750
+    ],
+    "event_bodies": [
+      [
+        {
+          "kind": "robot",
+          "robot_index": 0,
+          "link_name": "link7",
+          "actor": "link7",
+          "is_grasp_finger": true,
+          "is_mount_root": false,
+          "mount_support_actor": "mount_0"
+        },
+        {
+          "kind": "payload",
+          "actor": "apple_out",
+          "target_index": 0
+        }
+      ]
+    ]
+  },
+  "fixed_new_seed_batch": {
+    "seeds": [
+      6100,
+      6101
+    ],
+    "attempts_per_seed_per_route": 1,
+    "routes": 7,
+    "episodes": [
+      {
+        "case": "panda-pill-new",
+        "robot": "panda",
+        "backend": "mplib",
+        "seed": 6100,
+        "episode_id": 0,
+        "actions": 162,
+        "recorded_state_lengths": [
+          163,
+          163,
+          163,
+          163,
+          163
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 162,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "panda-pill-new",
+        "robot": "panda",
+        "backend": "mplib",
+        "seed": 6101,
+        "episode_id": 1,
+        "actions": 165,
+        "recorded_state_lengths": [
+          166,
+          166,
+          166,
+          166,
+          166
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 165,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "piper-pill-new",
+        "robot": "piper",
+        "backend": "mplib",
+        "seed": 6100,
+        "episode_id": 0,
+        "actions": 192,
+        "recorded_state_lengths": [
+          193,
+          193,
+          193,
+          193,
+          193
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 192,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "piper-pill-new",
+        "robot": "piper",
+        "backend": "mplib",
+        "seed": 6101,
+        "episode_id": 1,
+        "actions": 196,
+        "recorded_state_lengths": [
+          197,
+          197,
+          197,
+          197,
+          197
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 196,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "arx-pill-new",
+        "robot": "arx_x5",
+        "backend": "mplib",
+        "seed": 6100,
+        "episode_id": 0,
+        "actions": 194,
+        "recorded_state_lengths": [
+          195,
+          195,
+          195,
+          195,
+          195
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 194,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "arx-pill-new",
+        "robot": "arx_x5",
+        "backend": "mplib",
+        "seed": 6101,
+        "episode_id": 1,
+        "actions": 194,
+        "recorded_state_lengths": [
+          195,
+          195,
+          195,
+          195,
+          195
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 194,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "ur5-pill-new",
+        "robot": "ur5_wsg",
+        "backend": "mplib",
+        "seed": 6100,
+        "episode_id": 0,
+        "actions": 184,
+        "recorded_state_lengths": [
+          185,
+          185,
+          185,
+          185,
+          185
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 184,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "ur5-pill-new",
+        "robot": "ur5_wsg",
+        "backend": "mplib",
+        "seed": 6101,
+        "episode_id": 1,
+        "actions": 185,
+        "recorded_state_lengths": [
+          186,
+          186,
+          186,
+          186,
+          186
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 185,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "xarm-pill-new",
+        "robot": "xarm6_robotiq",
+        "backend": "mplib",
+        "seed": 6100,
+        "episode_id": 0,
+        "actions": 191,
+        "recorded_state_lengths": [
+          192,
+          192,
+          192,
+          192,
+          192
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 191,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "xarm-pill-new",
+        "robot": "xarm6_robotiq",
+        "backend": "mplib",
+        "seed": 6101,
+        "episode_id": 1,
+        "actions": 199,
+        "recorded_state_lengths": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "failed",
+        "quality_failure_reason": "verify_placement: both_placements_not_continuously_stable",
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 1,
+          "actions_executed": 0,
+          "passed": null,
+          "all_recorded_states_exact": null,
+          "actions_exact": null,
+          "initialization": null,
+          "error": "ValueError: Replay requires complete successful stage boundaries; partial records are unsupported"
+        },
+        "generation_stability": {
+          "observed": 9,
+          "required": 20
+        },
+        "diagnostic_only": {
+          "diagnostic_only": true,
+          "eligible_for_production_replay": false,
+          "recorded_actions": 199,
+          "executed_actions": 199,
+          "recorded_states": 200,
+          "observed_states": 200,
+          "actions_exact": true,
+          "all_states_exact": true
+        }
+      },
+      {
+        "case": "piper-baskets-new",
+        "robot": "piper",
+        "backend": "mplib",
+        "seed": 6100,
+        "episode_id": 0,
+        "actions": 194,
+        "recorded_state_lengths": [
+          195,
+          195,
+          195,
+          195,
+          195,
+          195,
+          195
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 194,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "piper-baskets-new",
+        "robot": "piper",
+        "backend": "mplib",
+        "seed": 6101,
+        "episode_id": 1,
+        "actions": 189,
+        "recorded_state_lengths": [
+          190,
+          190,
+          190,
+          190,
+          190,
+          190,
+          190
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 189,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "curobo-pill-new",
+        "robot": "panda",
+        "backend": "curobo",
+        "seed": 6100,
+        "episode_id": 0,
+        "actions": 183,
+        "recorded_state_lengths": [
+          184,
+          184,
+          184,
+          184,
+          184
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 183,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      },
+      {
+        "case": "curobo-pill-new",
+        "robot": "panda",
+        "backend": "curobo",
+        "seed": 6101,
+        "episode_id": 1,
+        "actions": 199,
+        "recorded_state_lengths": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "official_success": true,
+        "execution": "passed",
+        "quality": "passed",
+        "quality_failure_reason": null,
+        "archive_T_plus_one": true,
+        "production_replay": {
+          "process_exit_code": 0,
+          "actions_executed": 199,
+          "passed": true,
+          "all_recorded_states_exact": true,
+          "actions_exact": true,
+          "initialization": {
+            "method": "seeded_reset",
+            "state_write_count": 0
+          },
+          "error": null
+        }
+      }
+    ],
+    "totals": {
+      "allocated_episodes": 14,
+      "unobserved_allocated_episodes": 0,
+      "observed_recorded_episodes": 14,
+      "generation_official_success": 14,
+      "generation_execution_passed": 14,
+      "generation_quality_passed": 13,
+      "generation_official_execution_quality_passed": 13,
+      "T_plus_one_archives": 14,
+      "recorded_replay_traces": 14,
+      "production_replay_rejected_before_initialization": 1,
+      "production_replay_shared_value_divergence": 0,
+      "replay_actions_exact_float32": 13,
+      "replay_actions_exact_archived_values": 13,
+      "replay_all_states_exact": 13,
+      "replay_quality_passed": 13,
+      "replay_official_success": 13,
+      "replay_passed": 13,
+      "diagnostic_only_full_state_reproductions": 1,
+      "unique_recordings_with_independently_verified_exact_reproduction": 14
+    },
+    "wall_seconds": 485.5322118788026,
+    "plan_sha256": "f4d12ca600c753c96fc22db13cc19642fa1843cb69587d9222d945afc91088b5",
+    "protocol_sha256": "b0e5d2bc43a9cb0e87a1d6253a2ba7799c3d4330bd166f6a4e9050e85a130e3d",
+    "independent_audit_sha256": "e5b78f6d2e0084ddcdb7cdf2896650a95a0f9f8e3ccb12c1cd21aff19650e93b",
+    "artifact_integrity_checks_passed": true,
+    "archives": [
+      {
+        "case": "panda-pill-new",
+        "sha256": {
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/panda-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/panda-pill-new.json": "4203946f8d2e20065e8873bf9a22239055b2d97a2f90f2f6821e262b1f2f0c67",
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/panda-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/panda-pill-new.h5": "26a196bbd8ba967f680d02d3cf4059583bf6c2f626adfce4f5cd0ebab716ac16"
+        },
+        "unchanged_during_replay": true,
+        "generation_wall_seconds": 38.007531873183325
+      },
+      {
+        "case": "piper-pill-new",
+        "sha256": {
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/piper-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/piper-pill-new.json": "b7a8c4cd3de2fb98272270c6ace826e7e6ba14f4b246f5525759226d326337c2",
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/piper-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/piper-pill-new.h5": "eac8f96df12665f3f6f61cf10656cf653e8bb495baebaf0e65f232daa46db3e9"
+        },
+        "unchanged_during_replay": true,
+        "generation_wall_seconds": 35.80259832809679
+      },
+      {
+        "case": "arx-pill-new",
+        "sha256": {
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/arx-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/arx-pill-new.json": "d90c8281df8c80971b6bf74f87bcaf00264c40d17863d8a2119a5b5bd063cfcc",
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/arx-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/arx-pill-new.h5": "79fd556c883c27f1f014a5105f28b7d7e4f985f182c3d7c93a62341414b1893a"
+        },
+        "unchanged_during_replay": true,
+        "generation_wall_seconds": 33.195076326141134
+      },
+      {
+        "case": "ur5-pill-new",
+        "sha256": {
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/ur5-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/ur5-pill-new.json": "31f8610e17168082d9280568465d1f51f69dcc97048530a0ce0dd173ceb631d6",
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/ur5-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/ur5-pill-new.h5": "38a102d9db132a03300ab1e9d3c8ee2d83c3763a4902dbe26a4b88dac5d7e31c"
+        },
+        "unchanged_during_replay": true,
+        "generation_wall_seconds": 34.64419592102058
+      },
+      {
+        "case": "xarm-pill-new",
+        "sha256": {
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/xarm-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/xarm-pill-new.json": "20f2e63e4520751d9513a36690b84b24dcdbef0bba22e36c25eae5ae79ebf4b5",
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/xarm-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/xarm-pill-new.h5": "2a75b9f911d9a834d9bc7d957f84bf25e775280e0fbb2c3109fd874547623627"
+        },
+        "unchanged_during_replay": true,
+        "generation_wall_seconds": 43.659548121038824
+      },
+      {
+        "case": "piper-baskets-new",
+        "sha256": {
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/piper-baskets-new/generation/TwoRobotPickAppleBananaToBaskets-v1/motionplanning/piper-baskets-new.json": "7d9c3824f08d8c8deb72d5a0995863691441594b5e85937738f93ba18963e772",
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/piper-baskets-new/generation/TwoRobotPickAppleBananaToBaskets-v1/motionplanning/piper-baskets-new.h5": "fbd0ae7f5934e0c2ce1e53a9da8256429cde83f86e1f9ec78a72b4b5e94b2e3a"
+        },
+        "unchanged_during_replay": true,
+        "generation_wall_seconds": 94.10647862800397
+      },
+      {
+        "case": "curobo-pill-new",
+        "sha256": {
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/curobo-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/curobo-pill-new.json": "6c0cdb3cc32fd1e62bc25d6ecfc97d2e79438fee745289ffd2522fa761455456",
+          "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119/fixed-new-seeds/curobo-pill-new/generation/TwoRobotPickPillToRegions-v1/motionplanning/curobo-pill-new.h5": "23ca984bdc4fceb890d8a5412c06fd290f4931b1e58f4aea7048dee88d29fbb0"
+        },
+        "unchanged_during_replay": true,
+        "generation_wall_seconds": 284.65550027694553
+      }
+    ],
+    "dependencies": {
+      "numpy": "1.26.4",
+      "torch": "2.7.1+cu128",
+      "h5py": "3.16.0",
+      "sapien": "3.0.3",
+      "mplib": "0.1.1",
+      "gymnasium": "0.29.1",
+      "mani_skill": null
+    },
+    "planner_dependencies_post_run": {
+      "nvidia-curobo": "0.9.0",
+      "curobo": null,
+      "torch": "2.7.1+cu128",
+      "numpy": "1.26.4",
+      "warp-lang": "1.19.0",
+      "trimesh": "5.2.1"
+    }
+  },
+  "historical_shared_scope": {
+    "case": "Piper401 separate 400-step example",
+    "functionally_passed": true,
+    "all_states_exact": false,
+    "known_model_change": "Piper fixed tendon introduced in ae98a0744edf6bc9f8b9ea4f08692446b04543ed; dirty-base legacy metadata",
+    "not_a_same_version_exact_test": true,
+    "sole_cause_not_controlled": true
+  },
+  "local_evidence_directory": "/data/jxc/ld/ZeroWAM-for-TIG/infrastructure/validation/replay-state-20261119",
+  "publication_scope": "integration/current-features only; separate feature branch heads and main unchanged"
+}

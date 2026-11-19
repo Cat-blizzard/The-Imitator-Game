@@ -87,10 +87,35 @@ See [generation and conversion](dual-arm-sync.md),
 - Official success, physical events, expert execution/quality and recording
   facts remain separate. Optional policy-evaluation observation is read-only.
 
-## Validation
+## Replay-state repair and current validation
+
+Replay initialization was repaired in `c17c461`: when the seeded reset already
+matches every recorded S0 value, replay preserves it instead of writing the same
+state through the simulator again. An actual mismatch retains the previous
+one-time restoration. The redundant write was the cause of the cuRobo541
+generation/replay discrepancy below. Actions and acceptance thresholds did not
+change, and the applicable CPU suite now passes **528 tests**.
+
+All eight existing integration episodes now pass production replay with every
+action and T+1 state array exactly equal to generation. A predeclared new batch
+attempted seeds **6100/6101 once per supported original-task route**, fourteen
+episodes in total. All passed official success and execution; thirteen passed
+quality and production replay with exact state arrays. xArm6101 already fails
+generation quality (9/20 stable steps at action 199). Its normal replay rejects
+failed phase metadata before execution; a separate diagnostic reproduces all
+199 actions/200 states exactly and leaves its quality failure intact.
+
+The known Piper450 collision negative remains rejected. The early shared Piper
+example passes functional replay but crosses a known physical-model change and
+is excluded from same-version exact-state claims. Detailed evidence, limits and
+fixed batch results are in [the replay repair report](replay-state-repair.md)
+and [its machine-readable record](replay-state-validation.json).
+
+## Initial integration validation (before replay-state repair)
 
 The combined runtime was exercised at `cc60d7f`; the legacy MPLib archive
-compatibility fix is `6d0e8b7`. The final applicable CPU suite passes **511 tests**.
+compatibility fix is `6d0e8b7`. At that point the applicable CPU suite passed
+**511 tests**.
 
 | Fresh generation | Seed | Control actions | Official / execution / quality | Action replay |
 | --- | --- | ---: | --- | --- |
@@ -103,11 +128,11 @@ compatibility fix is `6d0e8b7`. The final applicable CPU suite passes **511 test
 | Panda pill, shared cuRobo session | 541 | 171 | pass / pass / pass | official/execution pass; quality fails |
 | Panda pill, same cuRobo session | 542 | 183 | pass / pass / pass | pass |
 
-**Known discrepancy:** the new cuRobo541 recording passes generation's twenty
-stable placement observations. Replaying its exact 171 recorded actions reaches
+**Historical discrepancy, resolved above:** the new cuRobo541 recording passes
+generation's twenty stable placement observations. Replaying its exact 171 recorded actions reaches
 official success with no forbidden contacts, but counts 18 final stable steps,
-so the unchanged quality rule rejects it. This result is retained; the branch
-is not certified as passing every quality replay. A control with the original
+so the unchanged quality rule rejects it. This pre-fix result is retained.
+A control with the original
 cuRobo branch `1a51690` produces the same 18-step result and identical execution,
 physics and placement reports. That control only converts the new metadata's
 `robot_uids` list to the same Panda tuple at environment construction; files,
@@ -138,14 +163,12 @@ identities and machine-readable results.
 The older A–I implementation plan contains dated status notes. The following
 priorities distinguish implemented interfaces from remaining benchmark work.
 
-1. **Resolve the cuRobo541 generation/replay stability discrepancy and finish a
-   releasable integrated baseline.** Compare recorded numeric state and stability
-   traces under the source and combined branches before changing execution.
-   Freeze dependencies and source, retain known positive/negative inputs,
-   and run a small fixed cross-seed
-   regression. Report official success, quality pass, failure categories, cold
-   startup and continuous throughput separately. Existing development seeds
-   do not establish general success rates or a cuRobo speed advantage.
+1. **Use the repaired baseline to characterize remaining task quality failures.**
+   The fixed new-seed batch retains xArm6101's placement quality failure; it is
+   already present in generation and its state trace reproduces exactly.
+   Investigate its physical cause before changing the task procedure or quality
+   settings. Broader coverage and matched timing experiments remain necessary
+   before general success-rate or cuRobo speed claims.
 2. **Connect a human demonstration to a new embodiment.** Select one supported
    task and one added robot; fix human demo IDs, L0–L3 pairing, robot-data
    provenance and train/dev/test roles. Run an existing video-conditioned
@@ -168,5 +191,5 @@ priorities distinguish implemented interfaces from remaining benchmark work.
    Handover, closed-chain manipulation, automatic recovery, USD/Real2Sim and
    soft-body tasks each need additional execution/data contracts.
 
-The current task creates the combined branch and assesses these priorities;
-it does not start new policy training or implement the remaining capabilities.
+These priorities do not represent completed policy training or additional
+supported planner/task/robot combinations.
