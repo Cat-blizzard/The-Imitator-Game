@@ -56,6 +56,11 @@ checks, not continuous collision detection or joint 14-DoF planning.
 The pill workflow includes preparation, pregrasp, descend, confirmed grasp,
 lift, transport to measured release targets, release, optional retreat, and
 optional final stability. There is no automatic recovery or spatial replanning.
+Preparation holds the initial arm targets and opens both hands for up to ten
+control ticks. It ends early after the selected reach-stability window meets
+the existing hand-opening and measured arm/object speed thresholds. Otherwise
+it keeps the original ten-tick preparation. Replay uses the recorded preparation
+length; older records without that field retain their ten-tick interpretation.
 
 ## Configuration and results
 

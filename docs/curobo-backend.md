@@ -120,7 +120,7 @@ The arms are planned separately and executed together, without a combined
 14-DoF search or automatic recovery. The original task success rule and
 200-step horizon apply to either backend.
 
-Native validation of the pill workflow at seed 401 completed in 194 of 200
+An earlier native validation of the pill workflow at seed 401 completed in 194 of 200
 control steps, including physical release, retreat and final stability. Action
 replay from the recorded initial state completed the same task in 194 steps.
 The default MPLib route retained its 171-step action sequence in the regression

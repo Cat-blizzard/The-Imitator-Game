@@ -8,9 +8,9 @@ import numpy as np
 import sapien
 
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
-from .dual_arm_execution import (plan_dual_pose, execute_dual_reach, close_dual_and_confirm,
+from .dual_arm_execution import (prepare_dual_open, plan_dual_pose, execute_dual_reach, close_dual_and_confirm,
     execute_dual_held_move, release_dual_and_confirm, verify_dual_placement, observe_dual_task_outcome)
-from .trajectory_execution import as_numpy, bindings
+from .trajectory_execution import as_numpy
 from .trajectory_schedule import ArmTrajectory, build_hold_schedule
 from .phase_kinematics import (SOLVER_LIMIT_FRACTION, attach_topp_capture, compact_phase_limits,
     compact_set_phase_limits, compact_retime_pair, compact_route_positions)
@@ -140,10 +140,7 @@ def solve(env: Any, seed: int | None = None, debug: bool = False, vis: bool = Fa
 
     try:
         capture.install()
-        arms = bindings(raw, tuple(raw.agent.agents_dict))
-        opened = {arm.key: np.r_[arm.arm_qpos(), 1.] for arm in arms}
-        for _ in range(10):
-            capture.step(opened)
+        report['preparation'] = prepare_dual_open(capture, task.targets, policy=policy)
         solvers = [PandaArmMotionPlanningSolver(env, base_pose=agent.robot.pose,
             multi_robot_id=i, joint_vel_limits=.9, joint_acc_limits=.9,
             debug=debug, vis=vis, visualize_target_grasp_pose=False, print_env_info=False)

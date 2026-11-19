@@ -51,7 +51,15 @@ def load_episode(path: str | Path, episode_id: int = 0) -> tuple:
     stages = sync["stages"]
     if [row.get("name") for row in stages] != expected or any(row.get("status") != "passed" for row in stages):
         raise ValueError("Replay requires complete successful stage boundaries; partial records are unsupported")
-    phases = [("preparation", 10)] + [(row["name"], row["environment_steps"]) for row in stages]
+    preparation_steps = 10
+    if "preparation" in sync:
+        preparation = sync["preparation"]
+        if (not isinstance(preparation, dict)
+                or type(preparation.get("environment_steps")) is not int
+                or not 1 <= preparation["environment_steps"] <= 10):
+            raise ValueError("Explicit preparation metadata requires environment_steps integer in [1,10]")
+        preparation_steps = preparation["environment_steps"]
+    phases = [("preparation", preparation_steps)] + [(row["name"], row["environment_steps"]) for row in stages]
     if any(type(count) is not int or count < 0 or (count == 0 and name != "observe_task_outcome")
            for name, count in phases):
         raise ValueError("Replay phase action counts must be positive, except a zero-step outcome observation")

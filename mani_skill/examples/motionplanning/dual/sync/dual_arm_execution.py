@@ -65,6 +65,54 @@ def _canonical(env: Any) -> tuple[Any, Any]:
     return bindings(env, tuple(keys))
 
 
+def _fingers_open(arm: Any, measurements: dict[str, Any]) -> bool:
+    fingers = [index for index in range(9) if index not in arm.indices]
+    upper = as_numpy(arm.agent.robot.get_qlimits())[0, fingers, 1]
+    return bool(np.allclose(measurements[arm.key]["finger_qpos_m"], upper, rtol=0, atol=OPEN_TOL))
+
+
+def prepare_dual_open(env: Any, targets: tuple[Any, Any], *, max_steps: int = 10,
+                      policy: RuntimePolicy = DEFAULT_POLICY) -> dict[str, Any]:
+    """Hold initial joints and open both hands, ending a quiet preparation early.
+
+    Measurements use two seven-joint states and two world object poses [4,4].
+    Only observations after real control ticks count. Existing arm/object speed
+    and hand-opening thresholds select early completion; otherwise the original
+    preparation limit is consumed without introducing a new rejection rule.
+    """
+    policy = _runtime_policy(policy)
+    limit = _budget(max_steps, "max_steps")
+    targets = _pair(targets, "targets")
+    arms = _canonical(env)
+    dt = _positive(env.unwrapped.control_timestep, "control timestep")
+    previous = _measure(arms)
+    previous_poses = [_transform(target.pose.to_transformation_matrix()) for target in targets]
+    action = {arm.key: np.r_[previous[arm.key]["qpos_rad"], 1.] for arm in arms}
+    _actions_valid(env, arms, action)
+    count = 0
+    for steps in range(1, limit+1):
+        before = as_numpy(env.unwrapped.elapsed_steps).copy()
+        env.step(action)
+        if not np.array_equal(as_numpy(env.unwrapped.elapsed_steps), before+1):
+            raise RuntimeError("Preparation must advance one paired control tick")
+        measured = _measure(arms)
+        poses = [_transform(target.pose.to_transformation_matrix()) for target in targets]
+        quiet = all(_fingers_open(arm, measured)
+            and np.max(np.abs(measured[arm.key]["qvel_rad_s"])) <= ARM_SPEED
+            and np.max(np.abs(np.asarray(measured[arm.key]["qpos_rad"])
+                              - previous[arm.key]["qpos_rad"]))/dt <= ARM_SPEED for arm in arms)
+        quiet = quiet and all(np.linalg.norm(pose[:3, 3]-old[:3, 3])/dt <= OBJECT_SPEED
+            and _rotation_distance(old[:3, :3], pose[:3, :3])/dt <= OBJECT_ANGULAR_SPEED
+            for pose, old in zip(poses, previous_poses))
+        count = count+1 if quiet else 0
+        previous, previous_poses = measured, poses
+        if count >= policy.reach_stable_steps:
+            break
+    return {"environment_steps": steps, "max_steps": limit,
+        "stable_steps_observed": count, "stable_steps_required": policy.reach_stable_steps,
+        "early_completion": steps < limit}
+
+
 class _Phase:
     """Canonical measurements and one joint action for a shared control tick."""
 
@@ -135,9 +183,7 @@ class _Phase:
         return {"measurements": measurements, "objects": objects}
 
     def opened(self, arm: Any, row: dict[str, Any]) -> bool:
-        fingers = [index for index in range(9) if index not in arm.indices]
-        upper = as_numpy(arm.agent.robot.get_qlimits())[0, fingers, 1]
-        return bool(np.allclose(row["measurements"][arm.key]["finger_qpos_m"], upper, rtol=0, atol=OPEN_TOL))
+        return _fingers_open(arm, row["measurements"])
 
     def hold(self, grip: int) -> dict[str, np.ndarray]:
         return {arm.key: np.r_[self.report["initial_measurements"][arm.key]["qpos_rad"], grip] for arm in self.arms}

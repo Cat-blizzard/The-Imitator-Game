@@ -37,6 +37,48 @@ def test_restores_exactly_state_zero_and_all_action_rows(recording):
     np.testing.assert_array_equal(state["actors"]["target"], np.arange(13))
 
 
+def test_short_preparation_preserves_every_action_and_initial_state(recording):
+    path, metadata = recording
+    sync = metadata["episodes"][0]["dual_sync"]
+    sync["preparation"] = {"environment_steps": 3}
+    count = 3 + sum(stage["environment_steps"] for stage in sync["stages"])
+    path.with_suffix(".json").write_text(json.dumps(metadata))
+    with h5py.File(path, "a") as h5:
+        group = h5["traj_0"]
+        expected_actions = group["actions"][:count]
+        expected_states = group["env_states/actors/target"][:count+1]
+        del group["actions"], group["env_states/actors/target"]
+        group["actions"] = expected_actions
+        group["env_states/actors/target"] = expected_states
+    _, _, _, phases, actions, state = replay.load_episode(path)
+    assert phases[0] == ("preparation", 3)
+    assert len(actions) == sum(steps for _, steps in phases) == count
+    assert len(expected_states) == len(actions) + 1
+    np.testing.assert_array_equal(actions, expected_actions)
+    np.testing.assert_array_equal(state["actors"]["target"], expected_states[0])
+
+
+def test_explicit_ten_step_preparation_remains_compatible(recording):
+    path, metadata = recording
+    metadata["episodes"][0]["dual_sync"]["preparation"] = {"environment_steps": 10}
+    path.with_suffix(".json").write_text(json.dumps(metadata))
+    _, _, _, phases, actions, _ = replay.load_episode(path)
+    assert phases[0] == ("preparation", 10)
+    assert len(actions) == sum(steps for _, steps in phases)
+
+
+@pytest.mark.parametrize("preparation", [
+    None, {}, [], {"environment_steps": None}, {"environment_steps": True},
+    {"environment_steps": 0}, {"environment_steps": -1}, {"environment_steps": 11},
+    {"environment_steps": 3.0}, {"environment_steps": "3"}])
+def test_explicit_invalid_preparation_metadata_is_rejected(recording, preparation):
+    path, metadata = recording
+    metadata["episodes"][0]["dual_sync"]["preparation"] = preparation
+    path.with_suffix(".json").write_text(json.dumps(metadata))
+    with pytest.raises(ValueError, match="Explicit preparation metadata"):
+        replay.load_episode(path)
+
+
 def test_action_order_preserves_both_physical_arms():
     action = replay.paired_action(np.arange(16))
     np.testing.assert_array_equal(action["panda_wristcam-0"], np.arange(8))
