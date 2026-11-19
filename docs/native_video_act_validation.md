@@ -6,6 +6,11 @@ on **ARX X5, L0 `TwoRobotPickPillToRegions-v1`** on 2026-11-19. The fixed
 seeds and 5/5 evaluation seeds**. These are small engineering checks of one
 task and body, not a full TIG benchmark result.
 
+A subsequent frozen batch of **twenty previously unused local-history seeds
+also achieved 20/20 final success with the same checkpoint**. Read-only action
+diagnostics and exact reconstruction of the earlier five rollouts are reported
+below.
+
 The implementation and portable commands are in [the workflow](native_video_act.md).
 Exact hashes, per-seed results and limits are in
 [the machine-readable record](native_video_act_validation.json).
@@ -90,7 +95,7 @@ solve this single task**. Discriminable tasks or goals are needed to test that.
 - Final runtime source: `9f2b06b`; the post-run change only rejects mixed or
   unidentified robot tasks and checks the recording/task pairing. It changes
   no network, optimizer or rollout behavior for this run.
-- The final applicable CPU regression suite passed **573 tests**. Real video
+- The initial pilot's applicable CPU regression suite passed **573 tests**. Real video
   decoding, pretrained-model training and simulator runs are additional evidence.
 - All raw logs, configuration, manifests, provenance, checkpoints, action H5s,
   videos and summaries remain outside Git under
@@ -105,3 +110,69 @@ The five evaluation seeds were used previously in the non-video native ACT
 engineering workflow; they are disjoint from this model's training data, not a
 new untouched benchmark test set. Broader tests should use a newly frozen
 protocol and retain failures as well as successes.
+
+## Action-limit diagnosis and twenty new seeds
+
+The follow-up froze seeds **18000–18019** before execution, after checking
+retained local recording metadata, structured seed fields and command receipts.
+No prior use or reservation was found within that audited history. Other hosts
+and deleted records are outside the audit. All twenty seeds were executed once
+with the same 6,000-update checkpoint and human episode 5, the original 200-step
+budget, 20 Hz control, 100 Hz physics and eight executed actions per query.
+
+Final official success was **20/20**, success at any point was **20/20**, and
+there were **zero timeouts, completed task failures or interface errors**. All
+twenty ended with both objects placed and ungrasped. Every video, action H5,
+result and diagnostic array was retained; no seed was replaced or used to tune
+the checkpoint. This is additional L0 engineering coverage for the same task.
+
+The optional `--action-diagnostics` flag records existing normalized predictions,
+denormalized requests and bounded executed actions. It defaults to off and
+does not alter execution or scoring. Across the **4,000 directly recorded steps**,
+the **twelve arm coordinates had zero exceedances**. Only the gripper commands
+crossed their normalized `[-1,1]` bounds:
+
+| Coordinate | Exceeding steps / 4,000 | Maximum command excess | P95 command excess | Maximum equivalent per-finger target correction |
+| --- | ---: | ---: | ---: | ---: |
+| Left gripper | 1,122 | 0.011229 | 0.006011 | 0.247 mm |
+| Right gripper | 2,761 | 0.023214 | 0.010141 | 0.511 mm |
+
+P95 is conditional on that coordinate exceeding a bound. At least one gripper
+exceeded its bound in 2,764 steps; left/right counts overlap. Each episode had
+117–155 affected steps. The controller maps a normalized gripper command `a` to
+each finger's position target `q = 0.022 × (a + 1)` metres. The millimetre column
+therefore describes the hypothetical target correction performed by the clamp,
+not actual finger motion, joint-limit violation or physical penetration.
+Mechanical-arm targets use radians and the prepared URDF's simulation limits;
+these should not be described as manufacturer hardware limits.
+
+All directly logged executed actions match their H5 records **bitwise**. They
+also equal `np.clip(requested, low, high)` bitwise. An independent NumPy affine
+inverse of every normalized action matches every recorded denormalized request
+with **maximum error zero**. The saved training q01/q99 for both gripper action
+dimensions are exactly `[-1,1]`, making their inverse scaling the identity.
+The ACT action head is linear without a final tanh, so endpoint predictions can
+slightly exceed these bounds. The observed corrections provide no reason to
+retrain or change controller ranges; the existing execution clamp is retained.
+
+The earlier seeds 8000–8004 were also reconstructed offline from their archived
+public RGB and qpos, without constructing a simulator. With the original CUDA
+RGB scaling, all **1,000 × 14 executed actions match their H5 values bitwise**,
+and the per-seed clipping counts remain `[118,149,143,124,145]`. Arm exceedances
+are zero. Left/right gripper maxima are `0.008996 / 0.018039`, equivalent to
+`0.198 / 0.397 mm` per-finger target correction.
+
+The initial offline reconstruction scaled saved RGB on CPU and was not bitwise
+identical. A controlled seed8004 comparison traced this to CPU versus CUDA
+division by 255: input values differ by at most one float32 ULP while contiguous
+layouts agree. Matching the live renderer's CUDA preprocessing reproduces every
+old action exactly. Both the initial reconstruction and corrected results are
+retained, together with the device comparison; the original rollout, policy and
+runtime preprocessing were not changed.
+
+The follow-up runtime is `e00d4c92dba1039d13dc7b782ef7596a27cbfa17`. Its applicable
+CPU suite passed **582 tests**, including diagnostics-on/off action, reward,
+termination and success equivalence. Raw evidence is under
+`clipping-seed-regression/` within the original local evidence directory. The
+[machine-readable record](native_video_act_validation.json) retains all twenty
+per-seed outcomes, fourteen-coordinate statistics, source identities and hashes.

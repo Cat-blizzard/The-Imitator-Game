@@ -297,3 +297,50 @@ python -m pytest -q tests/baselines/test_native_video_data.py \
   tests/baselines/test_native_video_eval.py \
   tests/baselines/test_policy_eval_boundary.py
 ```
+
+## 6. Inspect action limits during a fixed regression
+
+`--action-diagnostics` is an optional, read-only measurement in the shared
+native evaluator. It records the selected normalized prediction, denormalized
+requested action, and existing bounded action. It changes no action, reward,
+termination or success decision and defaults to off.
+
+Each episode adds `action_limit_diagnostics` to its result JSON, including
+per-coordinate lower/upper exceedance counts and conditional magnitude
+statistics. An NPZ beside the rollout contains the three `(steps, action_dim)`
+arrays and actual controller bounds. Magnitudes keep each coordinate's unit:
+arm targets are radians, while normalized gripper commands are dimensionless.
+The dataset's gripper physical-coordinate unit does not turn a normalized
+gripper command into metres.
+
+The following reproduces the twenty seeds reserved for the 2026-11-19
+engineering regression. For a new independent batch, freeze another allocation
+after checking the retained history.
+
+```bash
+python - <<'PY'
+import json
+import os
+from pathlib import Path
+
+path = Path(os.environ["RUN_ROOT"]) / "config/fresh-seeds.json"
+with path.open("x", encoding="utf-8") as stream:
+    json.dump({"evaluation": list(range(18000, 18020))}, stream, indent=2)
+    stream.write("\n")
+PY
+
+python -m examples.baselines.act.eval_act_native_video \
+  --checkpoint "$CHECKPOINT" --hf-cache-dir "$HF_HOME/hub" \
+  --sub-config "$RUN_ROOT/config/datasets.json" \
+  --human-manifest "$RUN_ROOT/config/human-manifest.json" \
+  --human-role evaluation \
+  --seeds-file "$RUN_ROOT/config/fresh-seeds.json" --seed-split evaluation \
+  --max-episode-steps 200 --fps 20 --execute-steps 8 \
+  --action-diagnostics --save-video \
+  --output-dir "$RUN_ROOT/fresh-seed-regression"
+```
+
+Retain every allocated seed, including a completed task failure or an interface
+error. A clipping step means at least one coordinate crossed a controller bound;
+its count alone does not measure severity. Review the affected coordinates and
+magnitudes before considering any training or execution change.
