@@ -374,6 +374,13 @@ both. Task IDs route data, configuration and statistics, without becoming an
 extra policy input. Shared-policy training currently requires matching native
 embodiment, joint ordering, state/action widths, camera shapes and control FPS.
 
+For legacy converted data lacking profiles, a dataset record can include
+`recorded_profiles` with the original collection's `robot_profile`,
+`task_profile` and `provenance` (source file/hash and field mapping). The trainer
+copies these into the checkpoint while preserving the original native metadata;
+it rejects a supplement that conflicts with an already recorded profile. Use
+actual saved collection settings for this supplement.
+
 Set `MULTITASK_ROOT` to the prepared manifest/configuration directory, and
 `DATA_ROOT` to the parent of the converted datasets. A dataset record may also
 use an absolute `root`. Use the same model JSON encoder settings as section 2.

@@ -1,4 +1,5 @@
 """Training configuration must preserve native dimensions and task pairing."""
+import copy
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -144,6 +145,35 @@ def test_each_task_keeps_its_native_physics_and_train_only_normalizer(multi_inpu
     single = recorded_contract(args, base)
     assert single["native"] == contract["datasets"][0]["native"]
     assert single["source_image_size"] == [32, 32]
+
+
+def test_saved_collection_profiles_fill_checkpoint_without_mutating_legacy_dataset(multi_inputs):
+    args, base = multi_inputs
+    path = Path(args.sub_config)
+    configs = json.loads(path.read_text())
+    original = copy.deepcopy(base.sub_datasets[0].meta.info["native_data_contract"])
+    supplemental = {
+        "robot_profile": {"uid": "piper", "coupled_gripper_joints": ["joint7", "joint8"]},
+        "task_profile": {"mount_poses": [{"position": [-0.3, -0.3, 0.202]},
+                                          {"position": [-0.3, 0.3, 0.202]}]},
+        "provenance": {"source_path": "original-collection/collection_config.json",
+                       "source_sha256": "a" * 64,
+                       "source_fields": {"robot_profile": "robot_profile", "task_profile": "profile"}},
+    }
+    configs[0]["recorded_profiles"] = supplemental
+    path.write_text(json.dumps(configs))
+    record = recorded_contract(args, base)["datasets"][0]
+    assert record["native_recorded"] == original
+    assert record["profile_provenance"] == supplemental["provenance"]
+    assert record["native"]["robot_profile"] == supplemental["robot_profile"]
+    assert record["native"]["task_profile"] == supplemental["task_profile"]
+    assert base.sub_datasets[0].meta.info["native_data_contract"] == original
+    # An already recorded profile is authoritative: supplementing cannot
+    # silently overwrite the mount positions with another task's settings.
+    base.sub_datasets[0].meta.info["native_data_contract"]["task_profile"] = {
+        "mount_poses": [{"position": [-0.25, -0.3, 0.202]}]}
+    with pytest.raises(ValueError, match="conflicts with the recorded native profile"):
+        recorded_contract(args, base)
 
 
 @pytest.mark.parametrize("mutation,error", [

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, fields
+import copy
 import hashlib
 import json
 import math
@@ -84,7 +85,21 @@ def recorded_contract(args: TrainingArgs, dataset: Any) -> dict[str, Any]:
         if sub.repo_id not in config_by_repo:
             raise ValueError(f"No dataset configuration for recorded repo_id {sub.repo_id!r}")
         config = config_by_repo[sub.repo_id]
-        native = sub.meta.info.get("native_data_contract") or {}
+        original_native = sub.meta.info.get("native_data_contract") or {}
+        native = copy.deepcopy(original_native)
+        supplemental = config.get("recorded_profiles")
+        if supplemental is not None:
+            if (not isinstance(supplemental, dict)
+                    or not isinstance(supplemental.get("provenance"), dict)
+                    or not supplemental["provenance"]):
+                raise ValueError("recorded_profiles requires explicit provenance for saved collection profiles")
+            for name in ("robot_profile", "task_profile"):
+                profile = supplemental.get(name)
+                if not isinstance(profile, dict) or not profile:
+                    raise ValueError(f"recorded_profiles requires a nonempty recorded {name}")
+                if name in native and native[name] != profile:
+                    raise ValueError(f"Supplemental {name} conflicts with the recorded native profile")
+                native[name] = copy.deepcopy(profile)
         env_id = config.get("env_id") or native.get("env_id")
         if not isinstance(env_id, str) or not env_id:
             raise ValueError("The robot dataset must identify its task to pair a human demonstration")
@@ -126,6 +141,9 @@ def recorded_contract(args: TrainingArgs, dataset: Any) -> dict[str, Any]:
             "train_episodes": train_episodes, "selected_episodes": list(sub.episodes),
             "normalizer_source": "selected_train_rows",
         })
+        if supplemental is not None:
+            records[-1].update(native_recorded=copy.deepcopy(original_native),
+                               profile_provenance=copy.deepcopy(supplemental["provenance"]))
     contract = {
         "schema_version": 2, "datasets": records, "fps": records[0]["fps"],
         "cameras": list(args.cameras), "image_size": list(args.image_size),
