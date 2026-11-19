@@ -304,7 +304,12 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
         return phase.finish()
     if not phase.preflight():
         return phase.finish()
-    phase.report["validation"] = validate_schedule(schedule, *(np.asarray(initial["measurements"][arm.key]["qpos_rad"]) for arm in phase.arms), checker, max_joint_step_rad=JOINT_STEP)
+    candidate = checker.candidate_checker() if callable(getattr(checker, "candidate_checker", None)) else checker
+    phase.report["validation"] = validate_schedule(schedule, *(np.asarray(initial["measurements"][arm.key]["qpos_rad"]) for arm in phase.arms), candidate, max_joint_step_rad=JOINT_STEP)
+    if phase.report["validation"]["status"] == "passed" and callable(getattr(candidate, "finish", None)):
+        remaining = candidate.finish()
+        if remaining:
+            phase.report["validation"].update(status="collision", first_collision={"collisions": remaining})
     if phase.report["validation"]["status"] != "passed":
         phase.report.update(status="rejected", reason="candidate_collision")
         return phase.finish()
@@ -312,6 +317,9 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
     def stable(row: dict[str, Any]) -> bool:
         speed = row["max_control_frame_joint_speed_rad_s"] if held else row["max_arm_velocity_rad_s"]
         if row["endpoint_error_rad"] > ENDPOINT or speed > ARM_SPEED:
+            return False
+        if getattr(checker, "release_separation", None) is not None and (
+                not checker.release_separation.all_clear or not env.release_separation_complete):
             return False
         return not held or all(obj["is_grasping"] and obj["control_frame_linear_speed_m_s"] <= OBJECT_SPEED
                                and obj["control_frame_angular_speed_rad_s"] <= OBJECT_ANGULAR_SPEED
@@ -352,6 +360,11 @@ def _scheduled(env: Any, schedule: DualArmSchedule, checker: Any, *, held: bool,
                 phase.report.update(status="aborted", reason="hold_not_stable"); break
             phase.report["hold_steps_completed"] += 1
         if phase.report["status"] == "running": phase.report["status"] = "passed"
+    separation = getattr(checker, "release_separation", None)
+    if phase.report["status"] == "passed" and separation is not None:
+        remaining = separation.finish()
+        if remaining:
+            phase.report.update(status="aborted", reason="measured_collision", remaining_release_contacts=remaining)
     phase.report["stable_steps_observed"] = count
     return phase.finish()
 

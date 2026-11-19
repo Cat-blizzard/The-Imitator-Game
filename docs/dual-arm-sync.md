@@ -46,6 +46,10 @@ action per control tick. The collision layer checks both robots, actual scene
 geometry, and measured held-object geometry. Initial table support, intended
 finger contact, and destination support have specific phase permissions.
 Measured poses refresh held-object prediction after physics advances.
+During open-hand retreat, existing own-finger/target contact may only separate:
+original mesh/box geometry must not deepen the intersection, and cleared pairs
+cannot re-enter. Candidate scans use independent contact state; execution and
+replay require both geometric and physical contact to clear before proceeding.
 Native contacts and held-object slip are sampled at 100 Hz. These are sampled
 checks, not continuous collision detection or joint 14-DoF planning.
 

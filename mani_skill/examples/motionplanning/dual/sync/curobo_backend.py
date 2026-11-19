@@ -375,7 +375,9 @@ class CuroboBackend:
             self.models[arm_index] = model
         snapshot["robot_cfg"] = reserve_payload_config(snapshot["robot_cfg"], model["capacity"])
         snapshot["payload_model"] = deepcopy(model)
-        state: dict[str, Any] = {"contact_allowed": phase == "descend" or closed,
+        # Candidate generation may leave release contact. The common checker
+        # permits only existing, diminishing intersections and rejects reentry.
+        state: dict[str, Any] = {"contact_allowed": phase in ("descend", "retreat") or closed,
             "attachment": None, "source_support_allowed": False,
             "source_support_obstacle_names": []}
         if closed:

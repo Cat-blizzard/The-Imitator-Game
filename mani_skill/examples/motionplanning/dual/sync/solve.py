@@ -234,8 +234,14 @@ def solve(env: Any, seed: int | None = None, debug: bool = False, vis: bool = Fa
             retreat_start = np.asarray([as_numpy(a.tcp.pose.p)[0].copy() for a in raw.agent.agents])
             poses = tuple(sapien.Pose(p=p+[0., 0., policy.retreat_command_m], q=as_numpy(a.tcp.pose.q)[0])
                 for p, a in zip(retreat_start, raw.agent.agents))
-            schedule, settle = plan('retreat', poses, False)
-            finish('retreat', execute_dual_reach(capture, schedule, checker, settle_max_steps=settle, policy=policy))
+            try:
+                allowed = checker.begin_release_separation()
+                capture.begin_release_separation(allowed)
+                schedule, settle = plan('retreat', poses, False)
+                finish('retreat', execute_dual_reach(capture, schedule, checker, settle_max_steps=settle, policy=policy))
+            finally:
+                capture.end_release_separation()
+                checker.end_release_separation()
             gain = np.asarray([as_numpy(a.tcp.pose.p)[0] for a in raw.agent.agents])-retreat_start
             report['quality']['retreat_displacement_m'] = gain.tolist()
             if np.any(gain[:, 2] < policy.minimum_retreat_m):

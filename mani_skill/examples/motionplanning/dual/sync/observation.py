@@ -8,7 +8,8 @@ import numpy as np
 
 from .trajectory_execution import as_numpy
 from .physical_observation import (contact_identities, contact_allowed, physical_contact_points,
-    physical_support_transition, task_object_contact_rows, pose_matrix, measured_source_departure)
+    physical_support_transition, task_object_contact_rows, pose_matrix, measured_source_departure,
+    own_finger_contact_pair)
 from .measurements import _rotation_distance
 
 
@@ -45,6 +46,12 @@ class ObservedEnvironment:
         self.substeps = self.held_substeps = 0
         self.max_slip_m = np.zeros(2)
         self.max_slip_rad = np.zeros(2)
+        self._retreat_contacts = None
+        self._retreat_initial_contacts = None
+        self._retreat_separated_contacts = set()
+        self._retreat_remaining_contacts = set()
+        self._last_own_finger_contacts = set()
+        self._last_own_finger_contact_phase = None
 
     def __getattr__(self, name):
         return getattr(self.unwrapped, name)
@@ -53,7 +60,33 @@ class ObservedEnvironment:
         self.unwrapped._after_simulation_step = self.record_substep
 
     def restore(self):
+        self.end_release_separation()
         self.unwrapped._after_simulation_step = self.original_hook
+
+    def begin_release_separation(self, allowed_pairs: set[tuple[int, str]]) -> None:
+        """Arm initial own-finger contacts; native substeps can only remove them."""
+        if self._retreat_contacts is not None:
+            raise RuntimeError('Release separation is already active')
+        pairs = set(allowed_pairs)
+        if any(not isinstance(pair, tuple) or len(pair) != 2 or type(pair[0]) is not int
+               or pair[0] not in (0, 1) or pair[1] not in ('panda_leftfinger', 'panda_rightfinger')
+               for pair in pairs):
+            raise ValueError('Release separation requires canonical own-finger pairs')
+        if self._last_own_finger_contact_phase == 'release':
+            pairs.update(self._last_own_finger_contacts)
+        self._retreat_contacts = pairs.copy()
+        self._retreat_initial_contacts = pairs.copy()
+        self._retreat_separated_contacts = set()
+        self._retreat_remaining_contacts = pairs.copy()
+
+    def end_release_separation(self) -> None:
+        if self._retreat_contacts is not None:
+            self._retreat_remaining_contacts = self._retreat_contacts.copy()
+            self._retreat_contacts = None
+
+    @property
+    def release_separation_complete(self) -> bool:
+        return self._retreat_contacts is not None and not self._retreat_contacts
 
     def record_substep(self):
         self.original_hook()
@@ -80,6 +113,13 @@ class ObservedEnvironment:
                 geometry[i], self.reference_z[i], height, source_contact[i])
         rows = task_object_contact_rows(contacts, self.identities, tuple(self.physical_released),
             self.phase, self.task)
+        present = {pair for row in rows if row['physical_contact']
+                   if (pair := own_finger_contact_pair(row['bodies'])) is not None}
+        self._last_own_finger_contacts = present
+        self._last_own_finger_contact_phase = self.phase
+        if self.phase == 'retreat' and self._retreat_contacts is not None:
+            self._retreat_separated_contacts.update(self._retreat_contacts-present)
+            self._retreat_contacts.intersection_update(present)
         for row in rows:
             if row['physical_contact'] and row['class'] == 'forbidden':
                 self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies']})
@@ -90,7 +130,8 @@ class ObservedEnvironment:
                 continue
             points = [{'separation_m': float(p.separation), 'impulse_Ns': np.asarray(p.impulse).tolist()}
                 for p in contact.points]
-            if physical_contact_points(points) and not contact_allowed(sides, self.phase, self.srdf):
+            if physical_contact_points(points) and not contact_allowed(sides, self.phase, self.srdf,
+                    retreat_contacts=self._retreat_contacts):
                 self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides})
         if self.references is not None and (self.phase == 'lift_and_hold' or self.phase.startswith('carry_')):
             self.held_substeps += 1
@@ -119,7 +160,14 @@ class ObservedEnvironment:
         return obs, reward, False if continued else terminated, truncated, info
 
     def summary(self):
-        return {"substeps": self.substeps, "held_substeps": self.held_substeps,
+        result = {"substeps": self.substeps, "held_substeps": self.held_substeps,
             "forbidden_contacts": self.events, "physical_source_departure": self.physical_released,
             "max_held_position_slip_m": self.max_slip_m.tolist(),
             "max_held_rotation_slip_rad": self.max_slip_rad.tolist()}
+        if self._retreat_initial_contacts is not None:
+            remaining = self._retreat_remaining_contacts if self._retreat_contacts is None else self._retreat_contacts
+            result['release_separation'] = {
+                'initial_pairs': [list(pair) for pair in sorted(self._retreat_initial_contacts)],
+                'separated_pairs': [list(pair) for pair in sorted(self._retreat_separated_contacts)],
+                'remaining_pairs': [list(pair) for pair in sorted(remaining)]}
+        return result

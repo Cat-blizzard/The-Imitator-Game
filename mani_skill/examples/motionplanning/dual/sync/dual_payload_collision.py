@@ -52,6 +52,7 @@ class DualPayloadCollisionChecker:
         self.scope = "two_measured_or_rigidly_predicted_payloads_one_private_dual_robot_scene_world"
         self.attached, self._supports = False, ()
         self.target_contacts_allowed = (False, False)
+        self._release_state = None
         self.refresh_count, self.last_allowed_contacts = 0, []
         self.coverage: dict[str, Any] = {}
         self._fresh = False
@@ -165,6 +166,98 @@ class DualPayloadCollisionChecker:
             live.set_target_contact_allowed(value)
         self.coverage["target_contacts_allowed"] = list(self.target_contacts_allowed)
 
+    @property
+    def release_separation(self) -> Any:
+        return getattr(self, "_release_state", None)
+
+    def begin_release_separation(self) -> set[tuple[int, str]]:
+        """Register existing finger/target intersections before an open retreat.
+
+        Only these pairs may separate. The ordinary scene checker still owns
+        palms, peer arms/targets, support and joint limits. Original physical
+        triangles are used here because FCL contact depths are unreliable for
+        this near-contact convex pair. No physical state or mask is changed.
+        """
+        import sapien.physx as physx
+        from .release_contact import SeparationState
+        from .scene_collision import _mesh
+        from .table_support_collision import NUMERICAL_TOP_TOLERANCE_M
+
+        if self.attached or self.release_separation is not None:
+            raise ValueError("Release separation requires detached, unregistered targets")
+        self.refresh()
+        self._release_boxes, self._release_meshes, self._release_links = [], {}, {}
+        for index, (agent, live) in enumerate(zip(self.env.agent.agents, self.lives)):
+            for link in agent.robot.get_links():
+                if link.name not in FINGER_LINKS:
+                    continue
+                self._release_links[index, link.name] = link._objs[0].entity
+                for shape_index, shape in enumerate(link._objs[0].get_collision_shapes()):
+                    if not isinstance(shape, physx.PhysxCollisionShapeBox):
+                        raise ValueError("Panda release separation requires its actual finger boxes")
+                    self._release_boxes.append((index, link.name, shape_index,
+                        np.asarray(shape.half_size, dtype=float),
+                        np.asarray(shape.get_local_pose().to_transformation_matrix(), dtype=float)))
+            meshes = {}
+            for name in self._target_names[index]:
+                _, shape = live._shape_refs[name]
+                if not isinstance(shape, physx.PhysxCollisionShapeConvexMesh):
+                    raise ValueError("Release separation requires closed target convex pieces")
+                vertices, faces = _mesh(shape)
+                # Every native convex piece must have a closed, oriented surface.
+                edges = np.concatenate([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]])
+                ordered = np.sort(edges, axis=1)
+                _, groups, counts = np.unique(ordered, axis=0, return_inverse=True, return_counts=True)
+                directions = np.where(edges[:, 0] < edges[:, 1], 1, -1)
+                if np.any(counts != 2) or np.any(np.bincount(groups, weights=directions) != 0):
+                    raise ValueError("Target release geometry must be a closed oriented triangle surface")
+                meshes[name] = (vertices[faces], np.asarray(
+                    shape.get_local_pose().to_transformation_matrix(), dtype=float))
+            self._release_meshes[index] = meshes
+        gaps = self._release_gaps(actual=True)
+        self._release_state = SeparationState(gaps, tolerance_m=NUMERICAL_TOP_TOLERANCE_M)
+        return {(key[0], key[1]) for key in self._release_state.active_pairs}
+
+    def end_release_separation(self) -> None:
+        self._release_state = None
+        self._release_boxes, self._release_meshes, self._release_links = [], {}, {}
+
+    def _release_gaps(self, joints: tuple[np.ndarray, np.ndarray] | None = None, *,
+                      actual: bool = False) -> dict[tuple, float]:
+        from .release_contact import triangle_box_gap_m
+
+        links, triangles = {}, {}
+        for index, meshes in self._release_meshes.items():
+            actor = self.lives[index]._entities[self.target_actor_names[index]]
+            world_actor = _entity_transform(actor)
+            for name, (local, local_pose) in meshes.items():
+                transform = world_actor @ local_pose
+                triangles[name] = local @ transform[:3, :3].T + transform[:3, 3]
+        for key, link in self._release_links.items():
+            index, name = key
+            if actual:
+                links[key] = _entity_transform(link)
+            else:
+                full = self._measured_qpos[index].copy()
+                full[self.native.arm_indices[index]] = joints[index]
+                links[key] = _world_tcp(self.models[index], full, name)
+        gaps = {}
+        for index, name, shape_index, half, local in self._release_boxes:
+            box_world = links[index, name] @ local
+            inverse = np.linalg.inv(box_world)
+            for target in self._release_meshes[index]:
+                box_triangles = triangles[target] @ inverse[:3, :3].T + inverse[:3, 3]
+                gaps[index, name, shape_index, target] = triangle_box_gap_m(half, box_triangles)
+        return gaps
+
+    def candidate_checker(self) -> Any:
+        """Path scans never advance the measured contact-separation latch."""
+        if self.release_separation is None:
+            return self
+        candidate = self.release_separation.clone()
+        return NS(scope=self.scope, check=lambda left, right: self.check(
+            left, right, separation_state=candidate), finish=candidate.finish)
+
     def attach(self) -> None:
         """Capture both real TCP/object relations; real grasp confirmation is external."""
         if self.attached:
@@ -259,7 +352,8 @@ class DualPayloadCollisionChecker:
                 return True
             for index, physical in enumerate(("left", "right")):
                 if (robot == physical and link in FINGER_LINKS and other in self._target_names[index]
-                        and (self.attached or self.target_contacts_allowed[index])):
+                        and (self.attached or self.target_contacts_allowed[index]
+                             or self.release_separation is not None)):
                     return True
         return False
 
@@ -272,7 +366,7 @@ class DualPayloadCollisionChecker:
                              (record.get("object_name2"), record.get("link_name2")))))
 
     def _evaluate(self, joints: tuple[np.ndarray, np.ndarray], poses: tuple[np.ndarray, np.ndarray] | None,
-                  mode: str) -> list[dict[str, Any]]:
+                  mode: str, *, separation_state: Any = None) -> list[dict[str, Any]]:
         self.assert_scene_unchanged()
         self.assert_robot_geometry_unchanged()
         objects = dict(self._measured_objects)
@@ -300,6 +394,14 @@ class DualPayloadCollisionChecker:
         # This query first sets BOTH robot states and checks self/interarm/world.
         for value in self.native.check(*joints):
             record(value)
+        separation = self.release_separation if separation_state is None else separation_state
+        if separation is not None:
+            for value in separation.check(self._release_gaps(joints)):
+                index, link, shape_index, target = value["pair"]
+                record({**value, "collision_type": "release_separation",
+                    "object_name1": ("left", "right")[index], "link_name1": link,
+                    "object_name2": target, "link_name2": target,
+                    "finger_shape_index": shape_index}, allowed=False)
         if poses is not None:
             # Normal-object/normal-object pairs are absent from PlanningWorld.
             for index, names in enumerate(self._target_names):
@@ -350,7 +452,8 @@ class DualPayloadCollisionChecker:
                              last_payload_T_world=[pose.tolist() for pose in poses] if poses is not None else None)
         return blocked
 
-    def check(self, left7: np.ndarray, right7: np.ndarray) -> list[dict[str, Any]]:
+    def check(self, left7: np.ndarray, right7: np.ndarray, *,
+              separation_state: Any = None) -> list[dict[str, Any]]:
         if self.attached and self.measured_attachment_prediction:
             self._assert_prediction_current()
         joints = (_vector(left7, 7), _vector(right7, 7))
@@ -366,7 +469,10 @@ class DualPayloadCollisionChecker:
         poses = tuple(_world_tcp(model, state, support.tcp_link_name) @ relation
                       for model, state, support, relation in zip(self.models, full_states,
                           self._supports, relations)) if self.attached else None
-        return self._evaluate(joints, poses, "candidate_two_rigid_predictions" if self.attached else "candidate_live_measured_objects")
+        mode = "candidate_two_rigid_predictions" if self.attached else "candidate_live_measured_objects"
+        if separation_state is not None:
+            return self._evaluate(joints, poses, mode, separation_state=separation_state)
+        return self._evaluate(joints, poses, mode)
 
     def measured_check(self) -> list[dict[str, Any]]:
         measured = self.lives[0]._measure_robots()

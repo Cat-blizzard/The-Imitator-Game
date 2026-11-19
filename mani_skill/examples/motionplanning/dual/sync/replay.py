@@ -131,6 +131,8 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 checker.detach()
             phase = None
             if checker is not None:
+                if name == "retreat":
+                    capture.begin_release_separation(checker.begin_release_separation())
                 checker.set_target_contacts_allowed((name in ("descend", "close_and_confirm", "release") or held,)*2)
                 phase = _Phase(capture, checker, name, targets=task.targets, held=held, policy=policy)
                 if not phase.preflight():
@@ -176,6 +178,12 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
                 raise RuntimeError("Physical source departure did not reproduce")
             if name == "retreat":
                 retreat_gain = np.asarray([as_numpy(agent.tcp.pose.p)[0] for agent in raw.agent.agents])-retreat_start
+                if checker.release_separation.finish():
+                    raise RuntimeError("Retreat ended before geometry separation completed")
+                if not capture.release_separation_complete:
+                    raise RuntimeError("Retreat ended before physical contact separation completed")
+                capture.end_release_separation()
+                checker.end_release_separation()
         result["execution"]["status"] = "passed"
         final_regions = [predicate(actor) for predicate, actor in zip(predicates, task.targets)]
         final_opened = all(phase.opened(arm, row) for arm in phase.arms)
@@ -192,7 +200,10 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
     except Exception as exc:
         result["execution"] = {"status": "failed", "reason": f"{type(exc).__name__}: {exc}"}
     finally:
+        if checker is not None:
+            checker.end_release_separation()
         if capture is not None:
+            capture.end_release_separation()
             capture.restore()
             result["physics"] = capture.summary()
         success = bool(as_numpy(raw.evaluate()["success"]).item())
