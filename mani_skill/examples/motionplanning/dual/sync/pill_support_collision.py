@@ -39,10 +39,7 @@ class PillTableSupportCollisionChecker(NumericalTableSupportCollisionChecker):
         self.numerical_top_support_receipts = []
         self._local_vertices = {name: _scaled_vertices(self.live, name).copy()
                                 for name in self._target_names}
-        self._initial_geometry_export = {
-            name: {"scaled_shape_local_vertices": vertices.tolist(),
-                   "shape_local_T": self._shape_local[name].tolist()}
-            for name, vertices in sorted(self._local_vertices.items())}
+        self._capture_initial_geometry()
         self._legacy_support_mode = None
         self._initial_support_exists = False
         self._initial_object_depth_m = 0.
