@@ -385,8 +385,15 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def main():
-    args = parse_args()
+def main(argv=None, *, checkpoint_loader=load_checkpoint, prepare_episode=None,
+         report_prefix: str = "act_single"):
+    """Run the shared native policy rollout with optional policy conditioning.
+
+    ``prepare_episode`` receives the policy and immutable checkpoint/configuration
+    before a seeded rollout. It returns reporting metadata; environment actions,
+    reset, success and termination remain owned by this evaluation path.
+    """
+    args = parse_args(argv)
     if args.num_envs != 1 or args.max_episode_steps < 1 or args.control_mode != "pd_joint_pos":
         raise ValueError("This baseline uses one CPU environment, pd_joint_pos and a positive step budget")
     seeds = evaluation_seeds(args)
@@ -394,7 +401,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     device = torch.device(args.device)
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    agent, train_args = load_checkpoint(args.checkpoint, args, device)
+    agent, train_args = checkpoint_loader(args.checkpoint, args, device)
     contract = checkpoint.get("data_contract", {})
     args.native_contract = contract.get("native") or {}
     source_image_size = contract.get("source_image_size", train_args.image_size)
@@ -408,7 +415,7 @@ def main():
     configs = json.loads(Path(args.sub_config).read_text())
     results = []
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    result_path = output / f"act_single_{stamp}.json"
+    result_path = output / f"{report_prefix}_{stamp}.json"
     from mani_skill.utils.wrappers.record import RecordEpisode
     from mani_skill.envs.tasks.tabletop.utils import L0_L3_utils
     L0_L3_utils.set_lr_mirror_enabled(False)
@@ -443,7 +450,11 @@ def main():
                                     save_video=args.save_video, video_fps=args.fps,
                                     source_type="act", source_desc="single-task ACT seeded policy evaluation")
             for seed in seeds:
+                episode_metadata = (prepare_episode(agent, checkpoint, config, args, seed,
+                                                    env_id, device)
+                                    if prepare_episode is not None else {})
                 result = evaluate_episode(agent, env, normalizer, args, train_args, seed, repo_id, device)
+                result.update(episode_metadata)
                 result.update(env_id=env_id, robot_uids=list(env.unwrapped.robot_uids), checkpoint=str(Path(args.checkpoint).resolve()),
                               fps=args.fps, execute_steps=args.execute_steps,
                               profile_nonphysical_differences=profile_differences)
@@ -475,6 +486,7 @@ def main():
     }
     (output / f"summary_{stamp}.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
+    return summary
 
 
 if __name__ == "__main__":
