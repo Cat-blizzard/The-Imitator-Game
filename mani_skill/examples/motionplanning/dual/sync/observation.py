@@ -8,8 +8,8 @@ import numpy as np
 from mani_skill import format_path
 
 from .trajectory_execution import as_numpy
-from .physical_observation import (contact_identities, contact_allowed, physical_contact_points,
-    physical_support_transition, task_object_contact_rows, pose_matrix, measured_source_departure)
+from .physical_observation import (contact_identities, contact_allowed, decode_native_contacts,
+    classify_task_object_contacts, physical_support_transition, pose_matrix, measured_source_departure)
 from .measurements import _rotation_distance
 
 
@@ -61,10 +61,11 @@ class ObservedEnvironment:
     def record_substep(self):
         self.original_hook()
         self.substeps += 1
-        contacts = self.unwrapped.scene.px.get_contacts()
+        native_contacts = self.unwrapped.scene.px.get_contacts()
         checker = self.checker_provider()
         geometry = measured_source_departure(checker, refresh=False)
-        rows = task_object_contact_rows(contacts, self.identities, tuple(self.physical_released),
+        contacts = decode_native_contacts(native_contacts, self.identities)
+        rows = classify_task_object_contacts(contacts, tuple(self.physical_released),
             self.phase, self.task, include_destination_contents_proof=False)
         source_contact = [False, False]
         for row in rows:
@@ -81,27 +82,29 @@ class ObservedEnvironment:
                     self.reference_z[i] = min(self.reference_z[i], height)
             self.physical_released[i] = physical_support_transition(self.physical_released[i],
                 geometry[i], self.reference_z[i], height, source_contact[i])
-        rows = task_object_contact_rows(contacts, self.identities, tuple(self.physical_released),
+        rows = classify_task_object_contacts(contacts, tuple(self.physical_released),
             self.phase, self.task)
         for row in rows:
             if row['physical_contact'] and row['class'] == 'forbidden':
                 self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies'],
                     "physical_substep_index": self.substeps, "points": row['points']})
-        for contact in contacts:
-            sides = [self.identities.get(body.entity, {'kind': 'unknown', 'actor': body.entity.name})
-                for body in contact.bodies]
+        for contact, native_contact in zip(contacts, native_contacts):
+            sides = contact['bodies']
             if not any(side.get('kind') == 'robot' for side in sides):
                 continue
-            native_points = contact.points
-            points = [{'separation_m': float(p.separation), 'impulse_Ns': np.asarray(p.impulse).tolist()}
-                for p in native_points]
-            if physical_contact_points(points) and not contact_allowed(sides, self.phase, self.srdf):
+            if contact['physical_contact'] and not contact_allowed(sides, self.phase, self.srdf):
                 # Retain details only for an already forbidden event. This is
                 # the same native manifold, with no additional scene query or
                 # physical acceptance threshold.
-                for point, native_point in zip(points, native_points):
-                    point.update(position_m=np.asarray(native_point.position).tolist(),
-                                 normal=np.asarray(native_point.normal).tolist())
+                points = []
+                for copied, native_point in zip(contact['points'], native_contact.points):
+                    point = {'separation_m': copied['separation_m'], 'impulse_Ns': copied['impulse_Ns']}
+                    if 'position_m' in copied:
+                        point.update(position_m=copied['position_m'], normal=copied['normal'])
+                    else:
+                        point.update(position_m=np.asarray(native_point.position).tolist(),
+                                     normal=np.asarray(native_point.normal).tolist())
+                    points.append(point)
                 self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides,
                     "physical_substep_index": self.substeps, "points": points})
         if self.references is not None and (self.phase == 'lift_and_hold' or self.phase.startswith('carry_')):

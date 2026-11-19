@@ -62,9 +62,42 @@ def contact_class(other: dict, index: int, released: bool, phase: str,
     if not placement and not released and other.get('actor') == initial[index]: return 'initial_support'
     return 'forbidden'
 
-def task_object_contact_rows(contacts: Any, identities: dict, released: tuple,
-                             phase: str | tuple[str, str], adapter: Any, *,
-                             include_destination_contents_proof: bool = True) -> list[dict]:
+def decode_native_contacts(contacts: Any, identities: dict) -> list[dict]:
+    """Copy one substep's native contact data for all measured checks.
+
+    Payload rows need position/normal as well as impulse/separation; robot-only
+    checks need just the latter pair. Unrelated contacts need no point readback.
+    The returned Python values live for this substep only, and consumers must
+    treat them as read-only. Classification is deliberately a separate pass:
+    physical source departure can change its permissions within the substep.
+    """
+    rows = []
+    for contact in contacts:
+        sides = [dict(identities.get(body.entity, {'kind': 'unknown',
+            'actor': str(getattr(body.entity, 'name', 'unknown'))})) for body in contact.bodies]
+        indices = [side['target_index'] for side in sides if side.get('target_index') is not None]
+        points = []
+        if indices or any(side.get('kind') == 'robot' for side in sides):
+            for point in contact.points:
+                value = {'separation_m': float(point.separation),
+                    'impulse_Ns': np.asarray(point.impulse).tolist()}
+                if indices:
+                    value.update(position_m=np.asarray(point.position).tolist(),
+                        normal=np.asarray(point.normal).tolist())
+                points.append(value)
+        rows.append({'bodies': sides, 'target_indices': indices, 'points': points,
+            'physical_contact': physical_contact_points(points)})
+    return rows
+
+
+def classify_task_object_contacts(contacts: list[dict], released: tuple,
+                                  phase: str | tuple[str, str], adapter: Any, *,
+                                  include_destination_contents_proof: bool = True) -> list[dict]:
+    """Classify copied contact facts using the current support/phase state.
+
+    Rows share the read-only body/point values from ``decode_native_contacts``;
+    each call creates fresh classification and support-release fields.
+    """
     rows = []
     if not isinstance(phase, str) and (len(phase) != 2 or any(not isinstance(p, str) for p in phase)):
         raise ValueError('Two canonical target phases are required')
@@ -72,14 +105,11 @@ def task_object_contact_rows(contacts: Any, identities: dict, released: tuple,
     destinations = tuple(support_name(a) for a in adapter.destination_supports)
     contents_names = tuple(getattr(adapter, 'destination_contents_state_names', ()))
     for contact in contacts:
-        sides = [dict(identities.get(body.entity, {'kind':'unknown','actor':str(getattr(body.entity,'name','unknown'))})) for body in contact.bodies]
-        indices = [s['target_index'] for s in sides if s.get('target_index') is not None]
+        sides, indices = contact['bodies'], contact['target_indices']
         if len(sides)!=2 or not indices: continue
         which = next(i for i,s in enumerate(sides) if s.get('target_index') is not None)
         index = sides[which]['target_index'];other = sides[1-which]
-        points = [{'position_m':np.asarray(p.position).tolist(),'normal':np.asarray(p.normal).tolist(),
-            'impulse_Ns':np.asarray(p.impulse).tolist(),'separation_m':float(p.separation)} for p in contact.points]
-        actual = physical_contact_points(points)
+        points, actual = contact['points'], contact['physical_contact']
         chosen = phase if isinstance(phase, str) else phase[index]
         row = {'bodies':sides,'target_indices':indices,'class':contact_class(other,index,released[index],chosen,initial,destinations),
             'support_released_snapshot':list(released),'initial_support_names':list(initial),'destination_support_names':list(destinations),
@@ -92,6 +122,15 @@ def task_object_contact_rows(contacts: Any, identities: dict, released: tuple,
         if not isinstance(phase, str): row['target_phases'] = list(phase)
         rows.append(row)
     return rows
+
+
+def task_object_contact_rows(contacts: Any, identities: dict, released: tuple,
+                             phase: str | tuple[str, str], adapter: Any, *,
+                             include_destination_contents_proof: bool = True) -> list[dict]:
+    """Compatibility entry point for callers supplying raw native contacts."""
+    return classify_task_object_contacts(decode_native_contacts(contacts, identities),
+        released, phase, adapter,
+        include_destination_contents_proof=include_destination_contents_proof)
 
 
 def physical_contact_points(points: Any) -> bool:
