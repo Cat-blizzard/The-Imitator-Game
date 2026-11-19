@@ -156,8 +156,10 @@ joints, including four passive joints. Its angular gripper coordinates are
 labelled in radians; grasp stability uses measured finger-link translation in
 the TCP frame. Saved native actions are replayed directly without remapping.
 
-Replay restores the recorded initial state once and executes exactly the saved
-actions. It checks real grasps, lift, release, retreat, final stability and measured
+Replay preserves the seeded reset when it exactly matches every recorded S0
+value; otherwise it restores S0 once. The initialization method and actual state
+write count are reported. It then executes exactly the saved actions and checks
+real grasps, lift, release, retreat, final stability and measured
 collisions using the recorded policy. Monitoring is sampled at control ticks;
 state differences are reported separately from task acceptance. It does not
 replan, add settling actions or impose recorded states on later frames.

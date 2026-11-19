@@ -21,7 +21,7 @@ from .dual_arm_execution import (ARM_SPEED, OBJECT_SPEED, OBJECT_ANGULAR_SPEED,
 from .dual_payload_collision import DualPayloadCollisionChecker
 from .measurements import _rotation_distance, _transform, gripper_is_open, gripper_open_settings
 from .runtime_policy import RuntimePolicy
-from .trajectory_execution import as_numpy, bindings
+from .trajectory_execution import as_numpy, bindings, initialize_replay_state
 
 PHASES = ("preparation", "pregrasp", "descend", "grasp", "lift", "carry", "lower",
           "release", "retreat", "settle")
@@ -157,7 +157,7 @@ def held_observations(tcp_poses: list[np.ndarray], object_poses: list[np.ndarray
 
 
 def replay(path: Path, output: Path, *, save_video: bool = False) -> dict[str, Any]:
-    """Run exactly the archive's actions, with one initial state restoration."""
+    """Run the archive's actions from matched reset or one S0 restoration."""
     path, output = Path(path), Path(output)
     output.mkdir(parents=True, exist_ok=True)
     result = {"schema": "multi-embodiment-action-replay-v2", "passed": False,
@@ -190,8 +190,8 @@ def replay(path: Path, output: Path, *, save_video: bool = False) -> dict[str, A
         if not np.isclose(1/raw.control_timestep, original["control_freq"], rtol=0, atol=1e-8):
             raise ValueError("Replay control frequency differs from the recorded frequency")
         _state_error(raw, archive["states"], 0)  # Check names/shapes before writing any state.
-        raw.set_state_dict(archive["initial"])
-        result["restored_states"] = 1
+        result["initialization"] = initialize_replay_state(raw, archive["initial"])
+        result["restored_states"] = result["initialization"]["state_write_count"]
         result["max_state_error"] = _state_error(raw, archive["states"], 0)
         observed = ObservedEpisode(env)
         result["events"] = observed.rows

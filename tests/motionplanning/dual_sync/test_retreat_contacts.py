@@ -152,7 +152,8 @@ def test_replay_requires_separation_before_zero_step_outcome_and_always_cleans_u
                  tcp=NS(pose=NS(p=np.zeros((1, 3))))) for _ in range(2)]
     raw = NS(num_envs=1, control_timestep=.05, sim_timestep=.01, agent=NS(agents=agents),
         robot_uids=('panda_wristcam',)*2,
-        elapsed_steps=np.array([0]), set_state_dict=lambda state: None,
+        elapsed_steps=np.array([0]), get_state_dict=lambda: {},
+        set_state_dict=lambda state: None,
         evaluate=lambda: {'success': np.array([True])})
     env = NS(unwrapped=raw, reset=lambda **kwargs: None, close=lambda: events.append('env.close'))
     task = NS(targets=(object(), object()), official_predicate_keys=('left', 'right'),

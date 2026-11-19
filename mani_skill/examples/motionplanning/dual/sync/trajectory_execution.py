@@ -13,6 +13,35 @@ def as_numpy(value: Any) -> np.ndarray:
     return np.asarray(value)
 
 
+def _same_single_env_state(current: Any, recorded: Any) -> bool:
+    if isinstance(recorded, dict):
+        return (isinstance(current, dict) and current.keys() == recorded.keys()
+                and all(_same_single_env_state(current[key], value)
+                        for key, value in recorded.items()))
+    actual, expected = as_numpy(current), as_numpy(recorded)
+    # RecordEpisode removes the single-environment axis when saving H5 rows.
+    if actual.shape == (1,) + expected.shape:
+        actual = actual[0]
+    elif expected.shape == (1,) + actual.shape:
+        expected = expected[0]
+    return np.array_equal(actual, expected)
+
+
+def initialize_replay_state(raw: Any, initial_state: dict[str, Any]) -> dict[str, Any]:
+    """Use an exact seeded reset, restoring S0 only when its values differ.
+
+    State leaves are the recorded actor/articulation arrays for one environment.
+    A read-then-write of an unchanged fixed articulation root is not numerically
+    idempotent in the native simulator. Preserve the reset when every recorded
+    value already matches, with no tolerance or physics step. Archives whose
+    reset differs still use the original one-time recorded-state restoration.
+    """
+    if _same_single_env_state(raw.get_state_dict(), initial_state):
+        return {"method": "seeded_reset", "state_write_count": 0}
+    raw.set_state_dict(initial_state)
+    return {"method": "recorded_state", "state_write_count": 1}
+
+
 @dataclass
 class ArmBinding:
     key: str

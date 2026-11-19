@@ -163,8 +163,12 @@ python -m mani_skill.examples.motionplanning.dual.sync.replay \
   --traj-path demos/TwoRobotPickPillToRegions-v1/motionplanning/sync-pill-401.h5
 ```
 
-Replay restores the recorded initial simulator state once, then executes the
-stored actions. It does not force recorded states during playback.
+Replay first compares the seeded reset with recorded S0, using exact numeric
+values and allowing only the saved single-environment axis difference. If they
+match, it preserves that reset; otherwise it restores S0 once. Rewriting an
+already matching fixed robot root can introduce native pose roundoff. The
+`initialization` report states the chosen method and state-write count. Replay
+then executes the stored actions without forcing later recorded states.
 
 H5 stores `T` actions and `T+1` observations/states. Arm order is left then right:
 each action has seven arm radians plus one normalized gripper command (16

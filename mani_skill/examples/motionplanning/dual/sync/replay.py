@@ -1,7 +1,7 @@
 """Replay standard sync H5 actions from one recorded initial state.
 
-Only the initial state is restored. Every subsequent state comes from physics;
-no planning or extra settling actions are inserted during replay.
+The seeded reset is retained when it exactly matches recorded S0; otherwise S0
+is restored once. Subsequent states come from physics, without extra actions.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from .pill_support_collision import PillDualPayloadCollisionChecker
 from .pill_task import PillTask, TASK_ID
 from .runtime_policy import RuntimePolicy
 from .solve import SYNC_TASK_IDS, phase_sequence, pill_planners, task_components
-from .trajectory_execution import as_numpy
+from .trajectory_execution import as_numpy, initialize_replay_state
 
 ACTION_ORDER = ("panda_wristcam-0", "panda_wristcam-1")
 
@@ -177,7 +177,7 @@ def replay(path: str | Path, episode_id: int = 0) -> dict[str, Any]:
         reset = dict(episode["reset_kwargs"])
         reset["seed"] = episode["episode_seed"]
         env.reset(**reset)
-        raw.set_state_dict(initial_state)
+        result["initialization"] = initialize_replay_state(raw, initial_state)
         if (raw.num_envs != 1 or not np.isclose(raw.control_timestep, .05)
                 or not np.isclose(raw.sim_timestep, .01)
                 or any(agent.control_mode != "pd_joint_pos" for agent in raw.agent.agents)):

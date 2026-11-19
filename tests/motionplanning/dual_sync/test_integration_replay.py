@@ -105,7 +105,8 @@ def test_legacy_replay_skips_separation_gate_and_keeps_native_action(monkeypatch
               for _ in range(2)]
     raw = NS(num_envs=1, control_timestep=.05, sim_timestep=.01,
              robot_uids=(robot, robot), agent=NS(agents=agents),
-             elapsed_steps=np.array([0]), set_state_dict=lambda state: None,
+             elapsed_steps=np.array([0]), get_state_dict=lambda: {},
+             set_state_dict=lambda state: None,
              evaluate=lambda: {"success": np.array([True])})
     env = NS(unwrapped=raw, reset=lambda **kwargs: None,
              close=lambda: events.append("closed"))
