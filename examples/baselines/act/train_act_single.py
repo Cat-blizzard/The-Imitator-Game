@@ -2,14 +2,15 @@
 Single-Task ACT Training (LeRobot)
 ====================================
 No task encoder, no human dataset.
-DETRVAE conditioned on obs_latent + state_latent.  A dummy zero vector of
-dim 1 is passed as video_feature so the existing DETRVAE constructor stays
-unmodified — the 1-D projection is essentially inert.
+DETRVAE conditioned on projected obs_latent + state_latent. A dummy zero
+vector of dim 1 is passed as video_feature so the existing video-conditioned
+DETRVAE stays unmodified; this constant feature carries no task information.
 
 Architecture:
   obs_encoder   →  obs_feat   (obs_latent_dim)
   state_encoder →  state_feat (state_latent_dim)
-  [obs_feat ; state_feat]  →  DETRVAE (video_feature = zeros(B, 1))
+  [obs_feat ; state_feat]  →  obs_proj (hidden_dim)  →  DETRVAE
+  video_feature = zeros(B, 1)
 
 Usage:
   python train_act_single.py \
@@ -20,6 +21,7 @@ Usage:
 
 ALGO_NAME = "ACTSingleTask"
 
+import json
 import os, random, time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -42,7 +44,8 @@ from imitator.dataset.lerobot_dataloader import (
 )
 from examples.baselines.encoders.obs_encoder import ObservationEncoder, ObsEncoderConfig
 from examples.baselines.encoders.state_encoder import StateEncoder, StateEncoderConfig
-from examples.baselines.act.act.detr.detr_vae import (
+from imitator.eval.native_io import masked_l1
+from examples.baselines.act.act.detr_video.detr_vae import (
     DETRVAE,
     build_encoder,
     build_transformer,
@@ -73,6 +76,13 @@ class TrainingArgs:
     include_depth: bool = False
     single_arm:    bool = False
     image_size:    List[int] = field(default_factory=lambda: [224, 224])
+    split: str = "train"
+    enable_augmentation: bool = True
+    normalization_method: str = "bounds_q99"
+    normalization_min_range: float = 0.0
+    normalization_stats_source: str = "metadata"
+    video_backend: str = "torchcodec"
+    tolerance_s: float = 0.05
 
     # ── Model dims ────────────────────────────────────────────────────────────
     state_dim:           int = 18
@@ -102,6 +112,7 @@ class TrainingArgs:
     lr_backbone:        float = 1e-5
 
     # ── Training ──────────────────────────────────────────────────────────────
+    max_updates:       Optional[int] = None  # Explicit update budget; otherwise retain epochs.
     total_epochs:      int   = 30        # number of full passes over the dataset
     save_freq_epochs:  int   = 5         # save a checkpoint every N epochs
     batch_size:        int   = 32
@@ -181,19 +192,19 @@ class ACTSingleTaskAgent(nn.Module):
         self.obs_proj = nn.Linear(obs_cond_dim, args.hidden_dim).to(device)
 
         # ── DETRVAE ───────────────────────────────────────────────────────────
-        # video_feature_dim=1 with a zero vector → inert task conditioning
+        # video_feature_dim=1 with a zero vector → constant task conditioning
         act_cfg = _ACTCfg(
             args,
             hidden_dim=args.hidden_dim,
             num_queries=args.pred_horizon,
             action_dim=args.action_dim,
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
         )
         self.model = DETRVAE(
             backbones=None,
             transformer=build_transformer(act_cfg),
             encoder=build_encoder(act_cfg),
-            state_dim=args.state_dim,
+            state_dim=args.hidden_dim,
             action_dim=args.action_dim,
             num_queries=args.pred_horizon,
             video_feature_dim=1,             # dummy 1-D task feature (always zero)
@@ -222,7 +233,7 @@ class ACTSingleTaskAgent(nn.Module):
 
         obs_feat,   _ = self.obs_encoder(obs_in)           # (B, obs_latent_dim)
         state_feat, _ = self.state_encoder(state[:, :T])   # (B, state_latent_dim)
-        return torch.cat([obs_feat, state_feat], dim=-1)
+        return self.obs_proj(torch.cat([obs_feat, state_feat], dim=-1))
 
     # ------------------------------------------------------------------
     def compute_loss(self, batch: Dict) -> torch.Tensor:
@@ -235,13 +246,17 @@ class ACTSingleTaskAgent(nn.Module):
         obs_for_model = self._encode_obs(rgb, state)  # (B, hidden_dim)
         video_feature = torch.zeros(B, 1, device=self.device)
 
+        is_pad = batch.get("action_is_pad", batch.get("actions_is_pad"))
+        if is_pad is not None:
+            is_pad = is_pad.to(self.device, dtype=torch.bool)
         a_hat, (mu, log_var) = self.model(
-            obs_for_model, actions=action, video_feature=video_feature
+            obs_for_model, actions=action, video_feature=video_feature, action_is_pad=is_pad
         )
 
         # L1 reconstruction + KL
-        l1_loss = F.l1_loss(a_hat, action)
+        l1_loss = F.l1_loss(a_hat, action) if is_pad is None else masked_l1(a_hat, action, is_pad)
         kl_loss = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).mean()
+        self.last_loss_terms = {"l1": float(l1_loss.detach()), "kl": float(kl_loss.detach())}
         return l1_loss + self.kl_weight * kl_loss
 
     # ------------------------------------------------------------------
@@ -281,12 +296,34 @@ def _auto_detect_cameras(sim_root, dataset_file, fallback):
     return fallback
 
 
-def build_dataloader(args: TrainingArgs):
-    cameras = _auto_detect_cameras(args.sim_root, args.sub_config, args.cameras)
+def _dataset_fps(sim_root: str, dataset_file: str) -> float:
+    """Use the recorded sampling rate for action-chunk timestamp offsets."""
+    with open(dataset_file) as stream:
+        configs = json.load(stream)
+    if not configs:
+        raise ValueError("The dataset configuration is empty")
+    rates = set()
+    for config in configs:
+        dataset_root = Path(sim_root) / config.get("root", config["repo_id"])
+        with (dataset_root / "meta" / "info.json").open() as stream:
+            rate = json.load(stream)["fps"]
+        if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not np.isfinite(rate) or rate <= 0:
+            raise ValueError(f"Invalid dataset fps {rate!r} in {dataset_root}")
+        rates.add(rate)
+    if len(rates) != 1:
+        raise ValueError(f"Single-task ACT requires one dataset sampling rate, got {sorted(rates)}")
+    return rates.pop()
+
+
+def build_dataloader(args: TrainingArgs, *, normalization_stats=None):
+    native = args.normalization_stats_source == "train_rows"
+    cameras = list(args.cameras) if native else _auto_detect_cameras(args.sim_root, args.sub_config, args.cameras)
+    if native and (len(cameras) != 1 or args.include_depth):
+        raise ValueError("Native ACT consumes one explicitly selected RGB camera")
     cfg = LeRobotDataConfig(
         source_type="sim",
         root=args.sim_root,
-        split="train",
+        split=args.split,
         dataset_file=args.sub_config,
         cameras=cameras,
         include_depth=args.include_depth,
@@ -295,20 +332,27 @@ def build_dataloader(args: TrainingArgs):
         single_arm=args.single_arm,
         horizon=args.pred_horizon,
         obs_horizon=args.obs_horizon,
-        fps=30,
-        video_backend="torchcodec",
-        tolerance_s=0.05,
-        enable_augmentation=True,
+        fps=_dataset_fps(args.sim_root, args.sub_config),
+        video_backend=args.video_backend,
+        tolerance_s=args.tolerance_s,
+        enable_augmentation=args.enable_augmentation,
+        normalization_method=args.normalization_method,
+        normalization_min_range=args.normalization_min_range,
+        normalization_stats=normalization_stats,
+        normalization_stats_source=args.normalization_stats_source,
     )
     dataset = build_lerobot_dataset(cfg)
+    if native:
+        if dataset.state_dim != args.state_dim or dataset.action_dim != args.action_dim:
+            raise ValueError("Configured ACT state/action dimensions differ from the dataset")
     print(f"  Dataset size: {len(dataset)} samples")
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
-        shuffle=True,
+        shuffle=args.split == "train",
         num_workers=args.num_workers,
         pin_memory=True,
-        drop_last=True,
+        drop_last=args.normalization_stats_source == "metadata" and args.split == "train",
     )
     return loader, dataset
 
@@ -318,6 +362,8 @@ def build_dataloader(args: TrainingArgs):
 # =============================================================================
 
 def train(args: TrainingArgs):
+    if args.split != "train":
+        raise ValueError("Optimizer updates require --split train")
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -350,22 +396,26 @@ def train(args: TrainingArgs):
         {"params": other_params,    "lr": args.lr},
     ], weight_decay=args.weight_decay)
 
-    scaler = torch.amp.GradScaler("cuda")
+    scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
     losses = defaultdict(list)
 
     steps_per_epoch = len(dataloader)
-    print(f"\n🚀 Training {run_name} for {args.total_epochs} epochs "
+    if not steps_per_epoch or args.total_epochs < 1 or (args.max_updates is not None and args.max_updates < 1):
+        raise ValueError("Training requires a nonempty loader and a positive update/epoch budget")
+    epoch_budget = ((args.max_updates + steps_per_epoch - 1) // steps_per_epoch
+                    if args.max_updates is not None else args.total_epochs)
+    print(f"\n🚀 Training {run_name} for {epoch_budget} epochs "
           f"({steps_per_epoch} steps/epoch)\n")
     agent.train()
     global_step = 0
 
-    for epoch in tqdm(range(1, args.total_epochs + 1), desc="Epochs"):
+    for epoch in tqdm(range(1, epoch_budget + 1), desc="Epochs"):
         epoch_losses: List[float] = []
 
         for batch in dataloader:
             global_step += 1
             optimizer.zero_grad(set_to_none=True)
-            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+            with torch.amp.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 loss = agent.compute_loss(batch)
 
             scaler.scale(loss).backward()
@@ -381,15 +431,18 @@ def train(args: TrainingArgs):
             if global_step % args.log_freq == 0:
                 avg = np.mean(losses["loss"]); losses["loss"].clear()
                 writer.add_scalar("train/loss", avg, global_step)
-                tqdm.write(f"[E{epoch:03d}/{args.total_epochs} "
+                tqdm.write(f"[E{epoch:03d}/{epoch_budget} "
                            f"S{global_step:>8}] loss={avg:.5f}")
+
+            if args.max_updates is not None and global_step >= args.max_updates:
+                break
 
         # ── End-of-epoch bookkeeping ──────────────────────────────────────────
         epoch_avg = float(np.mean(epoch_losses)) if epoch_losses else 0.0
         writer.add_scalar("train/epoch_loss", epoch_avg, epoch)
-        tqdm.write(f"── Epoch {epoch:03d}/{args.total_epochs} avg_loss={epoch_avg:.5f}")
+        tqdm.write(f"── Epoch {epoch:03d}/{epoch_budget} avg_loss={epoch_avg:.5f}")
 
-        if epoch % args.save_freq_epochs == 0 or epoch == args.total_epochs:
+        if epoch % args.save_freq_epochs == 0 or epoch == epoch_budget:
             ckpt = output_dir / f"checkpoint_epoch_{epoch:04d}.pt"
             torch.save({
                 "epoch":            epoch,
@@ -397,6 +450,15 @@ def train(args: TrainingArgs):
                 "agent_state_dict": agent.state_dict(),
                 "optimizer":        optimizer.state_dict(),
                 "args":             vars(args),
+                "data_contract": {
+                    "fps": _dataset_fps(args.sim_root, args.sub_config),
+                    "cameras": list(args.cameras), "image_size": list(args.image_size),
+                    "state_dim": args.state_dim, "action_dim": args.action_dim,
+                    "normalization_method": args.normalization_method,
+                    "normalization_min_range": args.normalization_min_range,
+                    "normalization_stats_source": args.normalization_stats_source,
+                    "native": dataset.main_dataset.meta.info.get("native_data_contract"),
+                },
                 "dataset_stats":    [
                     {
                         "dataset_idx": idx,

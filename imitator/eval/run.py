@@ -36,7 +36,7 @@ def parse_args(argv=None):
     p.add_argument("--policy", type=str, required=True, help="module:factory returning (policy, model_config)")
     p.add_argument("--checkpoint", type=str, default=None)
     p.add_argument("--policy-kwargs", type=str, default="{}", help="JSON dict passed to the factory")
-    p.add_argument("--eval-config", type=str, required=True, help=".txt file, one env id per line (e.g. L1_TwoRobotStirSpoon-v1)")
+    p.add_argument("--eval-config", type=str, help=".txt file, one env id per line (e.g. L1_TwoRobotStirSpoon-v1)")
     p.add_argument("--input-mode", type=str, default="video_only", choices=[m.value for m in InputMode])
     # data
     p.add_argument("--sim-config", type=str, default=f"{_D}/config/sim_config_all.json")
@@ -49,23 +49,53 @@ def parse_args(argv=None):
     # evaluation
     p.add_argument("--num-episodes", type=int, default=10)
     p.add_argument("--num-envs", type=int, default=1)
-    p.add_argument("--max-episode-steps", type=int, default=500)
+    p.add_argument("--max-episode-steps", type=int, default=None,
+                   help="Legacy evaluator: 500; native adapted original tasks: 200")
     p.add_argument("--sim-backend", type=str, default="physx_cpu")
     p.add_argument("--control-mode", type=str, default="pd_joint_pos")
     p.add_argument("--shader", type=str, default="rt-fast")
     p.add_argument("--temporal-agg", action="store_true", default=False)
     p.add_argument("--light-temporal-agg", action="store_true", default=False)
     p.add_argument("--tagg-window", type=int, default=4)
-    p.add_argument("--compute-dtw", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--compute-dtw", action=argparse.BooleanOptionalAction, default=None,
+                   help="Legacy default: enabled; native interface smoke default: disabled")
     p.add_argument("--dtw-band-ratio", type=float, default=0.15)
-    p.add_argument("--normalization-method", type=str, default="bounds_q99")
+    p.add_argument("--normalization-method", type=str, default=None,
+                   help="Legacy default: bounds_q99; native uses the checkpoint's saved method")
     p.add_argument("--output-dir", type=str, required=True)
     p.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
-    return p.parse_args(argv)
+    p.add_argument("--native", action="store_true", help="Use the policy factory's saved native embodiment contract")
+    p.add_argument("--env-id", help="Select one native task recorded by the checkpoint")
+    p.add_argument("--robot", help="Explicit native embodiment; must match the recording")
+    p.add_argument("--execute-steps", type=int, default=8, help="Native actions executed before the next model query")
+    p.add_argument("--seeds", type=int, nargs="+", help="Explicit native environment seeds")
+    p.add_argument("--seeds-file", help="Native seed list or split mapping JSON")
+    p.add_argument("--seed-split", default="evaluation")
+    p.add_argument("--save-video", action="store_true")
+    args = p.parse_args(argv)
+    if args.max_episode_steps is None and not args.native:
+        args.max_episode_steps = 500
+    if args.compute_dtw is None:
+        args.compute_dtw = not args.native
+    if args.normalization_method is None and not args.native:
+        args.normalization_method = "bounds_q99"
+    return args
 
 
 def main(argv=None):
     args = parse_args(argv)
+    if args.native:
+        from imitator.eval.native import evaluate_native
+
+        if args.eval_config is not None:
+            raise ValueError("Native tasks come from the checkpoint; select one with --env-id")
+        policy, model_config = build_policy(args.policy, args.checkpoint, torch.device(args.device),
+                                             **json.loads(args.policy_kwargs))
+        return evaluate_native(args, policy, model_config)
+    if args.eval_config is None:
+        raise ValueError("The legacy evaluator requires --eval-config")
+    if args.max_episode_steps is None:
+        args.max_episode_steps = 500
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
