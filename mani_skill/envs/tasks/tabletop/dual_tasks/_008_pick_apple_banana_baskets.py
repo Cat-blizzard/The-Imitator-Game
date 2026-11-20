@@ -31,6 +31,7 @@ from mani_skill.envs.tasks.tabletop.utils.reward_utils import (
     transport_reward,
     world_aabb_from_local_mesh,
 )
+from imitator.envs.original_task_bridge import OriginalTaskAdapter
 
 
 REWARD_PHASES = [
@@ -59,7 +60,8 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
     - Both robots are static.
     """
 
-    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")] + [
+        (f"imsim_{name}", f"imsim_{name}") for name in ("piper",)]
     agent: MultiAgent[Tuple[PandaWristCam, PandaWristCam]]
     video_info_whitelist = {
         "reward",
@@ -98,6 +100,7 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
         self,
         *args,
         robot_uids: Tuple[str, str] = ("panda_wristcam", "panda_wristcam"),
+        embodiment: str | None = None,
         robot_init_qpos_noise: float = 0.02,
         num_envs: int = 1,
         reconfiguration_freq=None,
@@ -105,6 +108,11 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
         wrist_sensor: bool = False, 
         **kwargs
     ):
+        self.original_task = OriginalTaskAdapter.from_args(
+            "TwoRobotPickAppleBananaToBaskets-v1", robot_uids, embodiment)
+        robot_uids = self.original_task.robot_uids
+        self.embodiment_profile = self.original_task.profile
+        self.native_embodiment = self.original_task.embodiment
         self.hi_res = hi_res
         self.wrist_sensor = wrist_sensor
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -177,14 +185,14 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
-        super()._load_agent(
-            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
-        )
+        super()._load_agent(options, self.original_task.load_poses())
         self.agent.__init__(self.agent.agents, wrist_sensor=self.wrist_sensor)
+        self.original_task.configure_agent(self)
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
         self.table_scene.build()
+        self.original_task.build_scene_mounts(self)
 
         self.apple_out_pose = sapien.Pose(
             p=[self.apple_out_xy[0], self.apple_out_xy[1], 0.0],
@@ -288,6 +296,7 @@ class TwoRobotPickAppleBananaToBasketsEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            self.original_task.initialize_agents(self, env_idx)
             if not hasattr(self, "reward_tracker"):
                 self.reward_tracker = RewardTracker(
                     REWARD_PHASES, self.num_envs, self.device
