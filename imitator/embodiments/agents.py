@@ -166,6 +166,16 @@ def _make_xarm6_robotiq(r: reg.ArmRecord):
         gripper_joint_names = list(r.gripper_joints) + list(r.passive_joints)
 
         @property
+        def physical_gripper_coupling(self):
+            from .coupling import ROBOTIQ_COUPLING
+            return deepcopy(ROBOTIQ_COUPLING)
+
+        def _after_loading_articulation(self):
+            from .coupling import couple_robotiq_outer_knuckles
+            self.gripper_tendon_count = couple_robotiq_outer_knuckles(self.robot)
+            super()._after_loading_articulation()
+
+        @property
         def _controller_configs(self):
             cc = super()._controller_configs
             out = {}

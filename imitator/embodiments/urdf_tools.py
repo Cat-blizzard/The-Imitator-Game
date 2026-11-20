@@ -280,6 +280,8 @@ def derive_urdf(src: str, out: str, *, joint_limits: dict | None = None, drop_li
                    controllers enforce the coupling)"""
     tree = ET.parse(src)
     root = tree.getroot()
+    from .inertia import correct_known_xarm_products
+    correct_known_xarm_products(Path(src).read_bytes(), root)
     d = os.path.dirname(os.path.abspath(src))
     if robot_name:
         root.set("name", robot_name)

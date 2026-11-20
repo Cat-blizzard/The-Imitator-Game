@@ -86,6 +86,18 @@ def make(task: str, embodiment: str | None = None, num_envs: int = 1, sim: str =
     import importlib
 
     import gymnasium as gym
+    from .embodiments.native import TASKS as ORIGINAL_TASKS, make_native_env
+    if task in ORIGINAL_TASKS:
+        if sim != "cpu" or num_envs != 1:
+            raise ValueError("Original-task native adaptation requires sim='cpu', num_envs=1")
+        backend = choose_render(False, sim, render)
+        if backend not in ("sapien_cpu", "sapien_gpu"):
+            raise ValueError("Original TIG table scenes require a SAPIEN render system; choose sapien_cpu or sapien_gpu")
+        compat.patch_render_backend()
+        return make_native_env(task, embodiment or "panda", num_envs=1,
+                               control_mode=control_mode, obs_mode=("state_dict" if obs == "state" else obs),
+                               render_backend=("cuda" if backend == "sapien_gpu" else "pci:0"),
+                               render_mode="rgb_array", **kw)
     spec = get_task(task)
     emb = embodiment or spec.default_embodiment
     if emb not in spec.embodiments:
