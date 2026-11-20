@@ -4,6 +4,14 @@ share a process.
 
 usage: research/envs/curobo/bin/python -B -I -m veritask.data.curobo_server --address <unix socket> [--batch 32]
        (or run this file directly with PYTHONPATH=veritask)
+       python /path/to/veritask/data/curobo_server.py --stdio
+
+The optional --stdio native-sync profile serves the original dual-Panda tasks
+with the measured robot/scene, independent fingers, held-object geometry and
+two persistent approach/transport planners. It uses native_curobo's versioned
+JSONL requests; the legacy socket protocol below remains unchanged. Neither
+profile imports or steps the simulator. Native candidate acceptance remains
+with the shared expert executor, not with this service.
 
 Protocol (multiprocessing.connection, authkey from VERITASK_CUROBO_KEY or b'veritask-e7'):
   {'op': 'ping'}                                   -> {'ok': True, 'gpu_mem_gb': ...}
@@ -22,6 +30,8 @@ import argparse
 import hashlib
 import json
 import os
+from pathlib import Path
+import sys
 import threading
 import time
 
@@ -189,9 +199,24 @@ def serve(address: str, batch: int = 32):
         threading.Thread(target=handle, args=(c,), daemon=True).start()
 
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> None:
+    """Start the legacy socket service or the measured native-Panda profile."""
     ap = argparse.ArgumentParser()
-    ap.add_argument("--address", required=True)
+    transport = ap.add_mutually_exclusive_group(required=True)
+    transport.add_argument("--address", help="Legacy data-corrector Unix socket")
+    transport.add_argument("--stdio", action="store_true",
+                           help="Native synchronous Panda JSONL profile; no simulator imports")
     ap.add_argument("--batch", type=int, default=32)
-    a = ap.parse_args()
-    serve(a.address, a.batch)
+    a = ap.parse_args(argv)
+    if a.stdio:
+        # The optional cuRobo interpreter invokes this file by absolute path.
+        # Resolve this checkout without importing the simulator's environment.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from veritask.data.native_curobo import serve_stdio
+        serve_stdio()
+    else:
+        serve(a.address, a.batch)
+
+
+if __name__ == "__main__":
+    main()
