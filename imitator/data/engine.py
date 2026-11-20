@@ -423,7 +423,7 @@ def _rng(spec_p: PerturbSpec, seed: int, stream: int):
     return np.random.default_rng([int(spec_p.seed_salt), int(seed) & 0x7FFFFFFF, int(stream)])
 
 
-def _write_env_info(out: str, env, lay: store.Layout):
+def _write_env_info(out: str, env, lay: store.Layout, *, has_cloth: bool = False):
     """the first worker to get here writes shards/env_info.json (ManiSkill env_info + layouts) for the dataset JSON"""
     p = os.path.join(out, "shards", "env_info.json")
     if os.path.exists(p):
@@ -435,6 +435,20 @@ def _write_env_info(out: str, env, lay: store.Layout):
                               max_episode_steps=getattr(u.spec, "max_episode_steps", None) if getattr(u, "spec", None) else None),
                 layout=lay.to_json(), control_freq=float(u.control_freq), sim_freq=float(u.sim_freq),
                 imsim_make=store.jsonable(getattr(u, "imsim", {})))
+    # Optional export metadata describes the live model, never today's registry
+    # inferred later for an old trajectory. It does not affect certification.
+    supported = (not has_cloth and int(u.num_envs) == 1 and lay.n_arms == 2
+                 and all(d == a + 1 for d, a in zip(lay.dims, lay.arm_dofs)))
+    if supported:
+        from ..embodiments.native import native_contract
+        try:
+            info["native_data_contract"] = native_contract(env, cameras=("render",))
+            info["native_export"] = dict(status="supported", observation="public_agent_qpos")
+        except (ValueError, AttributeError, FileNotFoundError) as exc:
+            info["native_export"] = dict(status="unsupported", reason=str(exc))
+    else:
+        info["native_export"] = dict(status="unsupported",
+            reason="Native export currently requires one rigid world and two scalar parallel grippers")
     tmp = p + f".{os.getpid()}"
     json.dump(store.jsonable(info), open(tmp, "w"), indent=1)
     os.replace(tmp, p)
@@ -545,7 +559,7 @@ def _soft_worker(job):
     C = spec.load_contract(opts["contracts"][0])
     extra = [spec.load_contract(c) for c in opts["contracts"][1:]]
     writer = store.ShardWriter(out, wid, keep_rejected=bool(opts.get("keep_rejected")))
-    _write_env_info(out, env, lay)
+    _write_env_info(out, env, lay, has_cloth=True)
     do_cert = bool(opts.get("certify", True))
     holder = {}
 
@@ -711,7 +725,8 @@ def dataset_meta(spec, emb, p: PerturbSpec, cnames, seeds, workers, wall, opts, 
     if os.path.exists(p_info):
         ei = json.load(open(p_info))
         env_info, lay_json = ei["env_info"], ei["layout"]
-        extra = {k: ei.get(k) for k in ("control_freq", "sim_freq", "imsim_make")}
+        extra = {k: ei.get(k) for k in ("control_freq", "sim_freq", "imsim_make",
+                                       "native_data_contract", "native_export")}
     dev = None
     if isinstance(p.devmodel, dict):
         dev = dict(path=p.devmodel.get("path"), scale_used=p.scale if p.scale is not None else p.devmodel.get("scale"),

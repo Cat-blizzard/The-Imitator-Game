@@ -4,7 +4,7 @@ Selects human/sim/robot dataloaders via a single config.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from imitator.dataset.lerobot_human_dataset import (
     HumanVideoDataConfig,
@@ -53,6 +53,10 @@ class LeRobotDataConfig:
     vla: bool = False
 
     enable_augmentation: bool = True
+    normalization_method: str = "bounds_q99"
+    normalization_min_range: float = 0.0
+    normalization_stats: Optional[List[Dict[str, Any]]] = None
+    normalization_stats_source: str = "metadata"  # Native training can opt into train_rows.
 
     pre_decode: bool = False
     pre_decode_cache_dir: str = "tmp/human_video_cache"
@@ -67,6 +71,8 @@ class LeRobotDataConfig:
 
 def build_lerobot_dataset(config: LeRobotDataConfig):
     source = config.source_type.lower()
+    if source != "sim" and config.normalization_min_range != 0:
+        raise ValueError("normalization_min_range is currently supported for simulation datasets")
     if source == "human":
         cfg = HumanVideoDataConfig(
             root=config.root,
@@ -110,6 +116,10 @@ def build_lerobot_dataset(config: LeRobotDataConfig):
             depth_mode=config.depth_mode,
             debug=config.debug,
             enable_augmentation=config.enable_augmentation,
+            normalization_method=config.normalization_method,
+            normalization_min_range=config.normalization_min_range,
+            normalization_stats=config.normalization_stats,
+            normalization_stats_source=config.normalization_stats_source,
             skill=config.skill,
             xskill=config.xskill,
             robot_frame_gap=config.robot_frame_gap,

@@ -8,6 +8,7 @@ import os
 import logging
 import json
 import bisect
+import ast
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 from dataclasses import dataclass, field
@@ -21,7 +22,7 @@ from tqdm import tqdm
 import cv2
 import re
 
-from imitator.dataset.lerobot_dataset import LeRobotDataset
+from imitator.dataset.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
 from imitator.dataset.utils import (
     create_output_dir,
     print_header,
@@ -34,18 +35,25 @@ from imitator.dataset.utils import (
     print_summary,
 )
 from imitator.dataset.normalizer import ActionNormalizer
+from imitator.dataset.native import selected_row_statistics
 
 logger = logging.getLogger(__name__)
 
-def get_episdoes_idx(sub_episodes: str) -> List[int]:
-    """
-    Get episode indices from string like "0: 45"
-    """
-    if ':' not in sub_episodes:
-        return eval(sub_episodes)
+def get_episdoes_idx(sub_episodes: str | list[int]) -> List[int]:
+    """Parse the existing episode list or half-open ``start:end`` convention."""
+    if isinstance(sub_episodes, str):
+        if ':' in sub_episodes:
+            start, end = map(int, sub_episodes.split(":"))
+            sub_episodes = list(range(start, end))
+        else:
+            sub_episodes = ast.literal_eval(sub_episodes)
+    if not isinstance(sub_episodes, list) or any(type(i) is not int or i < 0 for i in sub_episodes):
+        raise ValueError("Episode selection must be a list of nonnegative integers")
+    if len(set(sub_episodes)) != len(sub_episodes):
+        raise ValueError("Episode selection contains duplicates")
+    return sub_episodes
 
-    start, end = map(int, sub_episodes.split(":"))
-    return list(range(start, end))
+
 
 def rgb2hsv(rgb: np.ndarray) -> np.ndarray:
     """Vectorized RGB to HSV"""
@@ -141,6 +149,9 @@ class LeRobotSimDataConfig:
 
     # Normalization
     normalization_method: str = "bounds_q99"  # "bounds" or "bounds_q99"
+    normalization_min_range: float = 0.0  # Native units per state/action feature.
+    normalization_stats: Optional[List[Dict[str, Any]]] = None
+    normalization_stats_source: str = "metadata"
 
     # Compatibility with RealDataConfig
     split_file: Optional[str] = None
@@ -196,6 +207,7 @@ class LeRobotSimDataset(Dataset):
                 used_cam_keys.append(f"observation.images.{cam}_depth")
 
         sub_datasets = []
+        dataset_specs = []
         self.task_descriptions = {}
         if self.config.dataset_file:
             with open(self.config.dataset_file, "r") as f:
@@ -205,9 +217,14 @@ class LeRobotSimDataset(Dataset):
                     self.task_descriptions = json.load(f)
             for ds_cfg in tqdm(dataset_configs):
                 repo_id = ds_cfg.get("repo_id")
-                ds_root = os.path.join(self.root, ds_cfg.get("root"))
-                sub_episodes = ds_cfg.get(self.config.split)  # Load all if not specified
-                sub_episodes = get_episdoes_idx(sub_episodes)
+                ds_root = os.path.join(self.root, ds_cfg.get("root", repo_id))
+                meta = LeRobotDatasetMetadata(repo_id=repo_id, root=ds_root)
+                selection = ds_cfg.get(self.config.split, meta.info.get("splits", {}).get(self.config.split))
+                if selection is None:
+                    raise ValueError(f"No {self.config.split!r} episode split in {ds_root}")
+                sub_episodes = get_episdoes_idx(selection)
+                if not sub_episodes:
+                    continue
 
                 print(f'\033[94mloading episodes {sub_episodes} from {ds_root} with split {self.config.split}\033[0m')
 
@@ -220,6 +237,7 @@ class LeRobotSimDataset(Dataset):
                     episodes=sub_episodes,
                 )
                 sub_datasets.append(sub_ds)
+                dataset_specs.append(ds_cfg)
         else:
             if not self.config.repo_id:
                 raise ValueError("repo_id is required when dataset_file is not provided")
@@ -231,7 +249,11 @@ class LeRobotSimDataset(Dataset):
                 tolerance_s=config.tolerance_s,
             )
             sub_datasets.append(sub_ds)
+            dataset_specs.append({})
 
+        if not sub_datasets:
+            raise ValueError(f"The {self.config.split!r} split contains no episodes")
+        self.sub_datasets = sub_datasets
         for sub_ds in sub_datasets:
             # remove camera features from meta so they won't be fetched/decoded, but keep the ones we use
             for k in list(sub_ds.meta.features.keys()):
@@ -248,18 +270,37 @@ class LeRobotSimDataset(Dataset):
                 sub_ds.hf_dataset = sub_ds.hf_dataset.remove_columns(cols_to_remove)
 
         self.lerobot_dataset = ConcatDataset(sub_datasets)
+        self.sub_datasets = sub_datasets
         self.main_dataset = sub_datasets[0]  # For dimensions and stats fallback
 
-        # Initialize ActionNormalizer and populate with dataset stats
-        self.normalizer = ActionNormalizer()
-        for idx, sub_ds in enumerate(sub_datasets):
+        # Preserve historical metadata normalization by default. Native training
+        # opts into selected TRAIN rows; validation can reuse saved training stats.
+        self.normalizer = ActionNormalizer(min_range=config.normalization_min_range)
+        for idx, (sub_ds, spec) in enumerate(zip(sub_datasets, dataset_specs)):
+            if config.normalization_stats is not None:
+                records = [record for record in config.normalization_stats if record["repo_id"] == sub_ds.repo_id]
+                if len(records) != 1:
+                    raise ValueError(f"Expected one saved normalizer for {sub_ds.repo_id}")
+                stats = records[0]["stats"]
+            elif config.normalization_stats_source == "metadata":
+                stats = sub_ds.meta.stats
+            elif config.normalization_stats_source == "train_rows":
+                train_selection = spec.get("train", sub_ds.meta.info.get("splits", {}).get("train"))
+                if train_selection is None:
+                    raise ValueError(f"No training episodes specified for {sub_ds.repo_id}")
+                train_episodes = get_episdoes_idx(train_selection)
+                if not train_episodes:
+                    raise ValueError(f"No training rows available for {sub_ds.repo_id} normalization")
+                train_ds = sub_ds
+                if self.config.split != "train" or sub_ds.episodes != train_episodes:
+                    train_ds = LeRobotDataset(repo_id=sub_ds.repo_id, root=sub_ds.root,
+                                              episodes=train_episodes, delta_timestamps=None)
+                stats = selected_row_statistics(train_ds, [self.state_key, self.action_key])
+            else:
+                raise ValueError("normalization_stats_source must be metadata or train_rows")
             self.normalizer.add_dataset_stats(
-                dataset_idx=idx,
-                repo_id=sub_ds.repo_id,
-                stats=sub_ds.meta.stats,
-                state_key=self.state_key,
-                action_key=self.action_key,
-                single_arm=config.single_arm
+                dataset_idx=idx, repo_id=sub_ds.repo_id, stats=stats,
+                state_key=self.state_key, action_key=self.action_key, single_arm=config.single_arm,
             )
 
         # Augmentation pipeline (matching RealRobotDataset)
@@ -270,7 +311,7 @@ class LeRobotSimDataset(Dataset):
         self.target_length = self.total_transitions
 
         # Stats
-        self.stats = self.main_dataset.meta.stats
+        self.stats = self.normalizer.dataset_stats[0]
 
         self._episode_start_cache = {}
 
@@ -364,7 +405,9 @@ class LeRobotSimDataset(Dataset):
             sample_idx = global_idx - self.lerobot_dataset.cumulative_sizes[dataset_idx - 1]
         curr_dataset = self.lerobot_dataset.datasets[dataset_idx]
         obs_horizon = max(int(self.config.obs_horizon), 1)
-        start_idx = max(sample_idx - obs_horizon + 1, 0)
+        episode = int(curr_dataset.hf_dataset[sample_idx]["episode_index"])
+        episode_start = self._episode_start_cache[(dataset_idx, episode)]
+        start_idx = max(sample_idx - obs_horizon + 1, episode_start)
         frame_indices = list(range(start_idx, sample_idx + 1))
         if len(frame_indices) < obs_horizon:
             frame_indices = [frame_indices[0]] * (obs_horizon - len(frame_indices)) + frame_indices
@@ -552,8 +595,12 @@ class LeRobotSimDataset(Dataset):
         ret_dict = {
             "states": state.float(),
             "actions": action_sequence.float(),
+            "action_is_pad": torch.as_tensor(
+                frames[-1].get(f"{self.action_key}_is_pad", torch.zeros(self.horizon)), dtype=torch.bool
+            ),
             "task_name": re.sub(r"^L[0-9]_", "", repo_id),
-            "repo_id": repo_id,
+            # LeRobot task text identifies the task, not the source repository.
+            "repo_id": curr_dataset.repo_id,
             "task_descriptions": str(task_description),
             # "task_ids": torch.tensor(0, dtype=torch.long),
             # Add metadata for denormalization

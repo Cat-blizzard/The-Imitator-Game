@@ -33,7 +33,12 @@ import torch.utils
 from huggingface_hub import HfApi, snapshot_download
 from huggingface_hub.errors import RevisionNotFoundError
 
-from lerobot.datasets.compute_stats import aggregate_stats, compute_episode_stats
+from lerobot.datasets.compute_stats import (
+    aggregate_stats,
+    compute_episode_stats as _native_compute_episode_stats,
+    get_feature_stats,
+    sample_images,
+)
 from lerobot.datasets.image_writer import AsyncImageWriter, write_image
 from lerobot.datasets.utils import (
     DEFAULT_EPISODES_PATH,
@@ -81,6 +86,31 @@ from imitator.dataset.video_utils import (
 from lerobot.utils.constants import HF_LEROBOT_HOME
 
 CODEBASE_VERSION = "v3.0"
+
+
+def compute_episode_stats(
+    episode_data: dict[str, list[str] | np.ndarray],
+    features: dict,
+    quantile_list: list[float] | None = None,
+) -> dict:
+    """Keep native sampling/statistics, promoting image bytes before squaring.
+
+    Some LeRobot versions pass uint8 samples to running second moments, where
+    ``batch ** 2`` wraps before reduction. Numeric features keep the native
+    path. Images/videos use the same sampled frames, spatial downsampling,
+    quantiles and [0, 1] normalization, with float64 accumulation.
+    """
+    visual = {key: value for key, value in episode_data.items()
+              if features[key]["dtype"] in ("image", "video")}
+    numeric = {key: value for key, value in episode_data.items() if key not in visual}
+    stats = _native_compute_episode_stats(numeric, features, quantile_list)
+    for key, paths in visual.items():
+        sampled = sample_images(paths).astype(np.float64)
+        channel_stats = get_feature_stats(sampled, axis=(0, 2, 3), keepdims=True,
+                                          quantile_list=quantile_list)
+        stats[key] = {name: value if name == "count" else np.squeeze(value/255., axis=0)
+                      for name, value in channel_stats.items()}
+    return stats
 
 
 class LeRobotDatasetMetadata:
