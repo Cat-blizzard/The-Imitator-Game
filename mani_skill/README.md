@@ -285,7 +285,7 @@ motion-planning H5
   -> baseline-specific adapter
 ```
 
-The shared contract is implemented in [`imitator/dataset`](../imitator/dataset). Policies (the 1.0 baselines on `main`, or your own) share the converted datasets, task mapping, split files, and normalized sample fields. Architectures that need a different tensor layout add a thin adapter around this contract; the simulator data does not need to be converted again for each model.
+The shared contract is implemented in [`imitator/dataset`](../imitator/dataset). The baselines in `examples/baselines` (and any other policy) share the converted datasets, task mapping, split files, and normalized sample fields. Architectures that need a different tensor layout add a thin adapter around this contract; the simulator data does not need to be converted again for each model.
 
 ### Converter input contract
 

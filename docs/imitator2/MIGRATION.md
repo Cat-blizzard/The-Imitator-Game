@@ -10,14 +10,21 @@
 | `examples/baselines/lerobot_dataset/eval/*.txt` (evaluation lists) | `imitator/eval/lists/` |
 | `examples/baselines/diffusion_policy/diffusion_policy/make_env.py` | `imitator/eval/make_env.py` |
 | model-independent parts of `examples/baselines/diffusion_policy/eval_dp_imitator.py` (rollout loop, L0–L3 handling, result bookkeeping) | `imitator/eval/rollout.py` (logic unchanged) + `imitator/eval/run.py` (CLI with `--policy module:factory`) + `imitator/eval/policy.py` (interface) |
-| `examples/baselines/_template/` | `examples/policy_template/` (evaluation interface only) |
+| — | `examples/policy_template/`: minimal evaluation interface for any policy (the baseline template stays in `examples/baselines/_template/`) |
 | `python -m examples.baselines.lerobot_dataset.h5_to_lerobot` | `python -m imitator.dataset.h5_to_lerobot` |
 
-## What was removed (still on `main`)
+## What was removed
 
-- All policy / model code: `examples/baselines/{act, diffusion_policy, vqbet, uniskill, xskill, gr00t, rdt, pi, openvla_oft, hypericl, encoders, exp_scripts, hand_estimation}` and their dependencies in `pyproject.toml` (jax, flax, transformers, deepspeed, diffusers, tensorflow, ...).
-- One-off loaders and converters: `lerobot_dataset/agibot/`, `lerobot_xskill_task_dataset.py`, `lerobot_self_prompt_dataset.py`.
-- Hardware / one-off scripts: `scripts/{gr00t_*, graspnet_*, single_camera_cloudpoint*, camera_cloudpoint_realman_microwave_ask, view_pcd}.py`, `mani_skill/examples/motionplanning/maniskill_graspnet_pose.py`, `mani_skill/examples/motionplanning/widowxai/test_simple_motion.py` (hard-coded `/home` paths), `mani_skill/examples/demo_repley_action_vis.py` (hard-coded path), `examples/tutorials/1_quickstart.ipynb` (stock ManiSkill notebook with saved outputs, 17 MB).
+Only `examples/tutorials/` (the stock ManiSkill quick-start notebook with saved outputs, 17 MB; it is upstream
+ManiSkill material) and `mani_skill/examples/motionplanning/widowxai/test_simple_motion.py` (a stale test of a stock
+robot that puts `/home/ManiSkill` on `sys.path`).
+
+The policy baselines (`examples/baselines/`: ACT, Diffusion Policy, VQ-BeT, UniSkill, XSkill, GR00T, RDT, π0.5,
+OpenVLA-OFT, HyperICL, shared encoders, launch scripts, HaMeR / WiLoR hand estimation), their loaders
+(`imitator/dataset/agibot/`, `lerobot_xskill_task_dataset.py`, `lerobot_self_prompt_dataset.py`), the GR00T and
+real-robot perception scripts in `scripts/`, and their dependencies (extra `baselines`) are part of this branch. Their
+code is unchanged from `main` except the import paths of the moved dataset / evaluation modules (and the template
+baseline's import, which pointed at a non-existent `examples.baselines.template`).
 
 ## What was added
 

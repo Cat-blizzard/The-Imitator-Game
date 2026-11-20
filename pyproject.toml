@@ -9,7 +9,7 @@ description = "The Imitator Game 2.0: a benchmark for robot imitation from human
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { file = "LICENSE" }
-# Simulator and benchmark only. The 1.0 policy baselines (and their dependencies) stay on the `main` branch.
+# Simulator, benchmark, evaluation; extras: dataset (IG-10K), baselines (1.0 policy baselines), soft, real2sim.
 dependencies = [
     "sapien>=3.0.0.b1; platform_system=='Linux' or platform_system=='Windows'",
     "numpy>=1.22.4,<2.0.0",
@@ -49,6 +49,67 @@ soft = ["newton==1.7.0", "warp-lang==1.19.0", "mujoco-warp==3.15.0"]
 # optional real -> sim -> human pipeline (real2sim/, vendored ReSimPair); versions as in its requirements.lock
 real2sim = ["jsonschema==4.26.0", "referencing==0.37.0", "av==15.1.0", "coacd==1.0.7", "embreex==4.4.0.post1", "requests", "pyyaml",
             "scipy", "trimesh", "opencv-python", "imageio[ffmpeg]"]
+# 1.0 policy baselines (examples/baselines: ACT, Diffusion Policy, VQ-BeT, UniSkill, XSkill, GR00T, RDT, pi0.5,
+# OpenVLA-OFT, HyperICL): training and evaluation, versions as on `main`
+baselines = [
+    "imitator-game[dataset]",
+    "torch==2.7.1",
+    "accelerate>=1.10.1",
+    "augmax>=0.3.4",
+    "r3m",
+    "beartype==0.19.0",
+    "bitsandbytes>=0.48.1",
+    "blobfile>=3.1.0",
+    "deepspeed>=0.18.0",
+    "diffusers>=0.36.0",
+    "dm-control>=1.0.9",
+    "dm-tree>=0.1.8",
+    "draccus>=0.11.5",
+    "einops>=0.8.1",
+    "equinox>=0.11.8",
+    "filelock>=3.16.1",
+    "flatbuffers>=24.3.25",
+    "flax==0.10.2",
+    "gym>=0.26.2",
+    "gym-aloha>=0.1.1",
+    "hydra-core",
+    "jax[cuda12]==0.5.3",
+    "jaxtyping==0.2.36",
+    "joblib>=1.5.3",
+    "json-numpy>=2.1.1",
+    "jsonlines>=4.0.0",
+    "lightning",
+    "ml_collections==1.0.0",
+    "numba>=0.56.4",
+    "numcodecs>=0.10.2",
+    "numpydantic>=1.6.6",
+    "openai-clip>=1.0.1",
+    "openpi-client",
+    "orbax-checkpoint==0.11.13",
+    "peft>=0.17.1",
+    "plotly>=6.5.1",
+    "polars>=1.30.0",
+    "qwen-vl-utils<0.0.14",
+    "rich>=14.0.0",
+    "scikit-image>=0.19.3",
+    "scikit-learn>=1.8.0",
+    "scikit-video>=1.1.11",
+    "sentencepiece>=0.2.1",
+    "tensorboard>=2.15.0",
+    "termcolor>=2.0.1",
+    "tiktoken>=0.11.0",
+    "timm==0.9.10",
+    "tqdm-loggable>=0.2",
+    "transformers>=4.52.0",
+    "treescope>=0.1.7",
+    "typing-extensions>=4.12.2",
+    "wandb>=0.19.1",
+    "zarr>=2.12.0",
+    "dlimp",
+    "tensorflow-cpu>=2.16.1",
+    "tensorflow-datasets==4.9.9",
+    "gradio>=6.3.0",
+]
 # PartNet-Mobility download helper (mani_skill/utils/download_partnet.py)
 partnet = ["selenium>=4.39.0"]
 dev = ["pytest>=8.3.4", "ruff>=0.8.6"]
@@ -63,9 +124,23 @@ Repository = "https://github.com/Zhouxunzhe/The-Imitator-Game"
 
 [tool.uv]
 prerelease = "allow"
-override-dependencies = ["gymnasium==0.29.1", "numpy>=1.22.4,<2.0.0"]
+override-dependencies = [
+    "ml-dtypes>=0.5.0",
+    "tensorstore==0.1.74",
+    "gymnasium==0.29.1",
+    "draccus>=0.11.5",
+    "diffusers>=0.36.0",
+    "numpy>=1.22.4,<2.0.0",
+    "huggingface-hub==0.33.1",
+    "tensorflow>=2.16.1",
+    "tensorflow-cpu>=2.16.1",
+]
 
 [tool.uv.sources]
+openpi-client = { workspace = true }
+dlimp = { git = "https://github.com/kvablack/dlimp", rev = "ad72ce3a9b414db2185bc0b38461d4101a65477a" }
+diffusion-policy = { path = "examples/baselines/diffusion_policy", editable = true }
+r3m = { git = "https://github.com/facebookresearch/r3m" }
 torch = [{ index = "pytorch-cu128" }]
 torchvision = [{ index = "pytorch-cu128" }]
 
@@ -74,10 +149,13 @@ name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
+[tool.uv.workspace]
+members = ["examples/baselines/pi/packages/*"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["mani_skill", "real2sim"]
+extend-exclude = ["mani_skill", "real2sim", "examples/baselines"]
 
 [tool.ruff.lint]
 # https://docs.astral.sh/ruff/rules/

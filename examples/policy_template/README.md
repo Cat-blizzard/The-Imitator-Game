@@ -16,5 +16,5 @@ python -m imitator.eval.run --policy my_pkg.my_module:make_policy --checkpoint c
     --eval-config imitator/eval/lists/eval_all.txt --output-dir results/my_policy --input-mode video_only
 ```
 
-`policy.py` here is a random policy that exercises the whole loop. The 1.0 baselines (ACT, Diffusion Policy, VQ-BeT,
-UniSkill, XSkill, GR00T, RDT, π0.5, OpenVLA-OFT, HyperICL) remain available on the `main` branch.
+`policy.py` here is a random policy that exercises the whole loop. The full 1.0 baselines (ACT, Diffusion Policy, VQ-BeT,
+UniSkill, XSkill, GR00T, RDT, π0.5, OpenVLA-OFT, HyperICL) with training and evaluation are in `examples/baselines/`.
