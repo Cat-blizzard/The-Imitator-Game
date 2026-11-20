@@ -1,0 +1,190 @@
+"""Streaming physical observations; standard RecordEpisode owns trajectory data."""
+from __future__ import annotations
+
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+import numpy as np
+from mani_skill import format_path
+
+from .trajectory_execution import as_numpy
+from .physical_observation import (contact_identities, contact_allowed, decode_native_contacts,
+    classify_task_object_contacts, physical_support_transition, pose_matrix, measured_source_departure,
+    own_finger_contact_pair)
+from .measurements import _rotation_distance
+
+
+class PhysicalFailure(RuntimeError):
+    pass
+
+
+class ObservedEnvironment:
+    """One env.step per paired action, with sampled native contact monitoring.
+
+    Success termination may be continued to verify release/settling; native
+    timeout and failure remain effective. No diagnostic substep archive is kept.
+    """
+
+    def __init__(self, env, task, checker_provider, policy):
+        self.env, self.unwrapped, self.task = env, env.unwrapped, task
+        self.checker_provider, self.policy = checker_provider, policy
+        self.phase = "preparation"
+        self.last_step = None
+        self.references = None
+        self.physical_released = [False, False]
+        self.reference_frozen = [False, False]
+        self.reference_z = [float(as_numpy(a.pose.p)[0, 2]) for a in task.targets]
+        self.identities, _ = contact_identities(self.unwrapped, self.unwrapped.agent.agents,
+            task.target_names, task.targets)
+        self.srdf = {}
+        for i, agent in enumerate(self.unwrapped.agent.agents):
+            urdf = Path(format_path(agent.urdf_path))
+            srdf = Path(format_path(str(getattr(agent, "srdf_path", urdf.with_suffix(".srdf")))))
+            tree = ET.parse(srdf).getroot()
+            self.srdf[i] = {frozenset((node.attrib['link1'], node.attrib['link2']))
+                for node in tree.findall('disable_collisions')}
+        self.original_hook = self.unwrapped._after_simulation_step
+        self.events = []
+        self.pending_errors = []
+        self.substeps = self.held_substeps = 0
+        self.max_slip_m = np.zeros(2)
+        self.max_slip_rad = np.zeros(2)
+        self._retreat_contacts = None
+        self._retreat_initial_contacts = None
+        self._retreat_separated_contacts = set()
+        self._retreat_remaining_contacts = set()
+        self._last_own_finger_contacts = set()
+        self._last_own_finger_contact_phase = None
+
+    def __getattr__(self, name):
+        return getattr(self.unwrapped, name)
+
+    def install(self):
+        self.unwrapped._after_simulation_step = self.record_substep
+
+    def restore(self):
+        self.end_release_separation()
+        self.unwrapped._after_simulation_step = self.original_hook
+
+    def begin_release_separation(self, allowed_pairs: set[tuple[int, str]]) -> None:
+        """Arm initial own-finger contacts; native substeps can only remove them."""
+        if self._retreat_contacts is not None:
+            raise RuntimeError('Release separation is already active')
+        pairs = set(allowed_pairs)
+        if any(not isinstance(pair, tuple) or len(pair) != 2 or type(pair[0]) is not int
+               or pair[0] not in (0, 1) or pair[1] not in ('panda_leftfinger', 'panda_rightfinger')
+               for pair in pairs):
+            raise ValueError('Release separation requires canonical own-finger pairs')
+        if self._last_own_finger_contact_phase == 'release':
+            pairs.update(self._last_own_finger_contacts)
+        self._retreat_contacts = pairs.copy()
+        self._retreat_initial_contacts = pairs.copy()
+        self._retreat_separated_contacts = set()
+        self._retreat_remaining_contacts = pairs.copy()
+
+    def end_release_separation(self) -> None:
+        if self._retreat_contacts is not None:
+            self._retreat_remaining_contacts = self._retreat_contacts.copy()
+            self._retreat_contacts = None
+
+    @property
+    def release_separation_complete(self) -> bool:
+        return self._retreat_contacts is not None and not self._retreat_contacts
+
+    def record_substep(self):
+        self.original_hook()
+        self.substeps += 1
+        native_contacts = self.unwrapped.scene.px.get_contacts()
+        checker = self.checker_provider()
+        geometry = measured_source_departure(checker, refresh=False)
+        contacts = decode_native_contacts(native_contacts, self.identities)
+        rows = classify_task_object_contacts(contacts, tuple(self.physical_released),
+            self.phase, self.task, include_destination_contents_proof=False)
+        source_contact = [False, False]
+        for row in rows:
+            if row['physical_contact']:
+                for i in row['target_indices']:
+                    source_contact[i] |= any(side.get('kind') == 'actor'
+                        and side.get('actor') == self.task.initial_supports[i].name for side in row['bodies'])
+        for i, actor in enumerate(self.task.targets):
+            height = float(as_numpy(actor.pose.p)[0, 2])
+            if not self.reference_frozen[i]:
+                if geometry[i]:
+                    self.reference_frozen[i] = True
+                else:
+                    self.reference_z[i] = min(self.reference_z[i], height)
+            self.physical_released[i] = physical_support_transition(self.physical_released[i],
+                geometry[i], self.reference_z[i], height, source_contact[i])
+        rows = classify_task_object_contacts(contacts, tuple(self.physical_released),
+            self.phase, self.task)
+        present = {pair for row in rows if row['physical_contact']
+                   if (pair := own_finger_contact_pair(row['bodies'])) is not None}
+        self._last_own_finger_contacts = present
+        self._last_own_finger_contact_phase = self.phase
+        if self.phase == 'retreat' and self._retreat_contacts is not None:
+            self._retreat_separated_contacts.update(self._retreat_contacts-present)
+            self._retreat_contacts.intersection_update(present)
+        for row in rows:
+            if row['physical_contact'] and row['class'] == 'forbidden':
+                self.pending_errors.append({"reason": "forbidden_payload_contact", "bodies": row['bodies'],
+                    "physical_substep_index": self.substeps, "points": row['points']})
+        for contact, native_contact in zip(contacts, native_contacts):
+            sides = contact['bodies']
+            if not any(side.get('kind') == 'robot' for side in sides):
+                continue
+            if contact['physical_contact'] and not contact_allowed(sides, self.phase, self.srdf,
+                    retreat_contacts=self._retreat_contacts):
+                # Retain details only for an already forbidden event. This is
+                # the same native manifold, with no additional scene query or
+                # physical acceptance threshold.
+                points = []
+                for copied, native_point in zip(contact['points'], native_contact.points):
+                    point = {'separation_m': copied['separation_m'], 'impulse_Ns': copied['impulse_Ns']}
+                    if 'position_m' in copied:
+                        point.update(position_m=copied['position_m'], normal=copied['normal'])
+                    else:
+                        point.update(position_m=np.asarray(native_point.position).tolist(),
+                                     normal=np.asarray(native_point.normal).tolist())
+                    points.append(point)
+                self.pending_errors.append({"reason": "forbidden_robot_contact", "bodies": sides,
+                    "physical_substep_index": self.substeps, "points": points})
+        if self.references is not None and (self.phase == 'lift_and_hold' or self.phase.startswith('carry_')):
+            self.held_substeps += 1
+            for i, (agent, actor) in enumerate(zip(self.unwrapped.agent.agents, self.task.targets)):
+                tcp = pose_matrix(as_numpy(agent.tcp.pose.raw_pose)[0])
+                obj = pose_matrix(as_numpy(actor.pose.raw_pose)[0])
+                actual = np.linalg.inv(tcp) @ obj
+                self.max_slip_m[i] = max(self.max_slip_m[i],
+                    np.linalg.norm(actual[:3, 3] - self.references[i, :3, 3]))
+                self.max_slip_rad[i] = max(self.max_slip_rad[i],
+                    _rotation_distance(self.references[i, :3, :3], actual[:3, :3]))
+
+    def step(self, action):
+        if int(as_numpy(self.unwrapped.elapsed_steps).item()) >= self.policy.max_episode_steps:
+            raise RuntimeError("Official episode budget exhausted")
+        self.pending_errors = []
+        from ...data.phase import CONTACT, FREE, set_phase
+        set_phase(self.env, FREE if self.phase in ('preparation', 'pregrasp', 'retreat') else CONTACT)
+        self.last_step = self.env.step(action)
+        obs, reward, terminated, truncated, info = self.last_step
+        if self.pending_errors:
+            self.events.extend({"phase": self.phase, "step": int(as_numpy(self.unwrapped.elapsed_steps).item()),
+                **event} for event in self.pending_errors)
+            raise PhysicalFailure(self.pending_errors[0]['reason'])
+        success = bool(as_numpy(info.get('success', False)).item())
+        fail = bool(as_numpy(info.get('fail', False)).item())
+        continued = bool(as_numpy(terminated).item()) and success and not fail and not bool(as_numpy(truncated).item())
+        return obs, reward, False if continued else terminated, truncated, info
+
+    def summary(self):
+        result = {"substeps": self.substeps, "held_substeps": self.held_substeps,
+            "forbidden_contacts": self.events, "physical_source_departure": self.physical_released,
+            "max_held_position_slip_m": self.max_slip_m.tolist(),
+            "max_held_rotation_slip_rad": self.max_slip_rad.tolist()}
+        if self._retreat_initial_contacts is not None:
+            remaining = self._retreat_remaining_contacts if self._retreat_contacts is None else self._retreat_contacts
+            result['release_separation'] = {
+                'initial_pairs': [list(pair) for pair in sorted(self._retreat_initial_contacts)],
+                'separated_pairs': [list(pair) for pair in sorted(self._retreat_separated_contacts)],
+                'remaining_pairs': [list(pair) for pair in sorted(remaining)]}
+        return result

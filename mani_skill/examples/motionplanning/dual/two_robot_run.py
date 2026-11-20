@@ -1,6 +1,7 @@
 import multiprocessing as mp
 import os
 from copy import deepcopy
+from contextlib import ExitStack
 import argparse
 import gymnasium as gym
 import numpy as np
@@ -16,6 +17,7 @@ from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotPickW
 from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotCleanDesk
 from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotTransFood
 from mani_skill.examples.motionplanning.dual.solutions import solveTwoRobotPutBox
+from imitator.planning._tig_sync import entry as sync_entry
 MP_SOLUTIONS = {
     "TwoRobotPickCubeYCB-v1": solveTwoRobotPickCubeYCB,
     "TwoRobotPickRemoteControl-v1": solveTwoRobotPickRemoteControl,
@@ -120,11 +122,33 @@ MP_SOLUTIONS = {
     "TwoRobotTransFoodL3-v1": solveTwoRobotTransFoodL3,
     "TwoRobotPutBoxL3-v1": solveTwoRobotPutBoxL3,
 }
+# Compatibility names delegate to the shared CLI integration boundary.
+SYNC_TASKS = sync_entry.SYNC_TASKS
+
+
+def _selected_robot(args):
+    return sync_entry.selected_robot(args)
+
+
+def _native_action_layout(raw):
+    return sync_entry.native_action_layout(raw)
+
+
+def _solver_for(args):
+    return sync_entry.resolve_solver(args, MP_SOLUTIONS)
+
+
+def _flush_trajectory(env, execution_mode, save=True):
+    return sync_entry.flush_trajectory(env, execution_mode, save=save)
+
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1", help=f"Environment to run motion planning solver on. Available options are {list(MP_SOLUTIONS.keys())}")
     parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Observation mode to use. Usually this is kept as 'none' as observations are not necesary to be stored, they can be replayed later via the mani_skill.trajectory.replay_trajectory script.")
     parser.add_argument("-n", "--num-traj", type=int, default=10, help="Number of trajectories to generate.")
+    sync_entry.add_arguments(parser)
+    parser.add_argument("--seed", type=int, default=0, help="First episode seed (default 0).")
     parser.add_argument("--only-count-success", action="store_true", help="If true, generates trajectories until num_traj of them are successful and only saves the successful trajectories/videos")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
@@ -148,10 +172,11 @@ def parse_args(args=None):
             "Use --no-mirror-robot-pose to keep robots on original sides."
         ),
     )
-    return parser.parse_args()
+    return sync_entry.complete_arguments(parser.parse_args(args))
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     env_id = args.env_id
+    solve = sync_entry.resolve_solver(args, MP_SOLUTIONS)
     # Reset per-process L-level / mirror overrides to avoid leaking global state across runs.
     L0_L3_utils.set_l1_enabled(False)
     L0_L3_utils.set_l2_enabled(False)
@@ -171,6 +196,8 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         L0_L3_utils.set_l2_enabled(True)
     if args.l3:
         L0_L3_utils.set_l3_enabled(True)
+    robot = sync_entry.selected_robot(args)
+    robot_kwargs = ({"embodiment": robot or "panda"} if args.execution_mode == "sync" else {})
     env = gym.make(
         env_id,
         obs_mode=args.obs_mode,
@@ -179,110 +206,112 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         sensor_configs=dict(shader_pack=args.shader),
         human_render_camera_configs=dict(shader_pack=args.shader),
         viewer_camera_configs=dict(shader_pack=args.shader),
-        sim_backend=args.sim_backend
+        sim_backend=args.sim_backend,
+        **robot_kwargs,
     )
-    if env_id not in MP_SOLUTIONS:
-        raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")
 
-    if not args.traj_name:
-        #new_traj_name = time.strftime("%Y%m%d_%H%M%S")
-        if args.l0:
-            new_traj_name = "l0_" + env_id
-        elif args.l1:
-            new_traj_name = "l1_" + env_id
-        elif args.l2:
-            new_traj_name = "l2_" + env_id
-        elif args.l3:
-            new_traj_name = "l3_" + env_id
-    else:
-        new_traj_name = args.traj_name
-
-    if args.num_procs > 1:
-        new_traj_name = new_traj_name + "." + str(proc_id)
-    env = RecordEpisode(
-        env,
-        output_dir=osp.join(args.record_dir, env_id, "motionplanning"),
-        trajectory_name=new_traj_name, save_video=args.save_video,
-        source_type="motionplanning",
-        source_desc="official motion planning solution from ManiSkill contributors",
-        video_fps=30,
-        record_reward=False,
-        save_on_reset=False,
-        info_on_video=True,
-    )
-    output_h5_path = env._h5_file.filename
-    solve = MP_SOLUTIONS[env_id]
-    print(f"Motion Planning Running on {env_id}")
-    pbar = tqdm(range(args.num_traj), desc=f"proc_id: {proc_id}")
-    seed = start_seed
-    left_successes = []
-    right_successes = []
-    left_solution_episode_lengths = []
-    right_solution_episode_lengths = []
-    failed_motion_plans = 0
-    passed = 0
-    while True:
-        # try:
-        left_res, right_res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
-        eval_info = env.unwrapped.evaluate()
-        task_success = eval_info["success"]
-        if hasattr(task_success, "item"):
-            task_success = task_success.item()
-        print(f"Task success: {task_success}")
-        print("Eval info:", env.unwrapped.evaluate())
-        # except Exception as e:
-        #     print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
-        #     left_res, right_res = (-1, -1)
-
-        if left_res == -1 or right_res == -1:
-            all_success = left_success = right_success = False
-            failed_motion_plans += 1
+    with ExitStack() as resources:
+        resources.callback(lambda: env.close())
+        if not args.traj_name:
+            new_traj_name = env_id
+            if args.l0:
+                new_traj_name = "l0_" + env_id
+            elif args.l1:
+                new_traj_name = "l1_" + env_id
+            elif args.l2:
+                new_traj_name = "l2_" + env_id
+            elif args.l3:
+                new_traj_name = "l3_" + env_id
         else:
-            left_success = left_res[-1]["success"].item()
-            right_success = right_res[-1]["success"].item()
-            all_success = True
-            left_elapsed_steps = left_res[-1]["elapsed_steps"].item()
-            right_elapsed_steps = right_res[-1]["elapsed_steps"].item()
-            left_solution_episode_lengths.append(left_elapsed_steps)
-            right_solution_episode_lengths.append(right_elapsed_steps)
-        left_successes.append(left_success)
-        right_successes.append(right_success)
-        if args.only_count_success and not task_success:
-            seed += 1
-            env.flush_trajectory(save=False)
-            if args.save_video:
-                env.flush_video(save=False)
-            continue
-        else:
-            env.flush_trajectory()
-            if args.save_video:
-                env.flush_video()
-            pbar.update(1)
-            pbar.set_postfix(
-                dict(
-                    left_success_rate=np.mean(left_successes),
-                    right_success_rate=np.mean(right_successes),
-                    failed_motion_plan_rate=failed_motion_plans / (seed + 1),
-                    left_avg_episode_length=np.mean(left_solution_episode_lengths),
-                    right_avg_episode_length=np.mean(right_solution_episode_lengths),
-                    left_max_episode_length=np.max(left_solution_episode_lengths),
-                    right_max_episode_length=np.max(right_solution_episode_lengths),
-                    # min_episode_length=np.min(solution_episode_lengths)
+            new_traj_name = args.traj_name
+
+        if args.num_procs > 1:
+            new_traj_name = new_traj_name + "." + str(proc_id)
+        env = RecordEpisode(
+            env,
+            output_dir=osp.join(args.record_dir, env_id, "motionplanning"),
+            trajectory_name=new_traj_name, save_video=args.save_video,
+            source_type="motionplanning",
+            **sync_entry.recording_options(args, env.unwrapped.control_freq),
+            record_reward=False,
+            save_on_reset=False,
+            info_on_video=True,
+        )
+        output_h5_path = env._h5_file.filename
+        solve = sync_entry.prepare_collection(args, env, solve, resources)
+        print(f"Motion Planning Running on {env_id}")
+        pbar = tqdm(range(args.num_traj), desc=f"proc_id: {proc_id}")
+        resources.callback(pbar.close)
+        seed = start_seed
+        left_successes = []
+        right_successes = []
+        left_solution_episode_lengths = []
+        right_solution_episode_lengths = []
+        failed_motion_plans = 0
+        sync_summary = sync_entry.OutcomeSummary() if args.execution_mode == "sync" else None
+        passed = 0
+        attempts = 0
+        while True:
+            left_res, right_res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
+            attempts += 1
+            eval_info = env.unwrapped.evaluate()
+            task_success = eval_info["success"]
+            if hasattr(task_success, "item"):
+                task_success = task_success.item()
+            if sync_summary is not None:
+                sync_summary.record(env.unwrapped.dual_sync_result, task_success)
+            print(f"Task success: {task_success}")
+            print("Eval info:", eval_info)
+
+            if left_res == -1 or right_res == -1:
+                left_success = right_success = False
+                failed_motion_plans += 1
+            else:
+                left_success = left_res[-1]["success"].item()
+                right_success = right_res[-1]["success"].item()
+                left_elapsed_steps = left_res[-1]["elapsed_steps"].item()
+                right_elapsed_steps = right_res[-1]["elapsed_steps"].item()
+                left_solution_episode_lengths.append(left_elapsed_steps)
+                right_solution_episode_lengths.append(right_elapsed_steps)
+            left_successes.append(left_success)
+            right_successes.append(right_success)
+            if args.only_count_success and not task_success:
+                seed += 1
+                sync_entry.flush_trajectory(env, args.execution_mode, save=False)
+                if args.save_video:
+                    env.flush_video(save=False)
+                continue
+            else:
+                sync_entry.flush_trajectory(env, args.execution_mode)
+                if args.save_video:
+                    env.flush_video()
+                pbar.update(1)
+                pbar.set_postfix(
+                    dict(
+                        left_success_rate=np.mean(left_successes),
+                        right_success_rate=np.mean(right_successes),
+                        **(sync_summary.postfix(attempts) if sync_summary is not None else
+                           {"failed_motion_plan_rate": failed_motion_plans / attempts}),
+                        left_avg_episode_length=(np.mean(left_solution_episode_lengths)
+                                                 if left_solution_episode_lengths else float("nan")),
+                        right_avg_episode_length=(np.mean(right_solution_episode_lengths)
+                                                  if right_solution_episode_lengths else float("nan")),
+                        left_max_episode_length=max(left_solution_episode_lengths, default=float("nan")),
+                        right_max_episode_length=max(right_solution_episode_lengths, default=float("nan")),
+                    )
                 )
-            )
-            seed += 1
-            passed += 1
-            if passed == args.num_traj:
-                break
-    env.close()
-    return output_h5_path
+                seed += 1
+                passed += 1
+                if passed == args.num_traj:
+                    break
+        return output_h5_path
 
 def main(args):
     if args.num_procs > 1 and args.num_procs < args.num_traj:
         if args.num_traj < args.num_procs:
             raise ValueError("Number of trajectories should be greater than or equal to number of processes")
         args.num_traj = args.num_traj // args.num_procs
-        seeds = [*range(0, args.num_procs * args.num_traj, args.num_traj)]
+        seeds = [args.seed + i * args.num_traj for i in range(args.num_procs)]
         pool = mp.Pool(args.num_procs)
         proc_args = [(deepcopy(args), i, seeds[i]) for i in range(args.num_procs)]
         res = pool.starmap(_main, proc_args)
@@ -297,7 +326,7 @@ def main(args):
             tqdm.write(f"Remove {json_path}")
             os.remove(json_path)
     else:
-        _main(args)
+        _main(args, start_seed=args.seed)
 
 if __name__ == "__main__":
     # start = time.time()
