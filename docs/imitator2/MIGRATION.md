@@ -34,10 +34,18 @@ baseline's import, which pointed at a non-existent `examples.baselines.template`
 
 ## Changes to the fork itself (`mani_skill/`)
 
-Only one change: `mani_skill/envs/sapien_env.py` (and `sim2real_env.py`) read `controller.sets_target_qpos/qvel`, which
+`mani_skill/envs/sapien_env.py` (and `sim2real_env.py`) read `controller.sets_target_qpos/qvel`, which
 the fork's controllers never define (they were added in ManiSkill 3.0.1). Single-robot GPU simulation therefore raised
 AttributeError; it now defaults to applying both targets. Multi-robot envs (all 1.0 tasks) never took this branch, so
 their behaviour is unchanged.
+
+The optional original-task bridge also adds explicit embodiment selection to
+the pill and apple/banana environments and synchronous dispatch to the original
+motion-planning runner. Omitted selection keeps the Panda serial defaults.
+Original reward and success predicates are preserved. Robot definitions remain
+in the 2.0 registry; the new module contains task-specific mounts and grasps.
+Native recording, export, replay and human-video policy evaluation are described
+in [ORIGINAL_TASKS.md](ORIGINAL_TASKS.md).
 
 ## How `imsim` was ported to the fork (ManiSkill 3.0.0b21 instead of 3.0.1)
 

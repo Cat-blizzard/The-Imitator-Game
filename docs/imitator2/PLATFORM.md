@@ -94,6 +94,12 @@ python -m imitator card dual_handover_v1 <out>/evidence_imsim_dual_handover_v1.j
 
 ## Task list (E29b)
 
+This list describes the contract-registered platform tasks. Selected original
+TIG scenes also work through `imitator.make` and the public `imitator.eval.run
+--native` path; their original success rules remain separate from these
+contracts. See [the original-task workflow](ORIGINAL_TASKS.md) for the native
+embodiment, recording, replay and video-policy interfaces.
+
 `imitator.list_tasks()` returns every task below. Each task has a frozen physical outcome contract (SHA-256 in
 `tests/imitator/data/e29b_contract_manifest.json`, checked by the tests), a phase-annotated scripted expert
 (`imitator.data.phase`: FREE / CONTACT per arm), designed counterexample behaviours (names = the contract's

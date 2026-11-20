@@ -189,6 +189,11 @@ docs/imitator2/      PLATFORM.md, VERITASK.md, MIGRATION.md, ROADMAP.md
 
 ### Quick start (platform layer)
 
+Original TIG task scenes can also use native embodiments, synchronous experts,
+native LeRobot export and human-video ACT through the common policy interface.
+See [the original-task workflow](docs/imitator2/ORIGINAL_TASKS.md) for the supported
+task/body combinations, physical-model identities and optional cuRobo backend.
+
 ```python
 import imitator
 imitator.list_tasks(); imitator.list_embodiments()
